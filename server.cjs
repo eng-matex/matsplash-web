@@ -788,6 +788,20 @@ async function setupDatabase() {
       }
     }
     
+    // Fix remote access settings for existing employees
+    try {
+      console.log('🔧 Fixing remote access settings...');
+      
+      // Only Director and Admin should have remote access
+      await db('employees')
+        .whereIn('role', ['Manager', 'Receptionist', 'StoreKeeper', 'Sales'])
+        .update({ can_access_remotely: 0 });
+      
+      console.log('✅ Remote access settings fixed');
+    } catch (error) {
+      console.log('Error fixing remote access settings:', error.message);
+    }
+
     console.log('✅ Database setup complete');
   } catch (error) {
     console.error('❌ Database setup failed:', error);
@@ -930,7 +944,7 @@ async function setupDatabase() {
 
             if (!isDeviceAuth) {
               // For Admin, Director, and Manager, allow factory device access even if not whitelisted
-              if ((user.role === 'Admin' || user.role === 'Director' || user.role === 'Manager') && await isFactoryDevice(finalDeviceId)) {
+              if ((user.role === 'Admin' || user.role === 'Director' || user.role === 'Manager') && await isFactoryDevice(finalDeviceId, deviceInfo)) {
                 console.log(`Allowing factory device access for ${user.role} without whitelist`);
               } else {
                 return res.status(403).json({
@@ -946,7 +960,7 @@ async function setupDatabase() {
             
             if (!canAccessRemote) {
               // For non-privileged roles, they must use factory devices
-              const isFactoryDev = await isFactoryDevice(finalDeviceId);
+              const isFactoryDev = await isFactoryDevice(finalDeviceId, deviceInfo);
               console.log('Is factory device:', isFactoryDev);
 
               if (!isFactoryDev) {
@@ -1362,15 +1376,48 @@ app.get('/api/employees', async (req, res) => {
     }
 
     // Function to check if device is a factory device (for non-privileged roles)
-    async function isFactoryDevice(deviceId) {
+    async function isFactoryDevice(deviceId, deviceInfo = null) {
       try {
-        const device = await db('authorized_devices')
+        // First check by device fingerprint
+        let device = await db('authorized_devices')
           .where('device_fingerprint', deviceId)
           .where('is_active', true)
           .where('is_factory_device', true)
           .first();
         
-        return !!device;
+        if (device) {
+          return true;
+        }
+        
+        // If no match by fingerprint and we have device info, check by MAC addresses
+        if (deviceInfo && deviceInfo.networkAdapters) {
+          const currentMacs = deviceInfo.networkAdapters.map(adapter => 
+            adapter.macAddress ? adapter.macAddress.toUpperCase().replace(/[-:]/g, '') : null
+          ).filter(mac => mac);
+          
+          if (currentMacs.length > 0) {
+            // Get all factory device MAC addresses
+            const factoryMacs = await db('device_mac_addresses')
+              .join('authorized_devices', 'device_mac_addresses.device_id', 'authorized_devices.id')
+              .where('authorized_devices.is_factory_device', true)
+              .where('authorized_devices.is_active', true)
+              .where('device_mac_addresses.is_active', true)
+              .select('device_mac_addresses.mac_address');
+            
+            // Check if any current MAC matches any factory MAC
+            for (const currentMac of currentMacs) {
+              for (const factoryMac of factoryMacs) {
+                const normalizedFactoryMac = factoryMac.mac_address.toUpperCase().replace(/[-:]/g, '');
+                if (currentMac === normalizedFactoryMac) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        
+        return false;
+        
       } catch (error) {
         console.error('Error checking factory device:', error);
         return false;
