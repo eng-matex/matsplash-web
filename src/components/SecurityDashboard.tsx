@@ -65,6 +65,7 @@ import {
   Entry
 } from '@mui/icons-material';
 import axios from 'axios';
+import SurveillanceManagement from './SurveillanceManagement';
 
 interface SecurityDashboardProps {
   selectedSection: string;
@@ -650,6 +651,8 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
         return renderGateLog();
       case 'incident-reports':
         return renderIncidentReports();
+      case 'surveillance':
+        return <SurveillanceManagement selectedSection={selectedSection} userRole="security" />;
       default:
         return renderOverview();
     }

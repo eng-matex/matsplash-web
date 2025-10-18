@@ -24,7 +24,6 @@ import {
 export const getRoleNavigation = (role: string) => {
   switch (role?.toLowerCase()) {
     case 'admin':
-    case 'manager':
       return [
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
         { id: 'attendance', label: 'Attendance Logs', icon: AccessTime, color: '#607d8b' },
@@ -35,6 +34,21 @@ export const getRoleNavigation = (role: string) => {
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
+        { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
+        { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
+      ];
+
+    case 'manager':
+      return [
+        { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
+        { id: 'attendance', label: 'Attendance Logs', icon: AccessTime, color: '#607d8b' },
+        { id: 'my-attendance', label: 'My Attendance', icon: People, color: '#795548' },
+        { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
+        { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
+        { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
+        { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
         { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
@@ -59,6 +73,7 @@ export const getRoleNavigation = (role: string) => {
     case 'receptionist':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'general-sales', label: 'General Sales', icon: PointOfSale, color: '#4caf50' },
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
@@ -69,6 +84,7 @@ export const getRoleNavigation = (role: string) => {
     case 'storekeeper':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'inventory-audit', label: 'Inventory Audit', icon: Assessment, color: '#ff5722' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -77,6 +93,7 @@ export const getRoleNavigation = (role: string) => {
     case 'driver':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'active-dispatches', label: 'Active Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'dispatch-log', label: 'Dispatch Log', icon: Assessment, color: '#ff5722' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -85,6 +102,7 @@ export const getRoleNavigation = (role: string) => {
     case 'driver assistant':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'active-dispatches', label: 'Active Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];
@@ -92,6 +110,7 @@ export const getRoleNavigation = (role: string) => {
     case 'packer':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'packing-log', label: 'Packing Log', icon: Inventory, color: '#4caf50' },
         { id: 'my-logs', label: 'My Logs', icon: Assessment, color: '#ff5722' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -108,6 +127,7 @@ export const getRoleNavigation = (role: string) => {
     case 'security':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'gate-log', label: 'Gate Activity', icon: Assessment, color: '#ff5722' },
         { id: 'incident-reports', label: 'Incident Reports', icon: Security, color: '#f44336' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -116,6 +136,7 @@ export const getRoleNavigation = (role: string) => {
     case 'cleaner':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'cleaning-tasks', label: 'Cleaning Tasks', icon: CleaningServices, color: '#4caf50' },
         { id: 'supply-inventory', label: 'Supply Inventory', icon: Inventory, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -124,6 +145,7 @@ export const getRoleNavigation = (role: string) => {
     case 'operator':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'maintenance-tasks', label: 'Maintenance Tasks', icon: Engineering, color: '#ff5722' },
         { id: 'equipment-status', label: 'Equipment Status', icon: Inventory, color: '#4caf50' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
@@ -132,6 +154,7 @@ export const getRoleNavigation = (role: string) => {
     case 'loader':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'loading-tasks', label: 'Loading Tasks', icon: Inventory, color: '#4caf50' },
         { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }

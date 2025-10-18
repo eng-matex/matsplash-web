@@ -54,6 +54,11 @@ import axios from 'axios';
 import OrderManagement from './OrderManagement';
 import EmployeeManagement from './EmployeeManagement';
 import AttendanceManagement from './AttendanceManagement';
+import SurveillanceManagement from './SurveillanceManagement';
+import ReportingAnalytics from './ReportingAnalytics';
+import DistributorManagement from './DistributorManagement';
+import PricingManagement from './PricingManagement';
+import SalaryManagement from './SalaryManagement';
 
 interface ManagerDashboardProps {
   selectedSection: string;
@@ -537,9 +542,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       case 'attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="manager" />;
       case 'distributor-mgmt':
-        return renderDistributorManagement();
+        return <DistributorManagement selectedSection={selectedSection} userRole="manager" />;
       case 'system-activity':
         return renderSystemActivity();
+      case 'surveillance':
+        return <SurveillanceManagement selectedSection={selectedSection} userRole="manager" />;
+      case 'reports':
+        return <ReportingAnalytics selectedSection={selectedSection} userRole="manager" />;
       case 'general-sales':
       case 'distributor-orders':
       case 'driver-dispatches':

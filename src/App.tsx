@@ -20,7 +20,8 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
 import {
   Email,
@@ -33,15 +34,18 @@ import axios from 'axios';
 import theme from './theme';
 import logo from './assets/Matsplash-logo.png';
 import { getRoleNavigation, getDefaultView } from './components/RoleBasedNavigation';
+import ClockInScreen from './components/ClockInScreen';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [loginData, setLoginData] = useState({ emailOrPhone: '', pin: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPin, setShowPin] = useState(false);
-  const [currentPage, setCurrentPage] = useState('overview');
+      const [loginData, setLoginData] = useState({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [showPin, setShowPin] = useState(false);
+      const [currentPage, setCurrentPage] = useState('overview');
+      const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+      const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -59,13 +63,46 @@ const App: React.FC = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', loginData);
+      // Get device information
+      const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        isTablet: /tablet|ipad|playbook|silk/i.test(navigator.userAgent),
+        isMobile: /mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent),
+        isFactoryDevice: window.location.hostname === 'localhost' || 
+                        window.location.hostname.includes('factory') ||
+                        window.location.hostname.includes('192.168') ||
+                        window.location.hostname.includes('10.0'),
+        screenResolution: `${screen.width}x${screen.height}`,
+        timestamp: new Date().toISOString()
+      };
+
+      // Get location (mock for development)
+      const location = {
+        lat: 6.5244, // Lagos, Nigeria coordinates (factory location)
+        lng: 3.3792,
+        address: 'Mock Factory Location (Development Mode)',
+        accuracy: 10
+      };
+
+      const response = await axios.post('http://localhost:3001/api/auth/login', {
+        ...loginData,
+        location,
+        deviceInfo
+      });
+      
       if (response.data.success) {
         const loggedInUser = response.data.user;
         setUser(loggedInUser);
         localStorage.setItem('user', JSON.stringify(loggedInUser));
         setIsLoggedIn(true);
         setCurrentPage(getDefaultView(loggedInUser.role));
+        setRequiresTwoFactor(false);
+        setShowEmergencyAccess(false);
+        setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
+      } else if (response.data.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError('');
       } else {
         setError(response.data.message || 'Login failed');
       }
@@ -83,47 +120,52 @@ const App: React.FC = () => {
     setCurrentPage('overview');
   };
 
-  const renderRoleBasedDashboard = () => {
-    if (!user) return null;
+      const renderRoleBasedDashboard = () => {
+        if (!user) return null;
 
-    const navigationItems = getRoleNavigation(user?.role);
-    
-    return (
-      <Card sx={{ p: 3 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-            Welcome, {user.name}!
-          </Typography>
-          <Typography variant="h6" sx={{ color: '#13bbc6', mb: 2 }}>
-            Role: {user.role}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            You are currently viewing: <strong>{navigationItems.find(item => item.id === currentPage)?.label || 'Overview'}</strong>
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            The complete role-based factory management system is ready! Each role has access to their specific tools and data.
-          </Typography>
-          
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-              Available Sections for {user.role}:
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {navigationItems.map((item) => (
-                <Chip
-                  key={item.id}
-                  label={item.label}
-                  onClick={() => setCurrentPage(item.id)}
-                  color={currentPage === item.id ? 'primary' : 'default'}
-                  sx={{ cursor: 'pointer' }}
-                />
-              ))}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  };
+        const navigationItems = getRoleNavigation(user?.role);
+
+        // Handle clock-in-out section
+        if (currentPage === 'clock-in-out') {
+          return <ClockInScreen user={user} />;
+        }
+
+        return (
+          <Card sx={{ p: 3 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+                Welcome, {user.name}!
+              </Typography>
+              <Typography variant="h6" sx={{ color: '#13bbc6', mb: 2 }}>
+                Role: {user.role}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                You are currently viewing: <strong>{navigationItems.find(item => item.id === currentPage)?.label || 'Overview'}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                The complete role-based factory management system is ready! Each role has access to their specific tools and data.
+              </Typography>
+
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Available Sections for {user.role}:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {navigationItems.map((item) => (
+                    <Chip
+                      key={item.id}
+                      label={item.label}
+                      onClick={() => setCurrentPage(item.id)}
+                      color={currentPage === item.id ? 'primary' : 'default'}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        );
+      };
 
   if (isLoggedIn) {
     const navigationItems = getRoleNavigation(user?.role);
@@ -252,85 +294,196 @@ const App: React.FC = () => {
                 </Alert>
               )}
 
-              <Box component="form" onSubmit={handleLogin} sx={{ mt: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Email or Phone"
-                  value={loginData.emailOrPhone}
-                  onChange={(e) => setLoginData({ ...loginData, emailOrPhone: e.target.value })}
-                  margin="normal"
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Email />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label="PIN"
-                  type={showPin ? 'text' : 'password'}
-                  value={loginData.pin}
-                  onChange={(e) => setLoginData({ ...loginData, pin: e.target.value })}
-                  margin="normal"
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPin(!showPin)}
-                          edge="end"
-                        >
-                          {showPin ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  disabled={loading}
-                  sx={{ 
-                    mt: 3, 
-                    mb: 2, 
-                    py: 1.5,
-                    bgcolor: '#13bbc6',
-                    '&:hover': { bgcolor: '#0fa8b3' }
-                  }}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Login'}
-                </Button>
-              </Box>
+                  <Box component="form" onSubmit={handleLogin} sx={{ mt: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Email or Phone"
+                      value={loginData.emailOrPhone}
+                      onChange={(e) => setLoginData({ ...loginData, emailOrPhone: e.target.value })}
+                      margin="normal"
+                      required
+                      disabled={requiresTwoFactor}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Email />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      label="PIN"
+                      type={showPin ? 'text' : 'password'}
+                      value={loginData.pin}
+                      onChange={(e) => setLoginData({ ...loginData, pin: e.target.value })}
+                      margin="normal"
+                      required
+                      disabled={requiresTwoFactor}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Lock />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={() => setShowPin(!showPin)}
+                              edge="end"
+                            >
+                              {showPin ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    
+                    {requiresTwoFactor && (
+                      <TextField
+                        fullWidth
+                        label="Two-Factor Authentication Code"
+                        value={loginData.twoFactorCode}
+                        onChange={(e) => setLoginData({ ...loginData, twoFactorCode: e.target.value })}
+                        margin="normal"
+                        required
+                        placeholder="Enter 6-digit code from your authenticator app"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
 
-              <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                  Test Credentials:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Admin:</strong> admin@matsplash.com / 1111
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Director:</strong> director@matsplash.com / 1111
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Manager:</strong> manager@matsplash.com / 1111
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Receptionist:</strong> receptionist@matsplash.com / 1111
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Storekeeper:</strong> storekeeper@matsplash.com / 1111
-                </Typography>
-              </Box>
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Button
+                        type="button"
+                        variant="text"
+                        size="small"
+                        onClick={() => setShowEmergencyAccess(!showEmergencyAccess)}
+                        sx={{ color: '#ff6b6b' }}
+                      >
+                        Emergency Access
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="text"
+                        size="small"
+                        onClick={() => {
+                          setRequiresTwoFactor(false);
+                          setShowEmergencyAccess(false);
+                          setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </Box>
+
+                    {showEmergencyAccess && (
+                      <TextField
+                        fullWidth
+                        label="Emergency Access Code"
+                        value={loginData.emergencyCode}
+                        onChange={(e) => setLoginData({ ...loginData, emergencyCode: e.target.value })}
+                        margin="normal"
+                        placeholder="Enter emergency access code"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      disabled={loading}
+                      sx={{
+                        mt: 3,
+                        mb: 2,
+                        py: 1.5,
+                        bgcolor: '#13bbc6',
+                        '&:hover': { bgcolor: '#0fa8b3' }
+                      }}
+                    >
+                      {loading ? <CircularProgress size={24} /> : requiresTwoFactor ? 'Verify 2FA' : 'Login'}
+                    </Button>
+                  </Box>
+
+                  <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                    <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                      Test Credentials:
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Admin:</strong> admin@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Director:</strong> director@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Manager:</strong> manager@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Receptionist:</strong> receptionist@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Storekeeper:</strong> storekeeper@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Driver:</strong> driver@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Driver Assistant:</strong> driverassistant@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Packer:</strong> packer@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Security:</strong> security@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Cleaner:</strong> cleaner@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Operator:</strong> operator@matsplash.com / 1111
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Loader:</strong> loader@matsplash.com / 1111
+                    </Typography>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom sx={{ color: '#ff6b6b' }}>
+                      Emergency Access:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#ff6b6b' }}>
+                      <strong>Emergency Code:</strong> EMERGENCY2024
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
+                      ⚠️ Use only in emergency situations. This code bypasses all security restrictions.
+                    </Typography>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                      Security Notes:
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
+                      • <strong>Director & Admin:</strong> Require 2FA (Two-Factor Authentication)
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
+                      • <strong>Manager, Sales, Admin:</strong> Must use whitelisted personal devices
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
+                      • <strong>All Other Roles:</strong> Must use factory-authorized devices only
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+                      • <strong>Location:</strong> Non-Director roles must be at factory location
+                    </Typography>
+                  </Box>
             </CardContent>
           </Card>
         </Container>

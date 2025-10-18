@@ -157,6 +157,126 @@ async function setupDatabase() {
         fixed_salary: 70000.00,
         commission_rate: null,
         can_access_remotely: true
+      },
+      {
+        name: 'Driver',
+        email: 'driver@matsplash.com',
+        phone: '+2341234567806',
+        role: 'Driver',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 65000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Driver Assistant',
+        email: 'driverassistant@matsplash.com',
+        phone: '+2341234567813',
+        role: 'Driver Assistant',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 55000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Packer',
+        email: 'packer@matsplash.com',
+        phone: '+2341234567807',
+        role: 'Packer',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 60000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Sales Representative',
+        email: 'sales@matsplash.com',
+        phone: '+2341234567808',
+        role: 'Sales',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'commission',
+        fixed_salary: 50000.00,
+        commission_rate: 5.00,
+        can_access_remotely: true
+      },
+      {
+        name: 'Security Guard',
+        email: 'security@matsplash.com',
+        phone: '+2341234567809',
+        role: 'Security',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 55000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Cleaner',
+        email: 'cleaner@matsplash.com',
+        phone: '+2341234567810',
+        role: 'Cleaner',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 45000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Machine Operator',
+        email: 'operator@matsplash.com',
+        phone: '+2341234567811',
+        role: 'Operator',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 70000.00,
+        commission_rate: null,
+        can_access_remotely: false
+      },
+      {
+        name: 'Loader',
+        email: 'loader@matsplash.com',
+        phone: '+2341234567812',
+        role: 'Loader',
+        defaultPin: '1111',
+        status: 'active',
+        deletion_status: 'Active',
+        is_archived: false,
+        first_login: false,
+        salary_type: 'fixed',
+        fixed_salary: 50000.00,
+        commission_rate: null,
+        can_access_remotely: false
       }
     ];
 
@@ -201,12 +321,371 @@ async function setupDatabase() {
       const hasTable = await db.schema.hasTable(tableName);
       if (!hasTable) {
         console.log(`Creating ${tableName} table...`);
-        // Create basic table structure - you can expand this as needed
-        await db.schema.createTable(tableName, (table) => {
-          table.increments('id').primary();
-          table.timestamps(true, true);
-        });
+        switch (tableName) {
+          case 'attendance_logs':
+            await db.schema.createTable('attendance_logs', (table) => {
+              table.increments('id').primary();
+              table.integer('employee_id').unsigned().references('id').inTable('employees');
+              table.timestamp('clock_in_time').notNullable();
+              table.timestamp('clock_out_time');
+              table.decimal('hours_worked', 5, 2);
+              table.string('status').defaultTo('present').notNullable();
+              table.boolean('on_break').defaultTo(false);
+              table.timestamp('break_start_time');
+              table.timestamp('break_end_time');
+              table.integer('total_break_time').defaultTo(0);
+              table.text('clock_in_location');
+              table.text('clock_out_location');
+              table.text('break_start_location');
+              table.text('break_end_location');
+              table.text('device_info');
+              table.boolean('admin_action').defaultTo(false);
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'orders':
+            await db.schema.createTable('orders', (table) => {
+              table.increments('id').primary();
+              table.string('order_number').unique().notNullable();
+              table.string('customer_name').notNullable();
+              table.string('customer_phone');
+              table.string('order_type').notNullable();
+              table.string('status').defaultTo('pending').notNullable();
+              table.decimal('total_amount', 10, 2).notNullable();
+              table.string('payment_method');
+              table.string('payment_status').defaultTo('pending');
+              table.integer('created_by').unsigned().references('id').inTable('employees');
+              table.json('items').notNullable();
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'inventory_logs':
+            await db.schema.createTable('inventory_logs', (table) => {
+              table.increments('id').primary();
+              table.string('product_name').notNullable();
+              table.integer('quantity_change').notNullable();
+              table.integer('current_stock').notNullable();
+              table.string('operation_type').notNullable();
+              table.text('reason');
+              table.integer('employee_id').unsigned().references('id').inTable('employees');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'packing_logs':
+            await db.schema.createTable('packing_logs', (table) => {
+              table.increments('id').primary();
+              table.integer('order_id').unsigned().references('id').inTable('orders');
+              table.integer('packer_id').unsigned().references('id').inTable('employees');
+              table.json('packed_items').notNullable();
+              table.timestamp('packing_start_time').notNullable();
+              table.timestamp('packing_end_time');
+              table.string('status').defaultTo('in_progress').notNullable();
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'dispatch_logs':
+            await db.schema.createTable('dispatch_logs', (table) => {
+              table.increments('id').primary();
+              table.integer('order_id').unsigned().references('id').inTable('orders');
+              table.integer('driver_id').unsigned().references('id').inTable('employees');
+              table.integer('assistant_id').unsigned().references('id').inTable('employees');
+              table.timestamp('dispatch_time').notNullable();
+              table.timestamp('delivery_time');
+              table.string('status').defaultTo('dispatched').notNullable();
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'driver_sales_logs':
+            await db.schema.createTable('driver_sales_logs', (table) => {
+              table.increments('id').primary();
+              table.integer('driver_id').unsigned().references('id').inTable('employees');
+              table.integer('order_id').unsigned().references('id').inTable('orders');
+              table.decimal('amount_collected', 10, 2).notNullable();
+              table.string('payment_method');
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'cameras':
+            await db.schema.createTable('cameras', (table) => {
+              table.increments('id').primary();
+              table.string('name').notNullable();
+              table.string('location').notNullable();
+              table.string('ip_address').unique().notNullable();
+              table.string('status').defaultTo('offline').notNullable();
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'camera_credentials':
+            await db.schema.createTable('camera_credentials', (table) => {
+              table.increments('id').primary();
+              table.integer('camera_id').unsigned().references('id').inTable('cameras');
+              table.string('username').notNullable();
+              table.string('password').notNullable();
+              table.timestamps(true, true);
+            });
+            break;
+          case 'system_activity':
+            await db.schema.createTable('system_activity', (table) => {
+              table.increments('id').primary();
+              table.integer('employee_id').unsigned().references('id').inTable('employees');
+              table.string('activity_type').notNullable();
+              table.text('description');
+              table.timestamp('timestamp').defaultTo(db.fn.now());
+            });
+            break;
+          default:
+            // Create basic table structure for other tables
+            await db.schema.createTable(tableName, (table) => {
+              table.increments('id').primary();
+              table.timestamps(true, true);
+            });
+        }
+        console.log(`✅ ${tableName} table created.`);
+      } else {
+        console.log(`✅ ${tableName} table already exists.`);
       }
+    }
+
+    // Add missing columns to existing attendance_logs table
+    try {
+      const hasAttendanceTable = await db.schema.hasTable('attendance_logs');
+      if (hasAttendanceTable) {
+        const columns = [
+          'employee_id', 'clock_in_time', 'clock_out_time', 'hours_worked', 'status', 'notes',
+          'on_break', 'break_start_time', 'break_end_time', 'total_break_time',
+          'clock_in_location', 'clock_out_location', 'break_start_location',
+          'break_end_location', 'device_info', 'admin_action'
+        ];
+
+        for (const column of columns) {
+          const hasColumn = await db.schema.hasColumn('attendance_logs', column);
+          if (!hasColumn) {
+            await db.schema.alterTable('attendance_logs', (table) => {
+              switch (column) {
+                case 'employee_id':
+                  table.integer('employee_id').unsigned().references('id').inTable('employees');
+                  break;
+                case 'clock_in_time':
+                  table.timestamp('clock_in_time').notNullable();
+                  break;
+                case 'clock_out_time':
+                  table.timestamp('clock_out_time');
+                  break;
+                case 'hours_worked':
+                  table.decimal('hours_worked', 5, 2);
+                  break;
+                case 'status':
+                  table.string('status').defaultTo('present').notNullable();
+                  break;
+                case 'notes':
+                  table.text('notes');
+                  break;
+                case 'on_break':
+                  table.boolean('on_break').defaultTo(false);
+                  break;
+                case 'break_start_time':
+                case 'break_end_time':
+                  table.timestamp(column);
+                  break;
+                case 'total_break_time':
+                  table.integer('total_break_time').defaultTo(0);
+                  break;
+                case 'clock_in_location':
+                case 'clock_out_location':
+                case 'break_start_location':
+                case 'break_end_location':
+                case 'device_info':
+                  table.text(column);
+                  break;
+                case 'admin_action':
+                  table.boolean('admin_action').defaultTo(false);
+                  break;
+              }
+            });
+            console.log(`Added ${column} column to attendance_logs table`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error adding columns to attendance_logs:', error.message);
+    }
+
+    // Add missing columns to existing system_activity table
+    try {
+      const hasSystemActivityTable = await db.schema.hasTable('system_activity');
+      if (hasSystemActivityTable) {
+        const columns = [
+          'employee_id', 'activity_type', 'description', 'timestamp'
+        ];
+
+        for (const column of columns) {
+          const hasColumn = await db.schema.hasColumn('system_activity', column);
+          if (!hasColumn) {
+            await db.schema.alterTable('system_activity', (table) => {
+              switch (column) {
+                case 'employee_id':
+                  table.integer('employee_id').unsigned().references('id').inTable('employees');
+                  break;
+                case 'activity_type':
+                  table.string('activity_type').notNullable();
+                  break;
+                case 'description':
+                  table.text('description');
+                  break;
+                case 'timestamp':
+                  table.timestamp('timestamp').notNullable();
+                  break;
+              }
+            });
+            console.log(`Added ${column} column to system_activity table`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error adding columns to system_activity:', error.message);
+    }
+
+    // Create authorized_devices table
+    const hasAuthorizedDevicesTable = await db.schema.hasTable('authorized_devices');
+    if (!hasAuthorizedDevicesTable) {
+      await db.schema.createTable('authorized_devices', (table) => {
+        table.increments('id').primary();
+        table.string('device_id').unique().notNullable(); // MAC address or unique identifier
+        table.string('device_name').notNullable();
+        table.string('device_type').notNullable(); // 'tablet', 'kiosk', 'computer', 'personal'
+        table.string('location').notNullable(); // 'factory_floor', 'office', 'gate', 'personal'
+        table.integer('employee_id').unsigned().references('id').inTable('employees'); // For personal devices
+        table.string('device_fingerprint').notNullable(); // Browser fingerprint
+        table.boolean('is_active').defaultTo(true);
+        table.boolean('is_factory_device').defaultTo(false); // Factory vs personal device
+        table.timestamp('created_at').defaultTo(db.fn.now());
+        table.timestamp('updated_at').defaultTo(db.fn.now());
+        table.integer('created_by').unsigned().references('id').inTable('employees');
+      });
+      console.log('✅ Created authorized_devices table');
+    } else {
+      // Add new columns to existing table (with error handling)
+      try {
+        await db.schema.alterTable('authorized_devices', (table) => {
+          table.integer('employee_id').unsigned().references('id').inTable('employees');
+        });
+        console.log('✅ Added employee_id column to authorized_devices table');
+      } catch (error) {
+        console.log('employee_id column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('authorized_devices', (table) => {
+          table.string('device_fingerprint').notNullable().defaultTo('');
+        });
+        console.log('✅ Added device_fingerprint column to authorized_devices table');
+      } catch (error) {
+        console.log('device_fingerprint column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('authorized_devices', (table) => {
+          table.boolean('is_factory_device').defaultTo(false);
+        });
+        console.log('✅ Added is_factory_device column to authorized_devices table');
+      } catch (error) {
+        console.log('is_factory_device column may already exist');
+      }
+    }
+
+    // Create device_sessions table for tracking active sessions
+    const hasDeviceSessionsTable = await db.schema.hasTable('device_sessions');
+    if (!hasDeviceSessionsTable) {
+      await db.schema.createTable('device_sessions', (table) => {
+        table.increments('id').primary();
+        table.string('device_id').notNullable();
+        table.integer('employee_id').unsigned().references('id').inTable('employees');
+        table.string('session_token').notNullable();
+        table.timestamp('login_time').notNullable();
+        table.timestamp('last_activity').notNullable();
+        table.boolean('is_active').defaultTo(true);
+        table.text('login_location');
+        table.text('device_info');
+      });
+      console.log('✅ Created device_sessions table');
+    }
+
+    // Create factory_locations table for location enforcement
+    const hasFactoryLocationsTable = await db.schema.hasTable('factory_locations');
+    if (!hasFactoryLocationsTable) {
+      await db.schema.createTable('factory_locations', (table) => {
+        table.increments('id').primary();
+        table.string('name').notNullable(); // 'Main Factory', 'Warehouse', 'Office'
+        table.decimal('latitude', 10, 8).notNullable();
+        table.decimal('longitude', 11, 8).notNullable();
+        table.integer('radius_meters').defaultTo(100); // Allowed radius in meters
+        table.boolean('is_active').defaultTo(true);
+        table.timestamp('created_at').defaultTo(db.fn.now());
+        table.timestamp('updated_at').defaultTo(db.fn.now());
+      });
+      console.log('✅ Created factory_locations table');
+      
+      // Insert default factory location (Lagos, Nigeria)
+      await db('factory_locations').insert({
+        name: 'MatSplash Main Factory',
+        latitude: 6.5244,
+        longitude: 3.3792,
+        radius_meters: 200,
+        is_active: true
+      });
+      console.log('✅ Added default factory location');
+    }
+
+    // Create two_factor_auth table for 2FA
+    const hasTwoFactorAuthTable = await db.schema.hasTable('two_factor_auth');
+    if (!hasTwoFactorAuthTable) {
+      await db.schema.createTable('two_factor_auth', (table) => {
+        table.increments('id').primary();
+        table.integer('employee_id').unsigned().references('id').inTable('employees').unique();
+        table.string('secret_key').notNullable(); // TOTP secret
+        table.boolean('is_enabled').defaultTo(false);
+        table.string('backup_codes', 1000); // JSON array of backup codes
+        table.timestamp('last_used').nullable();
+        table.timestamp('created_at').defaultTo(db.fn.now());
+        table.timestamp('updated_at').defaultTo(db.fn.now());
+      });
+      console.log('✅ Created two_factor_auth table');
+    }
+
+    // Create emergency_access table for backdoor
+    const hasEmergencyAccessTable = await db.schema.hasTable('emergency_access');
+    if (!hasEmergencyAccessTable) {
+      await db.schema.createTable('emergency_access', (table) => {
+        table.increments('id').primary();
+        table.string('access_code').unique().notNullable(); // Emergency access code
+        table.string('description').notNullable(); // What this code is for
+        table.boolean('is_active').defaultTo(true);
+        table.integer('max_uses').defaultTo(1); // How many times it can be used
+        table.integer('used_count').defaultTo(0);
+        table.timestamp('expires_at').nullable(); // Optional expiration
+        table.timestamp('created_at').defaultTo(db.fn.now());
+        table.timestamp('updated_at').defaultTo(db.fn.now());
+        table.integer('created_by').unsigned().references('id').inTable('employees');
+      });
+      console.log('✅ Created emergency_access table');
+      
+      // Insert default emergency access code
+      await db('emergency_access').insert({
+        access_code: 'EMERGENCY2024',
+        description: 'Default emergency access code - CHANGE IMMEDIATELY',
+        is_active: true,
+        max_uses: 10,
+        used_count: 0,
+        expires_at: null,
+        created_by: 1 // Admin
+      });
+      console.log('✅ Added default emergency access code');
     }
     
     console.log('✅ Database setup complete');
@@ -216,128 +695,231 @@ async function setupDatabase() {
   }
 }
 
-// Login endpoint
-app.post('/api/auth/login', async (req, res) => {
-  try {
-  const { emailOrPhone, pin } = req.body;
+    // Login endpoint with enhanced security
+    app.post('/api/auth/login', async (req, res) => {
+      try {
+        const { emailOrPhone, pin, location, deviceInfo, twoFactorCode, emergencyCode } = req.body;
 
-    if (!emailOrPhone || !pin) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email/Phone and PIN are required'
-      });
-    }
-  
-  console.log('Login attempt:', { emailOrPhone, pin: 'PROVIDED' });
-  
-    // Find user by email or phone
-    const user = await db('employees')
-      .where(function() {
-        this.where('email', emailOrPhone).orWhere('phone', emailOrPhone);
-      })
-      .andWhere('status', 'active')
-      .andWhere('deletion_status', 'Active')
-      .first();
+        if (!emailOrPhone || !pin) {
+          return res.status(400).json({
+            success: false,
+            message: 'Email/Phone and PIN are required'
+          });
+        }
+      
+        console.log('Login attempt:', { 
+          emailOrPhone, 
+          pin: 'PROVIDED', 
+          location, 
+          deviceInfo,
+          hasTwoFactorCode: !!twoFactorCode,
+          hasEmergencyCode: !!emergencyCode
+        });
+      
+        // Find user by email or phone
+        const user = await db('employees')
+          .where(function() {
+            this.where('email', emailOrPhone).orWhere('phone', emailOrPhone);
+          })
+          .andWhere('status', 'active')
+          .andWhere('deletion_status', 'Active')
+          .first();
 
-    if (!user) {
-      console.log('User not found:', emailOrPhone);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+        if (!user) {
+          console.log('User not found:', emailOrPhone);
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid credentials'
+          });
+        }
 
-    console.log('User found:', { id: user.id, name: user.name, email: user.email });
+        console.log('User found:', { id: user.id, name: user.name, email: user.email, role: user.role });
 
-    // Check if it's first login
-    if (user.first_login) {
-      console.log('Is first login?', user.first_login);
-      const userResponse = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        isEmployee: user.role !== 'Admin' && user.role !== 'Director',
-        isActive: user.status === 'active',
-        createdAt: user.created_at,
-        first_login: user.first_login
-      };
+        // Check if it's first login
+        if (user.first_login) {
+          console.log('Is first login?', user.first_login);
+          const userResponse = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            isEmployee: user.role !== 'Admin' && user.role !== 'Director',
+            isActive: user.status === 'active',
+            createdAt: user.created_at,
+            first_login: user.first_login
+          };
 
-      return res.status(200).json({
-        success: true,
-        firstLogin: true,
-        user: userResponse,
-        message: 'First login detected. Please change your PIN.'
-      });
-    }
+          return res.status(200).json({
+            success: true,
+            firstLogin: true,
+            user: userResponse,
+            message: 'First login detected. Please change your PIN.'
+          });
+        }
 
-    // Verify PIN
-    console.log('Comparing PIN for user:', user.name);
-    const isPinValid = await bcrypt.compare(pin, user.pin_hash);
-    console.log('PIN match result:', isPinValid);
+        // Verify PIN
+        console.log('Comparing PIN for user:', user.name);
+        const isPinValid = await bcrypt.compare(pin, user.pin_hash);
+        console.log('PIN match result:', isPinValid);
 
-    if (!isPinValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid PIN'
-      });
-    }
+        if (!isPinValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid PIN'
+          });
+        }
 
-    // Generate JWT token
-    const JWT_SECRET = process.env.JWT_SECRET || 'matsplash-secret-key-2024';
-    const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+        // Check for emergency access
+        if (emergencyCode) {
+          const isEmergencyValid = await verifyEmergencyAccess(emergencyCode);
+          if (isEmergencyValid) {
+            console.log('Emergency access granted for:', user.name);
+            // Skip all other security checks for emergency access
+          } else {
+            return res.status(403).json({
+              success: false,
+              message: 'Invalid emergency access code'
+            });
+          }
+        } else {
+          // Apply security restrictions based on role
+          const deviceId = getDeviceFingerprint(req);
+          
+          // Check if user needs device whitelist
+          const needsWhitelist = await needsDeviceWhitelist(user.id);
+          console.log('Needs device whitelist:', needsWhitelist);
+          
+          if (needsWhitelist) {
+            const isDeviceAuth = await isDeviceAuthorized(deviceId, user.id);
+            console.log('Device authorized:', isDeviceAuth);
 
-    // Update last login
-    await db('employees')
-      .where('id', user.id)
-      .update({ 
-        last_login: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+            if (!isDeviceAuth) {
+              return res.status(403).json({
+                success: false,
+                message: 'Access denied: This device is not authorized for your account. Please contact your administrator to add this device to your whitelist.'
+              });
+            }
+          }
 
-    console.log('Login successful for:', user.name);
+          // Check if user can access remotely
+          const canAccessRemote = await canAccessRemotely(user.id);
+          console.log('Can access remotely:', canAccessRemote);
 
-    const userResponse = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      isEmployee: user.role !== 'Admin' && user.role !== 'Director',
-      isActive: user.status === 'active',
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      first_login: user.first_login,
-      salary_type: user.salary_type,
-      fixed_salary: user.fixed_salary,
-      commission_rate: user.commission_rate,
-      can_access_remotely: user.can_access_remotely
-    };
+          // If user cannot access remotely, enforce location restrictions
+          if (!canAccessRemote) {
+            // Check location if provided
+            if (location && location.lat && location.lng) {
+              const locationCheck = await isLocationValid(location.lat, location.lng);
+              console.log('Location check:', locationCheck);
 
-    res.json({
-      success: true,
-      user: userResponse,
-      token,
-      message: 'Login successful'
+              if (!locationCheck.valid) {
+                return res.status(403).json({
+                  success: false,
+                  message: `Access denied: ${locationCheck.message}`
+                });
+              }
+            } else {
+              return res.status(400).json({
+                success: false,
+                message: 'Location information is required for this device'
+              });
+            }
+          }
+
+          // Check if user needs 2FA
+          const needs2FA = await needsTwoFactorAuth(user.id);
+          console.log('Needs 2FA:', needs2FA);
+          
+          if (needs2FA) {
+            if (!twoFactorCode) {
+              return res.status(200).json({
+                success: false,
+                requiresTwoFactor: true,
+                message: 'Two-factor authentication required. Please enter your 2FA code.'
+              });
+            }
+            
+            const is2FAValid = await verifyTwoFactorCode(user.id, twoFactorCode);
+            console.log('2FA validation result:', is2FAValid);
+            
+            if (!is2FAValid) {
+              return res.status(401).json({
+                success: false,
+                message: 'Invalid two-factor authentication code'
+              });
+            }
+          }
+        }
+
+        // Generate JWT token
+        const JWT_SECRET = process.env.JWT_SECRET || 'matsplash-secret-key-2024';
+        const deviceId = getDeviceFingerprint(req);
+        const token = jwt.sign(
+          { 
+            userId: user.id, 
+            email: user.email, 
+            role: user.role,
+            deviceId: deviceId,
+            emergencyAccess: !!emergencyCode
+          },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        // Update last login
+        await db('employees')
+          .where('id', user.id)
+          .update({ 
+            last_login: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        // Create device session
+        await db('device_sessions').insert({
+          device_id: deviceId,
+          employee_id: user.id,
+          session_token: token,
+          login_time: new Date().toISOString(),
+          last_activity: new Date().toISOString(),
+          login_location: location ? JSON.stringify(location) : null,
+          device_info: deviceInfo ? JSON.stringify(deviceInfo) : null
+        });
+
+        console.log('Login successful for:', user.name);
+
+        const userResponse = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          isEmployee: user.role !== 'Admin' && user.role !== 'Director',
+          isActive: user.status === 'active',
+          createdAt: user.created_at,
+          lastLogin: user.last_login,
+          first_login: user.first_login,
+          salary_type: user.salary_type,
+          fixed_salary: user.fixed_salary,
+          commission_rate: user.commission_rate,
+          can_access_remotely: user.can_access_remotely
+        };
+
+        res.json({
+          success: true,
+          user: userResponse,
+          token,
+          message: 'Login successful'
+        });
+
+      } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Internal server error'
+        });
+      }
     });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
 
 // Mock dashboard stats
 app.get('/api/dashboard/stats', async (req, res) => {
@@ -421,6 +1003,1059 @@ app.get('/api/employees', async (req, res) => {
     });
   }
 });
+
+// ===== UTILITY FUNCTIONS =====
+
+// Function to get device fingerprint
+function getDeviceFingerprint(req) {
+  const userAgent = req.get('User-Agent') || '';
+  const acceptLanguage = req.get('Accept-Language') || '';
+  const acceptEncoding = req.get('Accept-Encoding') || '';
+  const connection = req.get('Connection') || '';
+  
+  // Create a simple device fingerprint (in production, use more sophisticated methods)
+  const fingerprint = Buffer.from(
+    userAgent + acceptLanguage + acceptEncoding + connection
+  ).toString('base64').substring(0, 32);
+  
+  return fingerprint;
+}
+
+    // Function to check if device is authorized
+    async function isDeviceAuthorized(deviceId, employeeId = null) {
+      try {
+        let query = db('authorized_devices')
+          .where('device_id', deviceId)
+          .where('is_active', true);
+        
+        // If employeeId is provided, check for personal device authorization
+        if (employeeId) {
+          query = query.where(function() {
+            this.where('employee_id', employeeId)
+                .orWhere('is_factory_device', true);
+          });
+        }
+        
+        const device = await query.first();
+        return !!device;
+      } catch (error) {
+        console.error('Error checking device authorization:', error);
+        return false;
+      }
+    }
+
+    // Function to check if employee can access remotely (updated security model)
+    async function canAccessRemotely(employeeId) {
+      try {
+        const employee = await db('employees')
+          .where('id', employeeId)
+          .first();
+        
+        if (!employee) return false;
+        
+        // Only Director can access remotely without device restrictions
+        return employee.role === 'Director';
+      } catch (error) {
+        console.error('Error checking remote access:', error);
+        return false;
+      }
+    }
+
+    // Function to check if employee needs device whitelist
+    async function needsDeviceWhitelist(employeeId) {
+      try {
+        const employee = await db('employees')
+          .where('id', employeeId)
+          .first();
+        
+        if (!employee) return true;
+        
+        // Manager, Sales, Admin need device whitelist
+        const whitelistRoles = ['Manager', 'Sales', 'Admin'];
+        return whitelistRoles.includes(employee.role);
+      } catch (error) {
+        console.error('Error checking device whitelist requirement:', error);
+        return true;
+      }
+    }
+
+    // Function to check if employee needs 2FA
+    async function needsTwoFactorAuth(employeeId) {
+      try {
+        const employee = await db('employees')
+          .where('id', employeeId)
+          .first();
+        
+        if (!employee) return false;
+        
+        // Director and Admin need 2FA (powerful roles)
+        const twoFactorRoles = ['Director', 'Admin'];
+        return twoFactorRoles.includes(employee.role);
+      } catch (error) {
+        console.error('Error checking 2FA requirement:', error);
+        return false;
+      }
+    }
+
+    // Function to verify 2FA code
+    async function verifyTwoFactorCode(employeeId, code) {
+      try {
+        const twoFactorRecord = await db('two_factor_auth')
+          .where('employee_id', employeeId)
+          .where('is_enabled', true)
+          .first();
+        
+        if (!twoFactorRecord) return false;
+        
+        // Simple TOTP verification (in production, use proper TOTP library)
+        const secret = twoFactorRecord.secret_key;
+        const expectedCode = generateTOTP(secret);
+        
+        if (code === expectedCode) {
+          // Update last used timestamp
+          await db('two_factor_auth')
+            .where('employee_id', employeeId)
+            .update({ last_used: new Date().toISOString() });
+          return true;
+        }
+        
+        // Check backup codes
+        const backupCodes = JSON.parse(twoFactorRecord.backup_codes || '[]');
+        if (backupCodes.includes(code)) {
+          // Remove used backup code
+          const updatedCodes = backupCodes.filter(c => c !== code);
+          await db('two_factor_auth')
+            .where('employee_id', employeeId)
+            .update({ 
+              backup_codes: JSON.stringify(updatedCodes),
+              last_used: new Date().toISOString()
+            });
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error verifying 2FA code:', error);
+        return false;
+      }
+    }
+
+    // Function to verify emergency access code
+    async function verifyEmergencyAccess(accessCode) {
+      try {
+        const emergencyRecord = await db('emergency_access')
+          .where('access_code', accessCode)
+          .where('is_active', true)
+          .first();
+        
+        if (!emergencyRecord) return false;
+        
+        // Check if expired
+        if (emergencyRecord.expires_at && new Date() > new Date(emergencyRecord.expires_at)) {
+          return false;
+        }
+        
+        // Check usage limit
+        if (emergencyRecord.used_count >= emergencyRecord.max_uses) {
+          return false;
+        }
+        
+        // Increment usage count
+        await db('emergency_access')
+          .where('id', emergencyRecord.id)
+          .update({ 
+            used_count: emergencyRecord.used_count + 1,
+            updated_at: new Date().toISOString()
+          });
+        
+        return true;
+      } catch (error) {
+        console.error('Error verifying emergency access:', error);
+        return false;
+      }
+    }
+
+    // Simple TOTP generator (in production, use proper library like speakeasy)
+    function generateTOTP(secret) {
+      const time = Math.floor(Date.now() / 1000 / 30);
+      const hash = require('crypto').createHmac('sha1', secret).update(time.toString()).digest('hex');
+      const offset = parseInt(hash.slice(-1), 16);
+      const code = (parseInt(hash.substr(offset * 2, 8), 16) & 0x7fffffff) % 1000000;
+      return code.toString().padStart(6, '0');
+    }
+
+// Function to check if location is within factory bounds
+async function isLocationValid(latitude, longitude) {
+  try {
+    const factoryLocations = await db('factory_locations')
+      .where('is_active', true);
+    
+    for (const location of factoryLocations) {
+      const distance = calculateDistance(
+        latitude, longitude,
+        location.latitude, location.longitude
+      );
+      
+      if (distance <= location.radius_meters) {
+        return { valid: true, location: location.name };
+      }
+    }
+    
+    return { valid: false, message: 'Location is not within factory premises' };
+  } catch (error) {
+    console.error('Error checking location:', error);
+    return { valid: false, message: 'Error validating location' };
+  }
+}
+
+// Function to calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Distance in meters
+}
+
+// Function to check if employee can access remotely
+async function canAccessRemotely(employeeId) {
+  try {
+    const employee = await db('employees')
+      .where('id', employeeId)
+      .first();
+    
+    if (!employee) return false;
+    
+    // Admin, Director, Manager, and Sales can access remotely
+    const remoteAccessRoles = ['Admin', 'Director', 'Manager', 'Sales'];
+    return remoteAccessRoles.includes(employee.role) || employee.can_access_remotely;
+  } catch (error) {
+    console.error('Error checking remote access:', error);
+    return false;
+  }
+}
+
+// Function to check if employee has already taken a break today
+async function hasTakenBreakToday(employeeId) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const attendanceLog = await db('attendance_logs')
+      .where('employee_id', employeeId)
+      .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+      .whereNotNull('break_start_time')
+      .first();
+    
+    return !!attendanceLog;
+  } catch (error) {
+    console.error('Error checking break status:', error);
+    return false;
+  }
+}
+
+// ===== ATTENDANCE ROUTES =====
+
+// Test endpoint to check database
+app.get('/api/attendance/test', async (req, res) => {
+  try {
+    const tables = await db.raw("SELECT name FROM sqlite_master WHERE type='table'");
+    const attendanceTable = await db.schema.hasTable('attendance_logs');
+    const attendanceColumns = await db.raw("PRAGMA table_info(attendance_logs)");
+    const systemActivityColumns = await db.raw("PRAGMA table_info(system_activity)");
+    res.json({
+      success: true,
+      data: {
+        tables: tables,
+        hasAttendanceTable: attendanceTable,
+        attendanceColumns: attendanceColumns,
+        systemActivityColumns: systemActivityColumns
+      }
+    });
+  } catch (error) {
+    console.error('Test error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Get clock-in status for employee
+app.get('/api/attendance/status/:employeeId', async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    console.log('Fetching status for employee:', employeeId);
+
+    // Find today's attendance record
+    const today = new Date().toISOString().split('T')[0];
+    console.log('Today:', today);
+    
+    const attendanceLog = await db('attendance_logs')
+      .where('employee_id', employeeId)
+      .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+      .whereNull('clock_out_time')
+      .first();
+
+    console.log('Attendance log found:', attendanceLog);
+
+    const isClockedIn = !!attendanceLog;
+    const clockInTime = attendanceLog?.clock_in_time || null;
+    const onBreak = attendanceLog?.on_break || false;
+    const breakStartTime = attendanceLog?.break_start_time || null;
+    const totalBreakTime = attendanceLog?.total_break_time || 0;
+
+    res.json({
+      success: true,
+      data: {
+        clockedIn: isClockedIn,
+        clockInTime,
+        onBreak,
+        breakStartTime,
+        totalBreakTime,
+        currentStatus: isClockedIn ? (onBreak ? 'on_break' : 'working') : 'not_clocked_in'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching clock-in status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch clock-in status',
+      error: error.message
+    });
+  }
+});
+
+    // Clock in employee
+    app.post('/api/attendance/clock-in', async (req, res) => {
+      try {
+        const { employeeId, pin, location, deviceInfo } = req.body;
+        console.log('Clock-in request:', { employeeId, pin: pin ? 'PROVIDED' : 'MISSING', location, deviceInfo });
+
+        if (!employeeId || !pin) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee ID and PIN are required'
+          });
+        }
+
+        // Get employee details
+        const employee = await db('employees').where('id', employeeId).first();
+        console.log('Employee found:', employee ? { id: employee.id, name: employee.name, email: employee.email, role: employee.role } : 'NOT FOUND');
+        
+        if (!employee || employee.deletion_status !== 'Active') {
+          return res.status(404).json({
+            success: false,
+            message: 'Employee not found or inactive'
+          });
+        }
+
+        // Verify PIN
+        const isPinValid = await bcrypt.compare(pin, employee.pin_hash);
+        console.log('PIN validation result:', isPinValid);
+        
+        if (!isPinValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid PIN'
+          });
+        }
+
+        // Check if employee can access remotely (Admin, Director, Manager, Sales can clock in from anywhere)
+        const canAccessRemote = await canAccessRemotely(employeeId);
+        console.log('Can access remotely:', canAccessRemote);
+
+        // If employee cannot access remotely, enforce location restrictions
+        if (!canAccessRemote) {
+          if (!location || !location.lat || !location.lng) {
+            return res.status(400).json({
+              success: false,
+              message: 'Location information is required for clock-in'
+            });
+          }
+
+          const locationCheck = await isLocationValid(location.lat, location.lng);
+          console.log('Location check:', locationCheck);
+
+          if (!locationCheck.valid) {
+            return res.status(403).json({
+              success: false,
+              message: `Clock-in denied: ${locationCheck.message}`
+            });
+          }
+        }
+
+        // Check if already clocked in today
+        const today = new Date().toISOString().split('T')[0];
+        const existingLog = await db('attendance_logs')
+          .where('employee_id', employeeId)
+          .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+          .whereNull('clock_out_time')
+          .first();
+
+        console.log('Existing log check:', existingLog ? 'FOUND' : 'NOT FOUND');
+
+        if (existingLog) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee is already clocked in today'
+          });
+        }
+
+        // Create attendance log
+        const attendanceLog = await db('attendance_logs').insert({
+          employee_id: employeeId,
+          clock_in_time: new Date().toISOString(),
+          clock_in_location: location ? JSON.stringify(location) : null,
+          device_info: deviceInfo ? JSON.stringify(deviceInfo) : null,
+          status: 'present',
+          notes: `Clocked in at ${location?.address || 'Unknown location'}`
+        }).returning('*');
+
+        console.log('Attendance log created:', attendanceLog);
+
+        // Log system activity
+        await db('system_activity').insert({
+          employee_id: employeeId,
+          activity_type: 'clock_in',
+          description: `Employee clocked in at ${new Date().toLocaleString()}`,
+          timestamp: new Date().toISOString()
+        });
+
+        res.json({
+          success: true,
+          message: 'Clocked in successfully',
+          data: attendanceLog[0]
+        });
+      } catch (error) {
+        console.error('Error clocking in employee:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to clock in employee',
+          error: error.message
+        });
+      }
+    });
+
+// Clock out employee
+app.post('/api/attendance/clock-out', async (req, res) => {
+  try {
+    const { employeeId, location, deviceInfo } = req.body;
+    console.log('Clock-out request:', { employeeId, location, deviceInfo });
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID is required'
+      });
+    }
+
+    // Get employee details
+    const employee = await db('employees').where('id', employeeId).first();
+    console.log('Employee found:', employee ? { id: employee.id, name: employee.name, email: employee.email } : 'NOT FOUND');
+    
+    if (!employee || employee.deletion_status !== 'Active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found or inactive'
+      });
+    }
+
+    // Find today's attendance record
+    const today = new Date().toISOString().split('T')[0];
+    const attendanceLog = await db('attendance_logs')
+      .where('employee_id', employeeId)
+      .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+      .whereNull('clock_out_time')
+      .first();
+
+    console.log('Attendance log found:', attendanceLog ? 'FOUND' : 'NOT FOUND');
+
+    if (!attendanceLog) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee is not currently clocked in'
+      });
+    }
+
+    // Calculate hours worked
+    const clockInTime = new Date(attendanceLog.clock_in_time);
+    const clockOutTime = new Date();
+    const hoursWorked = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+
+    console.log('Hours worked calculation:', { clockInTime, clockOutTime, hoursWorked });
+
+    // Update attendance log
+    await db('attendance_logs')
+      .where('id', attendanceLog.id)
+      .update({
+        clock_out_time: clockOutTime.toISOString(),
+        clock_out_location: location ? JSON.stringify(location) : null,
+        hours_worked: hoursWorked,
+        status: 'present'
+      });
+
+    console.log('Attendance log updated successfully');
+
+    // Log system activity
+    await db('system_activity').insert({
+      employee_id: employeeId,
+      activity_type: 'clock_out',
+      description: `Employee clocked out at ${new Date().toLocaleString()}. Hours worked: ${hoursWorked.toFixed(2)}`,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Clocked out successfully',
+      data: {
+        hoursWorked: hoursWorked.toFixed(2)
+      }
+    });
+  } catch (error) {
+    console.error('Error clocking out employee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clock out employee',
+      error: error.message
+    });
+  }
+});
+
+    // Start break
+    app.post('/api/attendance/start-break', async (req, res) => {
+      try {
+        const { employeeId, location, deviceInfo } = req.body;
+
+        if (!employeeId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee ID is required'
+          });
+        }
+
+        // Find today's attendance record
+        const today = new Date().toISOString().split('T')[0];
+        const attendanceLog = await db('attendance_logs')
+          .where('employee_id', employeeId)
+          .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+          .whereNull('clock_out_time')
+          .first();
+
+        if (!attendanceLog) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee is not currently clocked in'
+          });
+        }
+
+        if (attendanceLog.on_break) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee is already on break'
+          });
+        }
+
+        // Check if employee has already taken a break today (single break per day rule)
+        const hasTakenBreak = await hasTakenBreakToday(employeeId);
+        if (hasTakenBreak) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee has already taken their break for today. Only one break per day is allowed.'
+          });
+        }
+
+        // Update attendance log
+        await db('attendance_logs')
+          .where('id', attendanceLog.id)
+          .update({
+            on_break: true,
+            break_start_time: new Date().toISOString(),
+            break_start_location: location ? JSON.stringify(location) : null
+          });
+
+        // Log system activity
+        await db('system_activity').insert({
+          employee_id: employeeId,
+          activity_type: 'start_break',
+          description: `Employee started break at ${new Date().toLocaleString()}`,
+          timestamp: new Date().toISOString()
+        });
+
+        res.json({
+          success: true,
+          message: 'Break started successfully'
+        });
+      } catch (error) {
+        console.error('Error starting break:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to start break'
+        });
+      }
+    });
+
+// End break
+app.post('/api/attendance/end-break', async (req, res) => {
+  try {
+    const { employeeId, location, deviceInfo } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID is required'
+      });
+    }
+
+    // Find today's attendance record
+    const today = new Date().toISOString().split('T')[0];
+    const attendanceLog = await db('attendance_logs')
+      .where('employee_id', employeeId)
+      .whereRaw("strftime('%Y-%m-%d', clock_in_time) = ?", [today])
+      .whereNull('clock_out_time')
+      .first();
+
+    if (!attendanceLog) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee is not currently clocked in'
+      });
+    }
+
+    if (!attendanceLog.on_break) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee is not currently on break'
+      });
+    }
+
+    // Calculate break duration
+    const breakStartTime = new Date(attendanceLog.break_start_time);
+    const breakEndTime = new Date();
+    const breakDuration = (breakEndTime.getTime() - breakStartTime.getTime()) / (1000 * 60); // in minutes
+    const totalBreakTime = (attendanceLog.total_break_time || 0) + breakDuration;
+
+    // Update attendance log
+    await db('attendance_logs')
+      .where('id', attendanceLog.id)
+      .update({
+        on_break: false,
+        break_end_time: breakEndTime.toISOString(),
+        break_end_location: location ? JSON.stringify(location) : null,
+        total_break_time: totalBreakTime
+      });
+
+    // Log system activity
+    await db('system_activity').insert({
+      employee_id: employeeId,
+      activity_type: 'end_break',
+      description: `Employee ended break at ${new Date().toLocaleString()}. Break duration: ${breakDuration.toFixed(2)} minutes`,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Break ended successfully',
+      data: {
+        breakDuration: breakDuration.toFixed(2)
+      }
+    });
+  } catch (error) {
+    console.error('Error ending break:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to end break'
+    });
+  }
+});
+
+// ===== DEVICE MANAGEMENT ROUTES =====
+
+// Get all authorized devices (Admin/Director only)
+app.get('/api/devices', async (req, res) => {
+  try {
+    const devices = await db('authorized_devices')
+      .select('*')
+      .orderBy('created_at', 'desc');
+    
+    res.json({
+      success: true,
+      data: devices
+    });
+  } catch (error) {
+    console.error('Error fetching devices:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch devices'
+    });
+  }
+});
+
+    // Add new authorized device (Admin/Director only)
+    app.post('/api/devices', async (req, res) => {
+      try {
+        const { device_id, device_name, device_type, location, employee_id, device_fingerprint, is_factory_device, created_by } = req.body;
+        
+        if (!device_id || !device_name || !device_type || !location) {
+          return res.status(400).json({
+            success: false,
+            message: 'Device ID, name, type, and location are required'
+          });
+        }
+
+        // Check if device already exists
+        const existingDevice = await db('authorized_devices')
+          .where('device_id', device_id)
+          .first();
+
+        if (existingDevice) {
+          return res.status(400).json({
+            success: false,
+            message: 'Device with this ID already exists'
+          });
+        }
+
+        const device = await db('authorized_devices').insert({
+          device_id,
+          device_name,
+          device_type,
+          location,
+          employee_id: employee_id || null,
+          device_fingerprint: device_fingerprint || '',
+          is_factory_device: is_factory_device || false,
+          created_by: created_by || 1, // Default to admin
+          is_active: true
+        }).returning('*');
+
+        res.json({
+          success: true,
+          message: 'Device added successfully',
+          data: device[0]
+        });
+      } catch (error) {
+        console.error('Error adding device:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to add device'
+        });
+      }
+    });
+
+// Update device status (Admin/Director only)
+app.put('/api/devices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active, device_name, location } = req.body;
+
+    const device = await db('authorized_devices')
+      .where('id', id)
+      .update({
+        is_active,
+        device_name,
+        location,
+        updated_at: new Date().toISOString()
+      })
+      .returning('*');
+
+    if (!device.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Device not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Device updated successfully',
+      data: device[0]
+    });
+  } catch (error) {
+    console.error('Error updating device:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update device'
+    });
+  }
+});
+
+// Delete device (Admin/Director only)
+app.delete('/api/devices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await db('authorized_devices')
+      .where('id', id)
+      .del();
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Device not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Device deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting device:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete device'
+    });
+  }
+});
+
+// Get factory locations
+app.get('/api/locations', async (req, res) => {
+  try {
+    const locations = await db('factory_locations')
+      .where('is_active', true)
+      .select('*');
+    
+    res.json({
+      success: true,
+      data: locations
+    });
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch locations'
+    });
+  }
+});
+
+    // Add new factory location (Admin/Director only)
+    app.post('/api/locations', async (req, res) => {
+      try {
+        const { name, latitude, longitude, radius_meters } = req.body;
+        
+        if (!name || !latitude || !longitude) {
+          return res.status(400).json({
+            success: false,
+            message: 'Name, latitude, and longitude are required'
+          });
+        }
+
+        const location = await db('factory_locations').insert({
+          name,
+          latitude,
+          longitude,
+          radius_meters: radius_meters || 100,
+          is_active: true
+        }).returning('*');
+
+        res.json({
+          success: true,
+          message: 'Location added successfully',
+          data: location[0]
+        });
+      } catch (error) {
+        console.error('Error adding location:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to add location'
+        });
+      }
+    });
+
+    // ===== TWO-FACTOR AUTHENTICATION ENDPOINTS =====
+
+    // Setup 2FA for Director
+    app.post('/api/2fa/setup', async (req, res) => {
+      try {
+        const { employee_id } = req.body;
+        
+        if (!employee_id) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee ID is required'
+          });
+        }
+
+        // Check if employee is Director or Admin
+        const employee = await db('employees').where('id', employee_id).first();
+        if (!employee || !['Director', 'Admin'].includes(employee.role)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Two-factor authentication is only available for Director and Admin roles'
+          });
+        }
+
+        // Generate secret key
+        const secret = require('crypto').randomBytes(20).toString('base32');
+        
+        // Generate backup codes
+        const backupCodes = Array.from({ length: 10 }, () => 
+          Math.random().toString(36).substring(2, 8).toUpperCase()
+        );
+
+        // Check if 2FA already exists
+        const existing2FA = await db('two_factor_auth').where('employee_id', employee_id).first();
+        
+        if (existing2FA) {
+          // Update existing 2FA
+          await db('two_factor_auth')
+            .where('employee_id', employee_id)
+            .update({
+              secret_key: secret,
+              backup_codes: JSON.stringify(backupCodes),
+              is_enabled: false,
+              updated_at: new Date().toISOString()
+            });
+        } else {
+          // Create new 2FA
+          await db('two_factor_auth').insert({
+            employee_id,
+            secret_key: secret,
+            backup_codes: JSON.stringify(backupCodes),
+            is_enabled: false
+          });
+        }
+
+        res.json({
+          success: true,
+          message: '2FA setup initiated',
+          data: {
+            secret,
+            backupCodes,
+            qrCodeUrl: `otpauth://totp/MatSplash:${employee.email}?secret=${secret}&issuer=MatSplash`
+          }
+        });
+      } catch (error) {
+        console.error('Error setting up 2FA:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to setup 2FA'
+        });
+      }
+    });
+
+    // Enable 2FA after verification
+    app.post('/api/2fa/enable', async (req, res) => {
+      try {
+        const { employee_id, verification_code } = req.body;
+        
+        if (!employee_id || !verification_code) {
+          return res.status(400).json({
+            success: false,
+            message: 'Employee ID and verification code are required'
+          });
+        }
+
+        const twoFactorRecord = await db('two_factor_auth')
+          .where('employee_id', employee_id)
+          .first();
+
+        if (!twoFactorRecord) {
+          return res.status(404).json({
+            success: false,
+            message: '2FA setup not found'
+          });
+        }
+
+        // Verify the code
+        const expectedCode = generateTOTP(twoFactorRecord.secret_key);
+        if (verification_code !== expectedCode) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid verification code'
+          });
+        }
+
+        // Enable 2FA
+        await db('two_factor_auth')
+          .where('employee_id', employee_id)
+          .update({
+            is_enabled: true,
+            updated_at: new Date().toISOString()
+          });
+
+        res.json({
+          success: true,
+          message: 'Two-factor authentication enabled successfully'
+        });
+      } catch (error) {
+        console.error('Error enabling 2FA:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to enable 2FA'
+        });
+      }
+    });
+
+    // ===== EMERGENCY ACCESS ENDPOINTS =====
+
+    // Get emergency access codes (Admin/Director only)
+    app.get('/api/emergency-access', async (req, res) => {
+      try {
+        const codes = await db('emergency_access')
+          .select('*')
+          .orderBy('created_at', 'desc');
+        
+        res.json({
+          success: true,
+          data: codes
+        });
+      } catch (error) {
+        console.error('Error fetching emergency codes:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to fetch emergency codes'
+        });
+      }
+    });
+
+    // Create new emergency access code (Admin/Director only)
+    app.post('/api/emergency-access', async (req, res) => {
+      try {
+        const { access_code, description, max_uses, expires_at, created_by } = req.body;
+        
+        if (!access_code || !description) {
+          return res.status(400).json({
+            success: false,
+            message: 'Access code and description are required'
+          });
+        }
+
+        // Check if code already exists
+        const existingCode = await db('emergency_access')
+          .where('access_code', access_code)
+          .first();
+
+        if (existingCode) {
+          return res.status(400).json({
+            success: false,
+            message: 'Emergency access code already exists'
+          });
+        }
+
+        const emergencyCode = await db('emergency_access').insert({
+          access_code,
+          description,
+          max_uses: max_uses || 1,
+          expires_at: expires_at || null,
+          created_by: created_by || 1,
+          is_active: true,
+          used_count: 0
+        }).returning('*');
+
+        res.json({
+          success: true,
+          message: 'Emergency access code created successfully',
+          data: emergencyCode[0]
+        });
+      } catch (error) {
+        console.error('Error creating emergency code:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to create emergency code'
+        });
+      }
+    });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
