@@ -1202,20 +1202,29 @@ app.get('/api/employees', async (req, res) => {
           .where('device_id', deviceId)
           .update({ is_active: false, updated_at: new Date().toISOString() });
 
-        // Insert new MAC addresses
+        // Insert new MAC addresses - filter out empty/invalid ones
         if (macAddresses && macAddresses.length > 0) {
-          const macData = macAddresses.map((mac, index) => ({
-            device_id: deviceId,
-            mac_address: mac.macAddress,
-            adapter_type: mac.adapterType,
-            adapter_name: mac.adapterName,
-            is_primary: index === 0, // First MAC is primary
-            is_active: mac.isActive !== false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }));
+          const validMacs = macAddresses.filter(mac => 
+            mac.macAddress && 
+            mac.macAddress.trim() !== '' && 
+            mac.adapterType && 
+            mac.adapterType.trim() !== ''
+          );
 
-          await db('device_mac_addresses').insert(macData);
+          if (validMacs.length > 0) {
+            const macData = validMacs.map((mac, index) => ({
+              device_id: deviceId,
+              mac_address: mac.macAddress.trim(),
+              adapter_type: mac.adapterType.trim(),
+              adapter_name: mac.adapterName ? mac.adapterName.trim() : 'Unknown Adapter',
+              is_primary: index === 0, // First valid MAC is primary
+              is_active: mac.isActive !== false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }));
+
+            await db('device_mac_addresses').insert(macData);
+          }
         }
 
         return true;
@@ -2388,6 +2397,21 @@ app.get('/api/locations', async (req, res) => {
           });
         }
 
+        // Validate MAC addresses before processing
+        const validMacs = macAddresses.filter(mac => 
+          mac.macAddress && 
+          mac.macAddress.trim() !== '' && 
+          mac.adapterType && 
+          mac.adapterType.trim() !== ''
+        );
+
+        if (validMacs.length === 0 && macAddresses.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'At least one valid MAC address with adapter type is required'
+          });
+        }
+
         const success = await registerDeviceMacAddresses(parseInt(id), macAddresses);
         
         if (success) {
@@ -2407,7 +2431,7 @@ app.get('/api/locations', async (req, res) => {
         console.error('Error updating device MAC addresses:', error);
         res.status(500).json({
           success: false,
-          message: 'Failed to update device MAC addresses'
+          message: 'Failed to update device MAC addresses: ' + error.message
         });
       }
     });

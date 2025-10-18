@@ -278,19 +278,38 @@ const DeviceManagement: React.FC = () => {
   const handleSaveMacAddresses = async () => {
     if (!selectedDevice) return;
     
+    // Filter out empty MAC addresses before sending
+    const validMacs = macAddresses.filter(mac => 
+      mac.mac_address && 
+      mac.mac_address.trim() !== '' && 
+      mac.adapter_type && 
+      mac.adapter_type.trim() !== ''
+    );
+
+    if (validMacs.length === 0) {
+      setError('Please add at least one valid MAC address with adapter type');
+      return;
+    }
+    
     try {
       const response = await axios.put(`http://localhost:3001/api/devices/${selectedDevice.id}/mac-addresses`, {
-        macAddresses: macAddresses
+        macAddresses: validMacs.map(mac => ({
+          macAddress: mac.mac_address.trim(),
+          adapterType: mac.adapter_type.trim(),
+          adapterName: mac.adapter_name ? mac.adapter_name.trim() : 'Unknown Adapter',
+          isActive: mac.is_active
+        }))
       });
       
       if (response.data.success) {
         setSuccess('MAC addresses updated successfully');
         setMacAddresses(response.data.data);
         fetchDevices(); // Refresh device list
+        setError(''); // Clear any previous errors
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving MAC addresses:', error);
-      setError('Failed to save MAC addresses');
+      setError(error.response?.data?.message || 'Failed to save MAC addresses');
     }
   };
 
@@ -586,6 +605,9 @@ const DeviceManagement: React.FC = () => {
                     onChange={(e) => handleUpdateMacAddress(index, 'mac_address', e.target.value)}
                     placeholder="00:11:22:33:44:55"
                     size="small"
+                    required
+                    error={!mac.mac_address || mac.mac_address.trim() === ''}
+                    helperText={!mac.mac_address || mac.mac_address.trim() === '' ? 'MAC address is required' : ''}
                   />
                 </Grid>
                 <Grid item xs={12} sm={3}>
