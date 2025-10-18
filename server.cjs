@@ -820,10 +820,38 @@ async function setupDatabase() {
           });
         }
 
-        // Check for emergency access
+        // Check for emergency access (only for Director with 2FA)
         if (emergencyCode) {
+          // Only Director can use emergency access
+          if (user.role !== 'Director') {
+            return res.status(403).json({
+              success: false,
+              message: 'Emergency access is only available for Director role'
+            });
+          }
+          
           const isEmergencyValid = await verifyEmergencyAccess(emergencyCode);
           if (isEmergencyValid) {
+            // Emergency access still requires 2FA for Director
+            const needs2FA = await needsTwoFactorAuth(user.id);
+            if (needs2FA && !twoFactorCode) {
+              return res.status(200).json({
+                success: false,
+                requiresTwoFactor: true,
+                message: 'Emergency access requires two-factor authentication. Please enter your 2FA code.'
+              });
+            }
+            
+            if (needs2FA && twoFactorCode) {
+              const is2FAValid = await verifyTwoFactorCode(user.id, twoFactorCode);
+              if (!is2FAValid) {
+                return res.status(401).json({
+                  success: false,
+                  message: 'Invalid two-factor authentication code for emergency access'
+                });
+              }
+            }
+            
             console.log('Emergency access granted for:', user.name);
             // Skip all other security checks for emergency access
           } else {
@@ -1846,7 +1874,7 @@ app.get('/api/devices', async (req, res) => {
 app.put('/api/devices/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { is_active, device_name, location } = req.body;
+    const { is_active, device_name, location, employee_id, is_factory_device } = req.body;
 
     const device = await db('authorized_devices')
       .where('id', id)
@@ -1854,6 +1882,8 @@ app.put('/api/devices/:id', async (req, res) => {
         is_active,
         device_name,
         location,
+        employee_id: employee_id || null,
+        is_factory_device: is_factory_device !== undefined ? is_factory_device : true,
         updated_at: new Date().toISOString()
       })
       .returning('*');

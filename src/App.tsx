@@ -35,6 +35,7 @@ import theme from './theme';
 import logo from './assets/Matsplash-logo.png';
 import { getRoleNavigation, getDefaultView } from './components/RoleBasedNavigation';
 import ClockInScreen from './components/ClockInScreen';
+import DirectorDashboard from './components/DirectorDashboard';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -128,6 +129,11 @@ const App: React.FC = () => {
         // Handle clock-in-out section
         if (currentPage === 'clock-in-out') {
           return <ClockInScreen user={user} />;
+        }
+
+        // Handle Director dashboard
+        if (user?.role === 'Director') {
+          return <DirectorDashboard currentPage={currentPage} />;
         }
 
         return (
@@ -365,8 +371,9 @@ const App: React.FC = () => {
                         size="small"
                         onClick={() => setShowEmergencyAccess(!showEmergencyAccess)}
                         sx={{ color: '#ff6b6b' }}
+                        disabled={!loginData.emailOrPhone || !loginData.emailOrPhone.includes('director')}
                       >
-                        Emergency Access
+                        Emergency Access (Director Only)
                       </Button>
                       <Button
                         type="button"
@@ -483,8 +490,11 @@ const App: React.FC = () => {
                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
                       • <strong>Location:</strong> Non-Director roles must be at factory location
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
                       • <strong>Factory Devices:</strong> FACTORY-LAPTOP-001, FACTORY-DESKTOP-001, FACTORY-TABLET-001, FACTORY-MOBILE-001
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
+                      • <strong>Emergency Access:</strong> Director only, requires 2FA
                     </Typography>
                   </Box>
             </CardContent>
