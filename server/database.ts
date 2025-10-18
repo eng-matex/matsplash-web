@@ -475,8 +475,90 @@ async function setupDatabase() {
         table.string('model');
         table.string('manufacturer');
         table.timestamp('last_seen');
+        table.string('resolution').defaultTo('1920x1080');
+        table.integer('fps').defaultTo(30);
+        table.boolean('night_vision').defaultTo(false);
+        table.boolean('motion_detection').defaultTo(true);
+        table.boolean('audio_enabled').defaultTo(false);
+        table.boolean('recording_enabled').defaultTo(true);
+        table.boolean('continuous_recording').defaultTo(false);
+        table.decimal('storage_used', 10, 2).defaultTo(0);
+        table.decimal('storage_total', 10, 2).defaultTo(100);
         table.timestamps(true, true);
       });
+    } else {
+      // Add new columns to existing cameras table if they don't exist
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.string('resolution').defaultTo('1920x1080');
+        });
+      } catch (error) {
+        console.log('resolution column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.integer('fps').defaultTo(30);
+        });
+      } catch (error) {
+        console.log('fps column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.boolean('night_vision').defaultTo(false);
+        });
+      } catch (error) {
+        console.log('night_vision column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.boolean('motion_detection').defaultTo(true);
+        });
+      } catch (error) {
+        console.log('motion_detection column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.boolean('audio_enabled').defaultTo(false);
+        });
+      } catch (error) {
+        console.log('audio_enabled column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.boolean('recording_enabled').defaultTo(true);
+        });
+      } catch (error) {
+        console.log('recording_enabled column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.boolean('continuous_recording').defaultTo(false);
+        });
+      } catch (error) {
+        console.log('continuous_recording column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.decimal('storage_used', 10, 2).defaultTo(0);
+        });
+      } catch (error) {
+        console.log('storage_used column may already exist');
+      }
+      
+      try {
+        await db.schema.alterTable('cameras', (table) => {
+          table.decimal('storage_total', 10, 2).defaultTo(100);
+        });
+      } catch (error) {
+        console.log('storage_total column may already exist');
+      }
     }
 
     // Create camera_credentials table
@@ -486,6 +568,25 @@ async function setupDatabase() {
         table.string('username').notNullable();
         table.string('password').notNullable();
         table.string('description');
+        table.boolean('is_default').defaultTo(false);
+        table.timestamps(true, true);
+      });
+    }
+
+    // Create recording_sessions table
+    if (!await db.schema.hasTable('recording_sessions')) {
+      await db.schema.createTable('recording_sessions', (table) => {
+        table.string('id').primary();
+        table.integer('camera_id').references('id').inTable('cameras').notNullable();
+        table.timestamp('start_time').notNullable();
+        table.timestamp('end_time');
+        table.string('status').defaultTo('recording'); // recording, stopped, paused
+        table.string('recording_type').defaultTo('manual'); // manual, motion, continuous, scheduled
+        table.string('file_path');
+        table.integer('duration'); // in seconds
+        table.decimal('file_size', 15, 2); // in MB
+        table.integer('motion_events').defaultTo(0);
+        table.text('notes');
         table.timestamps(true, true);
       });
     }

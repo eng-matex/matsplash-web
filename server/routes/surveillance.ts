@@ -256,6 +256,278 @@ router.get('/credentials', async (req, res) => {
   }
 });
 
+// Recording management endpoints
+interface RecordingSession {
+  id: string;
+  camera_id: number;
+  start_time: string;
+  end_time?: string;
+  status: 'recording' | 'stopped' | 'paused';
+  recording_type: 'manual' | 'motion' | 'continuous' | 'scheduled';
+  file_path?: string;
+  duration?: number;
+  file_size?: number;
+  motion_events?: number;
+}
+
+// Start recording
+router.post('/cameras/:id/start-recording', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { recording_type = 'manual', duration } = req.body;
+    
+    const camera = await db('cameras').where('id', id).first();
+    if (!camera) {
+      return res.status(404).json({
+        success: false,
+        message: 'Camera not found'
+      } as ApiResponse);
+    }
+
+    // Check if camera is already recording
+    const existingRecording = await db('recording_sessions')
+      .where('camera_id', id)
+      .where('status', 'recording')
+      .first();
+
+    if (existingRecording) {
+      return res.status(400).json({
+        success: false,
+        message: 'Camera is already recording'
+      } as ApiResponse);
+    }
+
+    const sessionId = `rec_${id}_${Date.now()}`;
+    const recordingSession: RecordingSession = {
+      id: sessionId,
+      camera_id: parseInt(id),
+      start_time: new Date().toISOString(),
+      status: 'recording',
+      recording_type,
+      file_path: `recordings/${sessionId}.mp4`
+    };
+
+    // Store recording session in database
+    await db('recording_sessions').insert({
+      ...recordingSession,
+      created_at: new Date().toISOString()
+    });
+
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: req.body.userId || 1,
+      user_email: req.body.userEmail || 'system',
+      action: 'RECORDING_STARTED',
+      details: `Started ${recording_type} recording for camera ${camera.name}`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      created_at: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      data: recordingSession,
+      message: 'Recording started successfully'
+    } as ApiResponse<RecordingSession>);
+
+  } catch (error) {
+    console.error('Error starting recording:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start recording'
+    } as ApiResponse);
+  }
+});
+
+// Stop recording
+router.post('/cameras/:id/stop-recording', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const camera = await db('cameras').where('id', id).first();
+    if (!camera) {
+      return res.status(404).json({
+        success: false,
+        message: 'Camera not found'
+      } as ApiResponse);
+    }
+
+    // Find active recording session
+    const recordingSession = await db('recording_sessions')
+      .where('camera_id', id)
+      .where('status', 'recording')
+      .first();
+
+    if (!recordingSession) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active recording found for this camera'
+      } as ApiResponse);
+    }
+
+    const endTime = new Date().toISOString();
+    const duration = Math.floor((new Date(endTime).getTime() - new Date(recordingSession.start_time).getTime()) / 1000);
+
+    // Update recording session
+    await db('recording_sessions')
+      .where('id', recordingSession.id)
+      .update({
+        status: 'stopped',
+        end_time: endTime,
+        duration,
+        updated_at: new Date().toISOString()
+      });
+
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: req.body.userId || 1,
+      user_email: req.body.userEmail || 'system',
+      action: 'RECORDING_STOPPED',
+      details: `Stopped recording for camera ${camera.name} (${duration}s)`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      created_at: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...recordingSession,
+        status: 'stopped',
+        end_time: endTime,
+        duration
+      },
+      message: 'Recording stopped successfully'
+    } as ApiResponse<RecordingSession>);
+
+  } catch (error) {
+    console.error('Error stopping recording:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to stop recording'
+    } as ApiResponse);
+  }
+});
+
+// Get recording sessions
+router.get('/cameras/:id/recordings', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const recordings = await db('recording_sessions')
+      .where('camera_id', id)
+      .orderBy('start_time', 'desc')
+      .limit(parseInt(limit as string))
+      .offset(parseInt(offset as string));
+
+    res.json({
+      success: true,
+      data: recordings
+    } as ApiResponse<RecordingSession[]>);
+
+  } catch (error) {
+    console.error('Error fetching recordings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recordings'
+    } as ApiResponse);
+  }
+});
+
+// Get active recording status
+router.get('/cameras/:id/recording-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const activeRecording = await db('recording_sessions')
+      .where('camera_id', id)
+      .where('status', 'recording')
+      .first();
+
+    res.json({
+      success: true,
+      data: {
+        is_recording: !!activeRecording,
+        recording_session: activeRecording
+      }
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error fetching recording status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recording status'
+    } as ApiResponse);
+  }
+});
+
+// Configure 24/7 recording
+router.post('/cameras/:id/configure-247', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled, motion_detection = true, audio_enabled = false } = req.body;
+    
+    const camera = await db('cameras').where('id', id).first();
+    if (!camera) {
+      return res.status(404).json({
+        success: false,
+        message: 'Camera not found'
+      } as ApiResponse);
+    }
+
+    // Update camera settings
+    await db('cameras')
+      .where('id', id)
+      .update({
+        continuous_recording: enabled ? 1 : 0,
+        motion_detection: motion_detection ? 1 : 0,
+        audio_enabled: audio_enabled ? 1 : 0,
+        updated_at: new Date().toISOString()
+      });
+
+    // If enabling 24/7 recording, start recording
+    if (enabled) {
+      const sessionId = `247_${id}_${Date.now()}`;
+      const recordingSession: RecordingSession = {
+        id: sessionId,
+        camera_id: parseInt(id),
+        start_time: new Date().toISOString(),
+        status: 'recording',
+        recording_type: 'continuous'
+      };
+
+      await db('recording_sessions').insert({
+        ...recordingSession,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: req.body.userId || 1,
+      user_email: req.body.userEmail || 'system',
+      action: '247_RECORDING_CONFIGURED',
+      details: `${enabled ? 'Enabled' : 'Disabled'} 24/7 recording for camera ${camera.name}`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      created_at: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `24/7 recording ${enabled ? 'enabled' : 'disabled'} successfully`
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error configuring 24/7 recording:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to configure 24/7 recording'
+    } as ApiResponse);
+  }
+});
+
 // Network scanning functionality
 interface NetworkDevice {
   ip: string;
