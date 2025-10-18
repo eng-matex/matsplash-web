@@ -1,0 +1,414 @@
+# MatSplash Web Application - AI Agent Handoff Document
+
+## PROJECT OVERVIEW
+This is a modern web-based factory management system for water sachet production and distribution. The application has been built from scratch based on an existing Electron application, focusing on web-only deployment for GCP hosting.
+
+## CURRENT STATUS
+✅ **COMPLETED:**
+- Project structure and modern web stack setup
+- Authentication system with JWT and PIN-based login
+- Basic dashboard with role-based access
+- Database schema design
+- API endpoints foundation
+- Material-UI frontend with responsive design
+
+🔄 **IN PROGRESS:**
+- Core factory operation modules
+- Surveillance system integration
+
+⏳ **PENDING:**
+- Complete factory operation modules (packing, dispatch, inventory)
+- Surveillance center with camera management
+- GCP deployment configuration
+
+## TECHNICAL ARCHITECTURE
+
+### Frontend Stack
+- **React 18** with TypeScript
+- **Material-UI (MUI)** for UI components
+- **React Router** for navigation
+- **Axios** for API communication
+- **Vite** for development and building
+- **Context API** for state management
+
+### Backend Stack
+- **Node.js** with Express.js
+- **SQLite** database with Knex.js ORM
+- **JWT** for authentication
+- **bcryptjs** for password hashing
+- **CORS** enabled for cross-origin requests
+
+### Project Structure
+```
+matsplash-web/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   └── LoadingScreen.tsx
+│   ├── context/            # React context providers
+│   │   └── AuthContext.tsx
+│   ├── pages/              # Page components
+│   │   ├── LoginPage.tsx
+│   │   ├── ChangePinPage.tsx
+│   │   └── DashboardPage.tsx
+│   ├── types/              # TypeScript definitions
+│   │   └── index.ts
+│   └── utils/              # Utility functions
+├── server.cjs              # Express server (CommonJS)
+├── server/                 # TypeScript server files (for future use)
+│   ├── database.ts
+│   ├── config.ts
+│   └── routes/
+├── package.json
+└── README.md
+```
+
+## BUSINESS LOGIC REQUIREMENTS
+
+### User Roles & Permissions
+1. **Admin**: Full system access and configuration
+2. **Director**: Comprehensive oversight and reporting
+3. **Manager**: Order management and approval workflows
+4. **Receptionist**: Order creation and customer service
+5. **Storekeeper**: Inventory management and order processing
+6. **Driver/Assistant**: Delivery management and commission tracking
+7. **Packer/Operator/Cleaner**: Production and maintenance roles
+
+### Order Types (Critical Business Logic)
+1. **General Sales**: Walk-in customers
+   - Workflow: Receptionist/Manager → Storekeeper → Customer Pickup → Completion
+   - Status: Pending Pickup → Picked Up → Completed
+
+2. **Distributor Orders**: Registered distributors
+   - Workflow: Receptionist/Manager → Storekeeper → (Driver Pickup) → Delivery → Settlement → Returns Processing
+   - Status: Pending Pickup → Picked Up → Out for Delivery → Delivered → Completed
+   - Features: Free bag redemption, leakage returns
+
+3. **Driver Dispatches**: Company drivers delivering to customers
+   - Workflow: Receptionist/Manager → Storekeeper → Driver Pickup → Delivery → Settlement → Returns → Manager Approval
+   - Status: Pending Pickup → Picked Up → Out for Delivery → Settlement Pending → Returns Pending → Completed
+   - Features: Commission calculations, leakage replacement, discrepancy flagging
+
+### Database Schema (Key Tables)
+- **employees**: User management with roles, salaries, permissions
+- **orders**: Order management with status tracking and approval chains
+- **inventory_logs**: Real-time inventory tracking with audit trail
+- **attendance_logs**: Employee clock-in/out with hours tracking
+- **packing_logs**: Production tracking by packers
+- **dispatch_logs**: Delivery management and tracking
+- **driver_sales_logs**: Sales and commission tracking
+- **cameras**: Surveillance system management
+- **system_activity**: Complete audit trail
+
+## CURRENT IMPLEMENTATION DETAILS
+
+### Authentication System
+- **Default PIN**: All users use `1111` initially
+- **First Login Flow**: Users must change PIN on first login
+- **JWT Tokens**: 24-hour expiration
+- **Role-based Access**: Different dashboards per role
+
+### Default Users (PIN: 1111)
+- admin@matsplash.com (Admin)
+- director@matsplash.com (Director)
+- manager@matsplash.com (Manager)
+- receptionist@matsplash.com (Receptionist)
+- storekeeper@matsplash.com (Storekeeper)
+
+### API Endpoints (Currently Implemented)
+- POST /api/auth/login - User authentication
+- GET /api/auth/verify - Token verification
+- POST /api/auth/logout - User logout
+- GET /api/dashboard/stats - Dashboard statistics
+- GET /api/employees - Employee list
+- GET /api/health - Health check
+
+## IMMEDIATE NEXT STEPS
+
+### 1. Complete Factory Operation Modules
+**Priority: HIGH**
+
+#### Order Management System
+- Create order forms for all three order types
+- Implement order status tracking
+- Add approval workflow system
+- Build order history and filtering
+
+#### Inventory Management
+- Real-time inventory tracking
+- Stock level monitoring
+- Inventory audit functionality
+- Low stock alerts
+
+#### Employee Management
+- Employee CRUD operations
+- Attendance tracking with clock-in/out
+- Salary management system
+- Role-based permissions
+
+#### Production Tracking
+- Packing logs for packers
+- Production statistics
+- Quality control tracking
+- Shift management
+
+### 2. Surveillance System
+**Priority: MEDIUM**
+
+#### Camera Management
+- Add/edit/delete cameras
+- Camera discovery functionality
+- Live stream viewing
+- Camera status monitoring
+
+#### Security Features
+- Surveillance PIN system
+- Access control for camera feeds
+- Recording management
+- Alert system
+
+### 3. Advanced Features
+**Priority: MEDIUM**
+
+#### Reporting & Analytics
+- Comprehensive reporting system
+- Business intelligence dashboard
+- Export functionality (PDF, Excel)
+- Custom date range filtering
+
+#### Commission System
+- Automatic commission calculations
+- Driver/assistant commission tracking
+- Settlement processing
+- Discrepancy handling
+
+## TECHNICAL REQUIREMENTS
+
+### Frontend Development
+- Use Material-UI components consistently
+- Implement responsive design for all screen sizes
+- Follow React best practices with hooks
+- Use TypeScript for type safety
+- Implement proper error handling and loading states
+
+### Backend Development
+- Use Express.js with proper middleware
+- Implement proper error handling
+- Add input validation and sanitization
+- Use SQLite with Knex.js for database operations
+- Implement proper logging and monitoring
+
+### Database Operations
+- Use transactions for complex operations
+- Implement proper indexing for performance
+- Add data validation at database level
+- Implement audit trails for all operations
+
+## DEPLOYMENT CONSIDERATIONS
+
+### GCP Deployment
+- Configure for Google Cloud Platform
+- Set up Cloud SQL for production database
+- Implement proper environment configuration
+- Add monitoring and logging
+- Configure CI/CD pipeline
+
+### Security Requirements
+- Implement proper CORS configuration
+- Add rate limiting
+- Implement input validation
+- Use environment variables for secrets
+- Add HTTPS in production
+
+## CODE QUALITY STANDARDS
+
+### TypeScript
+- Use strict type checking
+- Define proper interfaces for all data structures
+- Avoid `any` types
+- Use proper error handling
+
+### React
+- Use functional components with hooks
+- Implement proper state management
+- Use Context API for global state
+- Follow component composition patterns
+
+### API Design
+- Use RESTful conventions
+- Implement proper HTTP status codes
+- Add comprehensive error responses
+- Use consistent response formats
+
+## TESTING REQUIREMENTS
+
+### Frontend Testing
+- Unit tests for components
+- Integration tests for user flows
+- E2E tests for critical paths
+- Accessibility testing
+
+### Backend Testing
+- Unit tests for API endpoints
+- Integration tests for database operations
+- Load testing for performance
+- Security testing
+
+## DOCUMENTATION NEEDS
+
+### Code Documentation
+- JSDoc comments for all functions
+- README updates for new features
+- API documentation
+- Database schema documentation
+
+### User Documentation
+- User manual for each role
+- Training materials
+- Troubleshooting guides
+- Feature release notes
+
+## CRITICAL BUSINESS RULES
+
+### Order Processing
+- Orders must go through proper approval chains
+- Inventory must be updated in real-time
+- All operations must be logged for audit
+- Discrepancies must be flagged for manager review
+
+### Employee Management
+- Attendance must be tracked accurately
+- Salaries must be calculated correctly
+- Role permissions must be enforced
+- All employee actions must be logged
+
+### Inventory Management
+- Stock levels must be accurate
+- All movements must be tracked
+- Low stock alerts must be sent
+- Physical counts must be verified
+
+## PERFORMANCE REQUIREMENTS
+
+### Response Times
+- API responses under 200ms
+- Page load times under 2 seconds
+- Real-time updates within 1 second
+- Database queries optimized
+
+### Scalability
+- Support for 100+ concurrent users
+- Handle 1000+ orders per day
+- Efficient database queries
+- Proper caching implementation
+
+## SECURITY REQUIREMENTS
+
+### Authentication
+- Secure JWT implementation
+- Password hashing with bcrypt
+- Session management
+- Role-based access control
+
+### Data Protection
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+- CSRF protection
+
+## MONITORING & LOGGING
+
+### Application Monitoring
+- Error tracking and reporting
+- Performance monitoring
+- User activity logging
+- System health checks
+
+### Business Metrics
+- Order processing times
+- Employee productivity metrics
+- Inventory turnover rates
+- Customer satisfaction tracking
+
+## INTEGRATION REQUIREMENTS
+
+### External Systems
+- Payment gateway integration (future)
+- Email notification system
+- SMS alerts for critical events
+- Third-party reporting tools
+
+### Mobile Support
+- Responsive web design
+- Progressive Web App features
+- Offline functionality (future)
+- Mobile-specific optimizations
+
+## MAINTENANCE REQUIREMENTS
+
+### Code Maintenance
+- Regular dependency updates
+- Code refactoring for performance
+- Bug fixes and improvements
+- Feature enhancements
+
+### Database Maintenance
+- Regular backups
+- Performance optimization
+- Data archiving
+- Schema migrations
+
+## SUCCESS CRITERIA
+
+### Functional Requirements
+- All user roles can access appropriate features
+- Order processing workflow is complete
+- Inventory tracking is accurate
+- Reporting system provides valuable insights
+
+### Non-Functional Requirements
+- Application is responsive and fast
+- System is secure and reliable
+- Code is maintainable and well-documented
+- Deployment process is automated
+
+## HANDOFF NOTES
+
+### Current Working State
+- Server running on port 3001
+- Frontend running on port 5173
+- Basic authentication working
+- Dashboard displaying mock data
+- Database schema ready for implementation
+
+### Development Environment
+- Node.js and npm installed
+- All dependencies in package.json
+- TypeScript configuration ready
+- Development scripts configured
+
+### Next Developer Should:
+1. Start with implementing the order management system
+2. Focus on the three order types and their workflows
+3. Implement proper database operations
+4. Add comprehensive error handling
+5. Test all functionality thoroughly
+6. Document all new features
+
+### Key Files to Focus On:
+- `src/types/index.ts` - All TypeScript definitions
+- `server.cjs` - Current working server
+- `src/pages/DashboardPage.tsx` - Main dashboard
+- `src/context/AuthContext.tsx` - Authentication logic
+
+### Business Context:
+This is a real factory management system for a water sachet production company. The system needs to handle real business operations including order processing, inventory management, employee tracking, and surveillance. Accuracy and reliability are critical for business operations.
+
+## CONTACT INFORMATION
+- Original requirements from existing Electron application
+- Business logic documented in WORKFLOW_DOCUMENTATION.md files
+- All user roles and permissions defined
+- Database schema matches business requirements
+
+---
+
+**IMPORTANT**: This is a production system that will be used by real employees in a factory environment. All features must be thoroughly tested and reliable. The system handles sensitive business data and must maintain data integrity at all times.

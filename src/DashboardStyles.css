@@ -1,0 +1,266 @@
+/* Modern Dashboard Styles */
+.dashboard-container {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-content {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  background-color: #f5f5f5;
+}
+
+.dashboard-main-area {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin: 16px;
+  min-height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.dashboard-section {
+  padding: 24px;
+  height: 100%;
+  overflow: auto;
+}
+
+/* Drawer Layout Styles - ENHANCED */
+.dashboard-drawer {
+  height: 100vh !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.dashboard-drawer .MuiDrawer-paper {
+  height: 100vh !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.dashboard-drawer-content {
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+}
+
+.dashboard-navigation-list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 140px) !important; /* Reserve space for logout */
+}
+
+.dashboard-logout-section {
+  flex-shrink: 0 !important;
+  border-top: 2px solid #e2e8f0 !important;
+  background-color: #f8fafc !important;
+  padding: 16px !important;
+  margin-top: 16px !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 1000 !important;
+  min-height: 80px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.dashboard-logout-button {
+  width: 100% !important;
+  background-color: #d32f2f !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  transition: all 0.2s ease !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dashboard-logout-button:hover {
+  background-color: #b71c1c !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3) !important;
+}
+
+/* Force visibility for critical navigation items */
+.dashboard-home-button {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  margin-bottom: 8px !important;
+}
+
+/* Ensure proper spacing in navigation */
+.dashboard-nav-item {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+.dashboard-nav-item:hover {
+  background-color: rgba(19, 187, 198, 0.08);
+  transform: translateX(4px);
+}
+
+.dashboard-nav-item.selected {
+  background-color: #13bbc6;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-main-area {
+    margin: 8px;
+    min-height: calc(100vh - 80px);
+  }
+  
+  .dashboard-section {
+    padding: 16px;
+  }
+  
+  .dashboard-navigation-list {
+    max-height: calc(100vh - 120px) !important;
+  }
+}
+
+/* Ensure proper scrolling */
+.dashboard-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Modern card styles */
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+/* Button improvements */
+.dashboard-button {
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: none;
+  transition: all 0.2s ease;
+}
+
+.dashboard-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Table improvements */
+.dashboard-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dashboard-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Form improvements */
+.dashboard-form {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.dashboard-form-field {
+  margin-bottom: 16px;
+}
+
+/* Status chips */
+.dashboard-status-chip {
+  border-radius: 16px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+/* Loading states */
+.dashboard-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* Empty states */
+.dashboard-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6c757d;
+}
+
+.dashboard-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Responsive grid */
+.dashboard-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Animation utilities */
+.dashboard-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
