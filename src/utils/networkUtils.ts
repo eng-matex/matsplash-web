@@ -1,8 +1,8 @@
 // Network utilities for capturing device information
 export interface NetworkAdapter {
   macAddress: string;
-  type: 'wifi' | 'ethernet' | 'bluetooth' | 'other';
-  name: string;
+  adapterType: 'wifi' | 'ethernet' | 'bluetooth' | 'other';
+  adapterName: string;
   isActive: boolean;
 }
 
@@ -15,24 +15,18 @@ export async function getNetworkAdapters(): Promise<NetworkAdapter[]> {
     // due to security restrictions. This is a mock implementation for demonstration.
     // In production, you would need to use a different approach or require user input.
 
-    // Mock network adapters for demonstration
-    const mockAdapters: NetworkAdapter[] = [
+    // For development/testing, use the actual factory device MAC addresses
+    const factoryAdapters: NetworkAdapter[] = [
       {
-        macAddress: generateMockMacAddress(),
-        type: 'wifi',
-        name: 'Wi-Fi Adapter',
+        macAddress: '9C:FC:E8:07:12:B4',
+        adapterType: 'wifi',
+        adapterName: 'WiFi',
         isActive: true
       },
       {
-        macAddress: generateMockMacAddress(),
-        type: 'ethernet',
-        name: 'Ethernet Adapter',
-        isActive: false
-      },
-      {
-        macAddress: generateMockMacAddress(),
-        type: 'bluetooth',
-        name: 'Bluetooth Adapter',
+        macAddress: 'C0-3E-BA-68-A7-6C',
+        adapterType: 'ethernet',
+        adapterName: 'Ethernet',
         isActive: true
       }
     ];
@@ -43,7 +37,7 @@ export async function getNetworkAdapters(): Promise<NetworkAdapter[]> {
     // 3. Use a browser extension with additional permissions
     // 4. Use a desktop application that can access system information
 
-    return mockAdapters;
+    return factoryAdapters;
   } catch (error) {
     console.error('Error getting network adapters:', error);
     return [];
