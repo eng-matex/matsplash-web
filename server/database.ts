@@ -591,6 +591,20 @@ async function setupDatabase() {
       });
     }
 
+    // Create motion_events table
+    if (!await db.schema.hasTable('motion_events')) {
+      await db.schema.createTable('motion_events', (table) => {
+        table.string('id').primary();
+        table.integer('camera_id').references('id').inTable('cameras').notNullable();
+        table.timestamp('timestamp').notNullable();
+        table.decimal('confidence', 3, 2).notNullable(); // 0.00 to 1.00
+        table.text('bounding_box'); // JSON string
+        table.string('event_type').notNullable(); // motion_start, motion_end, person_detected, object_detected
+        table.text('metadata'); // JSON string
+        table.timestamps(true, true);
+      });
+    }
+
     // Create system_activity table
     if (!await db.schema.hasTable('system_activity')) {
       await db.schema.createTable('system_activity', (table) => {

@@ -3,6 +3,8 @@ import { db } from '../database';
 import { ApiResponse, Camera, CameraCredentials } from '../../src/types';
 import * as net from 'net';
 import * as dgram from 'dgram';
+import { gcpStorage } from '../services/gcpStorage';
+import { motionDetectionService } from '../services/motionDetection';
 
 const router = express.Router();
 
@@ -857,5 +859,317 @@ function detectModelFromResponse(response: string): string {
   
   return 'Unknown';
 }
+
+// GCP Cloud Storage endpoints
+// Test GCP connection
+router.get('/gcp/test-connection', async (req, res) => {
+  try {
+    const result = await gcpStorage.testConnection();
+    
+    res.json({
+      success: result.success,
+      message: result.success ? 'GCP connection successful' : 'GCP connection failed',
+      error: result.error
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error testing GCP connection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test GCP connection'
+    } as ApiResponse);
+  }
+});
+
+// Get GCP storage statistics
+router.get('/gcp/storage-stats', async (req, res) => {
+  try {
+    const result = await gcpStorage.getStorageStats();
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.stats,
+        message: 'Storage statistics retrieved successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get storage statistics',
+        error: result.error
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error getting GCP storage stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get storage statistics'
+    } as ApiResponse);
+  }
+});
+
+// List recordings from GCP
+router.get('/gcp/recordings', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    const result = await gcpStorage.listRecordings();
+    
+    if (result.success && result.files) {
+      // Apply pagination
+      const startIndex = parseInt(offset as string);
+      const endIndex = startIndex + parseInt(limit as string);
+      const paginatedFiles = result.files.slice(startIndex, endIndex);
+      
+      res.json({
+        success: true,
+        data: {
+          files: paginatedFiles,
+          total: result.files.length,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string)
+        },
+        message: 'Recordings retrieved successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to list recordings',
+        error: result.error
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error listing GCP recordings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to list recordings'
+    } as ApiResponse);
+  }
+});
+
+// Get download URL for a recording
+router.get('/gcp/recordings/:fileName/download-url', async (req, res) => {
+  try {
+    const { fileName } = req.params;
+    const { expiration = 60 } = req.query; // Default 60 minutes
+    
+    const result = await gcpStorage.getDownloadUrl(fileName, parseInt(expiration as string));
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: {
+          downloadUrl: result.url,
+          expiresIn: parseInt(expiration as string)
+        },
+        message: 'Download URL generated successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate download URL',
+        error: result.error
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error generating download URL:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate download URL'
+    } as ApiResponse);
+  }
+});
+
+// Delete recording from GCP
+router.delete('/gcp/recordings/:fileName', async (req, res) => {
+  try {
+    const { fileName } = req.params;
+    
+    const result = await gcpStorage.deleteRecording(fileName);
+    
+    if (result.success) {
+      // Also remove from database if exists
+      await db('recording_sessions')
+        .where('file_path', 'like', `%${fileName}%`)
+        .del();
+      
+      res.json({
+        success: true,
+        message: 'Recording deleted successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete recording',
+        error: result.error
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error deleting GCP recording:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete recording'
+    } as ApiResponse);
+  }
+});
+
+// Upload recording to GCP (for future use with actual file uploads)
+router.post('/gcp/upload-recording', async (req, res) => {
+  try {
+    const { localFilePath, remoteFileName, metadata } = req.body;
+    
+    if (!localFilePath || !remoteFileName) {
+      return res.status(400).json({
+        success: false,
+        message: 'localFilePath and remoteFileName are required'
+      } as ApiResponse);
+    }
+    
+    const result = await gcpStorage.uploadRecording(localFilePath, remoteFileName, metadata);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: {
+          url: result.url,
+          fileName: result.fileName
+        },
+        message: 'Recording uploaded successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload recording',
+        error: result.error
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error uploading recording to GCP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload recording'
+    } as ApiResponse);
+  }
+});
+
+// Motion Detection endpoints
+// Process motion detection data
+router.post('/motion-detection/process', async (req, res) => {
+  try {
+    const { camera_id, motion_data } = req.body;
+    
+    if (!camera_id || !motion_data) {
+      return res.status(400).json({
+        success: false,
+        message: 'camera_id and motion_data are required'
+      } as ApiResponse);
+    }
+
+    const result = await motionDetectionService.processMotionDetection(camera_id, motion_data);
+    
+    res.json({
+      success: true,
+      data: result,
+      message: 'Motion detection processed successfully'
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error processing motion detection:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process motion detection'
+    } as ApiResponse);
+  }
+});
+
+// Get motion events for a camera
+router.get('/cameras/:id/motion-events', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const events = await motionDetectionService.getMotionEvents(
+      parseInt(id), 
+      parseInt(limit as string), 
+      parseInt(offset as string)
+    );
+    
+    res.json({
+      success: true,
+      data: events,
+      message: 'Motion events retrieved successfully'
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error fetching motion events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch motion events'
+    } as ApiResponse);
+  }
+});
+
+// Get motion detection statistics
+router.get('/motion-detection/stats', async (req, res) => {
+  try {
+    const { camera_id } = req.query;
+    
+    const stats = await motionDetectionService.getMotionStats(
+      camera_id ? parseInt(camera_id as string) : undefined
+    );
+    
+    res.json({
+      success: true,
+      data: stats,
+      message: 'Motion detection statistics retrieved successfully'
+    } as ApiResponse);
+
+  } catch (error) {
+    console.error('Error fetching motion stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch motion detection statistics'
+    } as ApiResponse);
+  }
+});
+
+// Update motion detection configuration
+router.put('/cameras/:id/motion-config', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled, sensitivity, min_confidence, cooldown_period, auto_recording } = req.body;
+    
+    const success = await motionDetectionService.updateMotionConfig(parseInt(id), {
+      enabled,
+      sensitivity,
+      min_confidence,
+      cooldown_period,
+      auto_recording
+    });
+    
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Motion detection configuration updated successfully'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update motion detection configuration'
+      } as ApiResponse);
+    }
+
+  } catch (error) {
+    console.error('Error updating motion config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update motion detection configuration'
+    } as ApiResponse);
+  }
+});
 
 export default router;
