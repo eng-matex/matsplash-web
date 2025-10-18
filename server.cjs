@@ -940,16 +940,23 @@ async function setupDatabase() {
               }
             }
           } else {
-            // For all other roles (non-privileged), they must use factory devices
-            const isFactoryDev = await isFactoryDevice(finalDeviceId);
-            console.log('Is factory device:', isFactoryDev);
+            // For roles that don't need whitelist, check if they can access remotely
+            const canAccessRemote = await canAccessRemotely(user.id);
+            console.log('Can access remotely:', canAccessRemote);
+            
+            if (!canAccessRemote) {
+              // For non-privileged roles, they must use factory devices
+              const isFactoryDev = await isFactoryDevice(finalDeviceId);
+              console.log('Is factory device:', isFactoryDev);
 
-            if (!isFactoryDev) {
-              return res.status(403).json({
-                success: false,
-                message: 'Access denied: You can only access the system from company-authorized devices. Please use a factory device (laptop, desktop, tablet, or mobile phone) that has been registered by your administrator.'
-              });
+              if (!isFactoryDev) {
+                return res.status(403).json({
+                  success: false,
+                  message: 'Access denied: You can only access the system from company-authorized devices. Please use a factory device (laptop, desktop, tablet, or mobile phone) that has been registered by your administrator.'
+                });
+              }
             }
+            // If can access remotely, no device restrictions
           }
 
           // Check if user can access remotely
