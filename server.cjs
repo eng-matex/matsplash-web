@@ -929,8 +929,8 @@ async function setupDatabase() {
             console.log('Device authorized:', isDeviceAuth);
 
             if (!isDeviceAuth) {
-              // For Admin and Director, allow factory device access even if not whitelisted
-              if ((user.role === 'Admin' || user.role === 'Director') && await isFactoryDevice(finalDeviceId)) {
+              // For Admin, Director, and Manager, allow factory device access even if not whitelisted
+              if ((user.role === 'Admin' || user.role === 'Director' || user.role === 'Manager') && await isFactoryDevice(finalDeviceId)) {
                 console.log(`Allowing factory device access for ${user.role} without whitelist`);
               } else {
                 return res.status(403).json({
