@@ -2,6 +2,9 @@ import React from 'react';
 import { Box, Typography, Card, CardContent } from '@mui/material';
 import DeviceManagement from './DeviceManagement';
 import EmployeeManagement from './EmployeeManagement';
+import DistributorManagement from './DistributorManagement';
+import PricingManagement from './PricingManagement';
+import SalaryManagement from './SalaryManagement';
 import ReportingAnalytics from './ReportingAnalytics';
 import SurveillanceManagement from './SurveillanceManagement';
 
@@ -14,9 +17,15 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage }) =>
     switch (currentPage) {
       case 'device-management':
         return <DeviceManagement />;
-      case 'employee-management':
+      case 'employee-mgmt':
         return <EmployeeManagement />;
-      case 'reporting-analytics':
+      case 'distributor-mgmt':
+        return <DistributorManagement />;
+      case 'pricing':
+        return <PricingManagement />;
+      case 'salary':
+        return <SalaryManagement />;
+      case 'reports':
         return <ReportingAnalytics />;
       case 'surveillance':
         return <SurveillanceManagement />;
@@ -29,7 +38,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage }) =>
                 Director Dashboard Overview
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Welcome to the Director dashboard. You have full access to all system features including device management, employee oversight, reporting, and surveillance.
+                Welcome to the Director dashboard. You have full access to all system features including device management, employee oversight, business operations, reporting, and surveillance.
               </Typography>
               
               <Box sx={{ mt: 3 }}>
@@ -41,6 +50,15 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage }) =>
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   • <strong>Employee Management:</strong> Oversee all employee accounts and permissions
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>Distributor Management:</strong> Manage distributor relationships and credit
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>Pricing Management:</strong> Set and manage product pricing strategies
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>Salary Management:</strong> Handle payroll and commission calculations
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   • <strong>Reporting & Analytics:</strong> Access comprehensive business reports

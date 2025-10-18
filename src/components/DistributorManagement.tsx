@@ -23,7 +23,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Tabs,
   Tab,
   Alert,
@@ -59,10 +58,9 @@ import {
   FormControlLabel as SwitchFormControlLabel,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  DatePicker,
-  LocalizationProvider
+  AccordionDetails
 } from '@mui/material';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import {
   Add,
   Edit,
@@ -502,7 +500,7 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
     setSelectedOrder(null);
   };
 
-  const handleDistributorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleDistributorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewDistributor((prev: any) => ({ ...prev, [name]: value }));
   };

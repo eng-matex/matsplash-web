@@ -58,10 +58,9 @@ import {
   FormControlLabel as SwitchFormControlLabel,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  DatePicker,
-  LocalizationProvider
+  AccordionDetails
 } from '@mui/material';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import {
   Add,
   Edit,
@@ -80,7 +79,6 @@ import {
   TrendingDown,
   BarChart,
   PieChart,
-  LineChart,
   ShowChart,
   Timeline,
   Schedule,

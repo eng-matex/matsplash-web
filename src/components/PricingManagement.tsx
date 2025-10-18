@@ -23,7 +23,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Tabs,
   Tab,
   Alert,
@@ -59,10 +58,9 @@ import {
   FormControlLabel as SwitchFormControlLabel,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  DatePicker,
-  LocalizationProvider
+  AccordionDetails
 } from '@mui/material';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import {
   Add,
   Edit,
@@ -140,8 +138,6 @@ import {
   LocalShipping,
   PriceCheck,
   Percent,
-  Euro,
-  Dollar,
   CurrencyExchange,
   MonetizationOn,
   AccountBalance,
@@ -159,14 +155,12 @@ import {
   Sell,
   PointOfSale,
   ReceiptLong,
-  Receipt,
   Calculate,
   Functions,
   TrendingFlat,
   ShowChart,
   BarChart,
-  PieChart,
-  LineChart
+  PieChart
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -559,7 +553,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     setSelectedRule(null);
   };
 
-  const handleProductChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleProductChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewProduct((prev: any) => {
       const updated = { ...prev, [name]: value };
@@ -578,7 +572,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     });
   };
 
-  const handleRuleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleRuleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewRule((prev: any) => ({ ...prev, [name]: value }));
   };

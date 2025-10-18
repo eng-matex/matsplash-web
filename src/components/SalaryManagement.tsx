@@ -23,7 +23,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Tabs,
   Tab,
   Alert,
@@ -59,10 +58,9 @@ import {
   FormControlLabel as SwitchFormControlLabel,
   Accordion,
   AccordionSummary,
-  AccordionDetails,
-  DatePicker,
-  LocalizationProvider
+  AccordionDetails
 } from '@mui/material';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import {
   Add,
   Edit,
@@ -140,8 +138,6 @@ import {
   LocalShipping,
   PriceCheck,
   Percent,
-  Euro,
-  Dollar,
   CurrencyExchange,
   MonetizationOn,
   AccountBalance,
@@ -165,7 +161,6 @@ import {
   ShowChart,
   BarChart,
   PieChart,
-  LineChart,
   AccountBalanceWallet,
   Savings,
   TrendingUp as TrendingUpIcon,
@@ -655,7 +650,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
     setSelectedSalaryRecord(null);
   };
 
-  const handleSalaryRecordChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleSalaryRecordChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewSalaryRecord((prev: any) => {
       const updated = { ...prev, [name]: value };
@@ -682,7 +677,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
     });
   };
 
-  const handleCommissionRecordChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleCommissionRecordChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewCommissionRecord((prev: any) => {
       const updated = { ...prev, [name]: value };

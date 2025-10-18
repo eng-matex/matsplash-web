@@ -60,6 +60,9 @@ export const getRoleNavigation = (role: string) => {
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
         { id: 'device-management', label: 'Device Management', icon: Devices, color: '#13bbc6' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
+        { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
+        { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
+        { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' }
       ];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from '@mui/material';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -53,6 +53,19 @@ interface Device {
   employee_id?: number;
   created_at: string;
   updated_at: string;
+  macAddresses?: MacAddress[];
+}
+
+interface MacAddress {
+  id: number;
+  device_id: number;
+  mac_address: string;
+  adapter_type: string;
+  adapter_name: string;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Employee {
@@ -70,6 +83,9 @@ const DeviceManagement: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [macDialogOpen, setMacDialogOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [macAddresses, setMacAddresses] = useState<MacAddress[]>([]);
   const [formData, setFormData] = useState({
     device_id: '',
     device_name: '',
@@ -213,6 +229,71 @@ const DeviceManagement: React.FC = () => {
     return deviceType?.icon || <Computer />;
   };
 
+  const handleOpenMacDialog = async (device: Device) => {
+    setSelectedDevice(device);
+    try {
+      const response = await axios.get(`http://localhost:3001/api/devices/${device.id}/mac-addresses`);
+      if (response.data.success) {
+        setMacAddresses(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching MAC addresses:', error);
+      setError('Failed to fetch MAC addresses');
+    }
+    setMacDialogOpen(true);
+  };
+
+  const handleCloseMacDialog = () => {
+    setMacDialogOpen(false);
+    setSelectedDevice(null);
+    setMacAddresses([]);
+  };
+
+  const handleAddMacAddress = () => {
+    const newMac: MacAddress = {
+      id: 0,
+      device_id: selectedDevice?.id || 0,
+      mac_address: '',
+      adapter_type: 'wifi',
+      adapter_name: '',
+      is_primary: false,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setMacAddresses([...macAddresses, newMac]);
+  };
+
+  const handleUpdateMacAddress = (index: number, field: keyof MacAddress, value: any) => {
+    const updated = [...macAddresses];
+    updated[index] = { ...updated[index], [field]: value };
+    setMacAddresses(updated);
+  };
+
+  const handleRemoveMacAddress = (index: number) => {
+    const updated = macAddresses.filter((_, i) => i !== index);
+    setMacAddresses(updated);
+  };
+
+  const handleSaveMacAddresses = async () => {
+    if (!selectedDevice) return;
+    
+    try {
+      const response = await axios.put(`http://localhost:3001/api/devices/${selectedDevice.id}/mac-addresses`, {
+        macAddresses: macAddresses
+      });
+      
+      if (response.data.success) {
+        setSuccess('MAC addresses updated successfully');
+        setMacAddresses(response.data.data);
+        fetchDevices(); // Refresh device list
+      }
+    } catch (error) {
+      console.error('Error saving MAC addresses:', error);
+      setError('Failed to save MAC addresses');
+    }
+  };
+
   const getEmployeeName = (employeeId?: number) => {
     if (!employeeId) return 'Factory Device';
     const employee = employees.find(emp => emp.id === employeeId);
@@ -322,13 +403,23 @@ const DeviceManagement: React.FC = () => {
                         size="small"
                         onClick={() => handleEditDevice(device)}
                         color="primary"
+                        title="Edit Device"
                       >
                         <Edit />
                       </IconButton>
                       <IconButton
                         size="small"
+                        onClick={() => handleOpenMacDialog(device)}
+                        color="info"
+                        title="Manage MAC Addresses"
+                      >
+                        <Security />
+                      </IconButton>
+                      <IconButton
+                        size="small"
                         onClick={() => handleDeleteDevice(device.id)}
                         color="error"
+                        title="Delete Device"
                       >
                         <Delete />
                       </IconButton>
@@ -458,6 +549,111 @@ const DeviceManagement: React.FC = () => {
             }}
           >
             {loading ? <CircularProgress size={20} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* MAC Address Management Dialog */}
+      <Dialog open={macDialogOpen} onClose={handleCloseMacDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Manage MAC Addresses - {selectedDevice?.device_name}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Add and manage all network adapter MAC addresses for this device. This ensures the device can be identified regardless of which network adapter is being used.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">MAC Addresses</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={handleAddMacAddress}
+              size="small"
+            >
+              Add MAC Address
+            </Button>
+          </Box>
+
+          {macAddresses.map((mac, index) => (
+            <Card key={index} sx={{ mb: 2, p: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="MAC Address"
+                    value={mac.mac_address}
+                    onChange={(e) => handleUpdateMacAddress(index, 'mac_address', e.target.value)}
+                    placeholder="00:11:22:33:44:55"
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Adapter Type</InputLabel>
+                    <Select
+                      value={mac.adapter_type}
+                      label="Adapter Type"
+                      onChange={(e) => handleUpdateMacAddress(index, 'adapter_type', e.target.value)}
+                    >
+                      <MenuItem value="wifi">WiFi</MenuItem>
+                      <MenuItem value="ethernet">Ethernet</MenuItem>
+                      <MenuItem value="bluetooth">Bluetooth</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="Adapter Name"
+                    value={mac.adapter_name}
+                    onChange={(e) => handleUpdateMacAddress(index, 'adapter_name', e.target.value)}
+                    placeholder="e.g., Intel WiFi 6"
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={2}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label={mac.is_primary ? 'Primary' : 'Secondary'}
+                      size="small"
+                      color={mac.is_primary ? 'primary' : 'default'}
+                      variant="outlined"
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveMacAddress(index)}
+                      color="error"
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Card>
+          ))}
+
+          {macAddresses.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                No MAC addresses configured. Click "Add MAC Address" to get started.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseMacDialog}>Cancel</Button>
+          <Button
+            onClick={handleSaveMacAddresses}
+            variant="contained"
+            disabled={loading}
+            sx={{
+              bgcolor: '#13bbc6',
+              '&:hover': { bgcolor: '#0fa8b3' }
+            }}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Save MAC Addresses'}
           </Button>
         </DialogActions>
       </Dialog>

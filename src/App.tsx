@@ -64,19 +64,9 @@ const App: React.FC = () => {
     setLoading(true);
     
     try {
-      // Get device information
-      const deviceInfo = {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        isTablet: /tablet|ipad|playbook|silk/i.test(navigator.userAgent),
-        isMobile: /mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent),
-        isFactoryDevice: window.location.hostname === 'localhost' || 
-                        window.location.hostname.includes('factory') ||
-                        window.location.hostname.includes('192.168') ||
-                        window.location.hostname.includes('10.0'),
-        screenResolution: `${screen.width}x${screen.height}`,
-        timestamp: new Date().toISOString()
-      };
+          // Get enhanced device information including network adapters
+          const { getEnhancedDeviceInfo } = await import('./utils/networkUtils');
+          const deviceInfo = await getEnhancedDeviceInfo();
 
       // Get location (mock for development)
       const location = {
@@ -286,12 +276,12 @@ const App: React.FC = () => {
             <CardContent>
               <Box sx={{ textAlign: 'center', mb: 4 }}>
                 <img src={logo} alt="MatSplash Logo" style={{ width: 200, height: 'auto', marginBottom: 20 }} />
-                <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-                  MatSplash Factory Management
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Please login to access the system
-                </Typography>
+                    <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+                      MatSplash Factory Management
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      Please login to access the system
+                    </Typography>
               </Box>
 
               {error && (
@@ -373,7 +363,7 @@ const App: React.FC = () => {
                         sx={{ color: '#ff6b6b' }}
                         disabled={!loginData.emailOrPhone || !loginData.emailOrPhone.includes('director')}
                       >
-                        Emergency Access (Director Only)
+                        Emergency Access
                       </Button>
                       <Button
                         type="button"
@@ -388,6 +378,21 @@ const App: React.FC = () => {
                         Reset
                       </Button>
                     </Box>
+
+                    {/* Show 2FA option for Director and Admin */}
+                    {loginData.emailOrPhone && (loginData.emailOrPhone.includes('director') || loginData.emailOrPhone.includes('admin')) && !requiresTwoFactor && (
+                      <Box sx={{ mt: 2 }}>
+                        <Button
+                          type="button"
+                          variant="outlined"
+                          size="small"
+                          onClick={() => setRequiresTwoFactor(true)}
+                          sx={{ color: '#13bbc6', borderColor: '#13bbc6' }}
+                        >
+                          Use Two-Factor Authentication
+                        </Button>
+                      </Box>
+                    )}
 
                     {showEmergencyAccess && (
                       <TextField
