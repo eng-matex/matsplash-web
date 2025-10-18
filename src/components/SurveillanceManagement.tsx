@@ -187,6 +187,16 @@ interface SurveillanceLog {
   notes?: string;
 }
 
+interface NetworkDevice {
+  ip: string;
+  port: number;
+  status: 'online' | 'offline';
+  responseTime?: number;
+  deviceType?: string;
+  manufacturer?: string;
+  model?: string;
+}
+
 const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selectedSection, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -225,6 +235,13 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
   });
   const [fullscreenCamera, setFullscreenCamera] = useState<Camera | null>(null);
   const [selectedView, setSelectedView] = useState('grid');
+  const [networkDevices, setNetworkDevices] = useState<NetworkDevice[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testResult, setTestResult] = useState<NetworkDevice | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const cameraLocations = [
     'Main Entrance',
@@ -550,6 +567,96 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
     }
   };
 
+  // Network scanning functions
+  const handleScanNetwork = async () => {
+    setScanning(true);
+    setScanProgress(0);
+    setNetworkDevices([]);
+    
+    try {
+      const response = await fetch('/api/surveillance/scan-network', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          networkRange: '192.168.1.1-254',
+          ports: [80, 8080, 554, 1935]
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setNetworkDevices(result.data);
+        setScanDialogOpen(true);
+      } else {
+        console.error('Network scan failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Error scanning network:', error);
+    } finally {
+      setScanning(false);
+      setScanProgress(100);
+    }
+  };
+
+  const handleTestCamera = async (ip: string, port: number = 80, username?: string, password?: string) => {
+    setTesting(true);
+    setTestResult(null);
+    
+    try {
+      const response = await fetch('/api/surveillance/test-camera', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ip_address: ip,
+          port,
+          username,
+          password,
+          timeout: 5000
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setTestResult(result.data);
+        setTestDialogOpen(true);
+      } else {
+        console.error('Camera test failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Error testing camera:', error);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleAddFromScan = (device: NetworkDevice) => {
+    setNewCamera({
+      name: `Camera ${device.ip}`,
+      ip_address: device.ip,
+      port: device.port,
+      username: 'admin',
+      password: '',
+      location: '',
+      model: device.model || 'Unknown',
+      manufacturer: device.manufacturer || 'Unknown',
+      resolution: '1920x1080',
+      fps: 30,
+      night_vision: false,
+      motion_detection: true,
+      audio_enabled: false,
+      recording_enabled: true
+    });
+    setDialogType('add');
+    setDialogOpen(true);
+    setScanDialogOpen(false);
+  };
+
   const filteredCameras = cameras.filter(camera => {
     const matchesSearch = camera.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          camera.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -784,6 +891,15 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
             sx={{ bgcolor: '#13bbc6' }}
           >
             Add Camera
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<NetworkCheck />}
+            onClick={handleScanNetwork}
+            disabled={scanning}
+            sx={{ borderColor: '#13bbc6', color: '#13bbc6' }}
+          >
+            {scanning ? 'Scanning...' : 'Scan Network'}
           </Button>
         </Box>
       </Box>
@@ -1103,6 +1219,171 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'new-camera' && (
             <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+              Add Camera
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Network Scan Dialog */}
+      <Dialog open={scanDialogOpen} onClose={() => setScanDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Network Scan Results</Typography>
+            <IconButton onClick={() => setScanDialogOpen(false)}>
+              <Cancel />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {scanning ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <CircularProgress />
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                Scanning network for cameras...
+              </Typography>
+              <LinearProgress variant="determinate" value={scanProgress} sx={{ mt: 2 }} />
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Found {networkDevices.length} devices on the network:
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>IP Address</TableCell>
+                      <TableCell>Port</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Device Type</TableCell>
+                      <TableCell>Manufacturer</TableCell>
+                      <TableCell>Model</TableCell>
+                      <TableCell>Response Time</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {networkDevices.map((device, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{device.ip}</TableCell>
+                        <TableCell>{device.port}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={device.status} 
+                            color={device.status === 'online' ? 'success' : 'error'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{device.deviceType || 'Unknown'}</TableCell>
+                        <TableCell>{device.manufacturer || 'Unknown'}</TableCell>
+                        <TableCell>{device.model || 'Unknown'}</TableCell>
+                        <TableCell>{device.responseTime ? `${device.responseTime}ms` : 'N/A'}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="Test Connection">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => handleTestCamera(device.ip, device.port)}
+                                disabled={testing}
+                              >
+                                <NetworkCheck />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Add as Camera">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => handleAddFromScan(device)}
+                                color="primary"
+                              >
+                                <Add />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScanDialogOpen(false)}>Close</Button>
+          <Button onClick={handleScanNetwork} variant="contained" disabled={scanning}>
+            Scan Again
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Camera Test Result Dialog */}
+      <Dialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Camera Test Result</Typography>
+            <IconButton onClick={() => setTestDialogOpen(false)}>
+              <Cancel />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {testing ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <CircularProgress />
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                Testing camera connection...
+              </Typography>
+            </Box>
+          ) : testResult ? (
+            <Box>
+              <Alert 
+                severity={testResult.status === 'online' ? 'success' : 'error'}
+                sx={{ mb: 2 }}
+              >
+                Camera is {testResult.status}
+              </Alert>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">IP Address:</Typography>
+                  <Typography variant="body1">{testResult.ip}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">Port:</Typography>
+                  <Typography variant="body1">{testResult.port}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">Response Time:</Typography>
+                  <Typography variant="body1">
+                    {testResult.responseTime ? `${testResult.responseTime}ms` : 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">Device Type:</Typography>
+                  <Typography variant="body1">{testResult.deviceType || 'Unknown'}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">Manufacturer:</Typography>
+                  <Typography variant="body1">{testResult.manufacturer || 'Unknown'}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="textSecondary">Model:</Typography>
+                  <Typography variant="body1">{testResult.model || 'Unknown'}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTestDialogOpen(false)}>Close</Button>
+          {testResult && testResult.status === 'online' && (
+            <Button 
+              onClick={() => {
+                handleAddFromScan(testResult);
+                setTestDialogOpen(false);
+              }} 
+              variant="contained"
+            >
               Add Camera
             </Button>
           )}

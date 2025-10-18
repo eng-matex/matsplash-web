@@ -1,6 +1,8 @@
 import * as express from 'express';
 import { db } from '../database';
 import { ApiResponse, Camera, CameraCredentials } from '../../src/types';
+import * as net from 'net';
+import * as dgram from 'dgram';
 
 const router = express.Router();
 
@@ -253,5 +255,335 @@ router.get('/credentials', async (req, res) => {
     } as ApiResponse);
   }
 });
+
+// Network scanning functionality
+interface NetworkDevice {
+  ip: string;
+  port: number;
+  status: 'online' | 'offline';
+  responseTime?: number;
+  deviceType?: string;
+  manufacturer?: string;
+  model?: string;
+}
+
+// Scan network for devices
+router.post('/scan-network', async (req, res) => {
+  try {
+    const { networkRange = '192.168.1.1-254', ports = [80, 8080, 554, 1935] } = req.body;
+    
+    console.log(`🔍 Scanning network range: ${networkRange} on ports: ${ports.join(', ')}`);
+    
+    const devices = await scanNetworkRange(networkRange, ports);
+    
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: req.body.userId || 1,
+      user_email: req.body.userEmail || 'system',
+      action: 'NETWORK_SCAN',
+      details: `Scanned network range ${networkRange} - found ${devices.length} devices`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      created_at: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      data: devices,
+      message: `Found ${devices.length} devices on the network`
+    } as ApiResponse<NetworkDevice[]>);
+
+  } catch (error) {
+    console.error('Error scanning network:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to scan network'
+    } as ApiResponse);
+  }
+});
+
+// Test camera connection
+router.post('/test-camera', async (req, res) => {
+  try {
+    const { ip_address, port = 80, username, password, timeout = 5000 } = req.body;
+    
+    if (!ip_address) {
+      return res.status(400).json({
+        success: false,
+        message: 'IP address is required'
+      } as ApiResponse);
+    }
+
+    console.log(`🔍 Testing camera connection: ${ip_address}:${port}`);
+    
+    const result = await testCameraConnection(ip_address, port, username, password, timeout);
+    
+    res.json({
+      success: true,
+      data: result,
+      message: result.status === 'online' ? 'Camera is reachable' : 'Camera is not reachable'
+    } as ApiResponse<NetworkDevice>);
+
+  } catch (error) {
+    console.error('Error testing camera:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test camera connection'
+    } as ApiResponse);
+  }
+});
+
+// Helper function to scan network range
+async function scanNetworkRange(networkRange: string, ports: number[]): Promise<NetworkDevice[]> {
+  const devices: NetworkDevice[] = [];
+  const [startIp, endIp] = parseNetworkRange(networkRange);
+  
+  if (!startIp || !endIp) {
+    throw new Error('Invalid network range format. Use format like "192.168.1.1-254"');
+  }
+
+  const ipList = generateIpList(startIp, endIp);
+  
+  // Scan in batches to avoid overwhelming the network
+  const batchSize = 20;
+  for (let i = 0; i < ipList.length; i += batchSize) {
+    const batch = ipList.slice(i, i + batchSize);
+    const batchPromises = batch.map(ip => scanIpForPorts(ip, ports));
+    const batchResults = await Promise.allSettled(batchPromises);
+    
+    batchResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.length > 0) {
+        devices.push(...result.value);
+      }
+    });
+    
+    // Small delay between batches
+    if (i + batchSize < ipList.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  
+  return devices;
+}
+
+// Helper function to parse network range
+function parseNetworkRange(networkRange: string): [string, string] | [null, null] {
+  const parts = networkRange.split('-');
+  if (parts.length !== 2) return [null, null];
+  
+  const [startPart, endPart] = parts;
+  const startIpParts = startPart.split('.');
+  const endIpParts = endPart.split('.');
+  
+  if (startIpParts.length !== 4 || endIpParts.length !== 4) return [null, null];
+  
+  // Handle cases like "192.168.1.1-254"
+  if (endIpParts.length === 1) {
+    const baseIp = startIpParts.slice(0, 3).join('.');
+    return [`${baseIp}.${startIpParts[3]}`, `${baseIp}.${endIpParts[0]}`];
+  }
+  
+  return [startPart, endPart];
+}
+
+// Helper function to generate IP list
+function generateIpList(startIp: string, endIp: string): string[] {
+  const ips: string[] = [];
+  const startParts = startIp.split('.').map(Number);
+  const endParts = endIp.split('.').map(Number);
+  
+  for (let a = startParts[0]; a <= endParts[0]; a++) {
+    for (let b = startParts[1]; b <= endParts[1]; b++) {
+      for (let c = startParts[2]; c <= endParts[2]; c++) {
+        for (let d = startParts[3]; d <= endParts[3]; d++) {
+          ips.push(`${a}.${b}.${c}.${d}`);
+        }
+      }
+    }
+  }
+  
+  return ips;
+}
+
+// Helper function to scan IP for specific ports
+async function scanIpForPorts(ip: string, ports: number[]): Promise<NetworkDevice[]> {
+  const devices: NetworkDevice[] = [];
+  
+  for (const port of ports) {
+    try {
+      const result = await testPort(ip, port);
+      if (result.status === 'online') {
+        devices.push({
+          ip,
+          port,
+          status: 'online',
+          responseTime: result.responseTime,
+          deviceType: detectDeviceType(port),
+          manufacturer: detectManufacturer(ip, port),
+          model: detectModel(ip, port)
+        });
+      }
+    } catch (error) {
+      // Port is closed or unreachable
+    }
+  }
+  
+  return devices;
+}
+
+// Helper function to test port connectivity
+function testPort(ip: string, port: number, timeout: number = 3000): Promise<{ status: 'online' | 'offline', responseTime?: number }> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const startTime = Date.now();
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      const responseTime = Date.now() - startTime;
+      socket.destroy();
+      resolve({ status: 'online', responseTime });
+    });
+    
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve({ status: 'offline' });
+    });
+    
+    socket.on('error', () => {
+      socket.destroy();
+      resolve({ status: 'offline' });
+    });
+    
+    socket.connect(port, ip);
+  });
+}
+
+// Helper function to test camera connection
+async function testCameraConnection(ip: string, port: number, username?: string, password?: string, timeout: number = 5000): Promise<NetworkDevice> {
+  const startTime = Date.now();
+  
+  try {
+    // Test basic connectivity
+    const portTest = await testPort(ip, port, timeout);
+    
+    if (portTest.status === 'offline') {
+      return {
+        ip,
+        port,
+        status: 'offline'
+      };
+    }
+    
+    // Test HTTP connection (common for IP cameras)
+    const httpTest = await testHttpConnection(ip, port, username, password, timeout);
+    
+    return {
+      ip,
+      port,
+      status: 'online',
+      responseTime: Date.now() - startTime,
+      deviceType: 'camera',
+      manufacturer: httpTest.manufacturer,
+      model: httpTest.model
+    };
+    
+  } catch (error) {
+    return {
+      ip,
+      port,
+      status: 'offline'
+    };
+  }
+}
+
+// Helper function to test HTTP connection
+function testHttpConnection(ip: string, port: number, username?: string, password?: string, timeout: number = 5000): Promise<{ manufacturer?: string, model?: string }> {
+  return new Promise((resolve) => {
+    const http = require('http');
+    const url = `http://${ip}:${port}`;
+    
+    const options = {
+      timeout,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    };
+    
+    if (username && password) {
+      const auth = Buffer.from(`${username}:${password}`).toString('base64');
+      options.headers['Authorization'] = `Basic ${auth}`;
+    }
+    
+    const req = http.get(url, options, (res: any) => {
+      let data = '';
+      res.on('data', (chunk: any) => data += chunk);
+      res.on('end', () => {
+        const manufacturer = detectManufacturerFromResponse(data);
+        const model = detectModelFromResponse(data);
+        resolve({ manufacturer, model });
+      });
+    });
+    
+    req.on('error', () => resolve({}));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({});
+    });
+  });
+}
+
+// Helper function to detect device type based on port
+function detectDeviceType(port: number): string {
+  switch (port) {
+    case 80:
+    case 8080:
+      return 'web_camera';
+    case 554:
+      return 'rtsp_camera';
+    case 1935:
+      return 'rtmp_camera';
+    default:
+      return 'unknown';
+  }
+}
+
+// Helper function to detect manufacturer
+function detectManufacturer(ip: string, port: number): string {
+  // This is a simplified detection - in reality, you'd need to make HTTP requests
+  // and parse response headers or HTML content
+  return 'Unknown';
+}
+
+// Helper function to detect model
+function detectModel(ip: string, port: number): string {
+  // This is a simplified detection - in reality, you'd need to make HTTP requests
+  // and parse response headers or HTML content
+  return 'Unknown';
+}
+
+// Helper function to detect manufacturer from HTTP response
+function detectManufacturerFromResponse(response: string): string {
+  const lowerResponse = response.toLowerCase();
+  
+  if (lowerResponse.includes('hikvision')) return 'Hikvision';
+  if (lowerResponse.includes('dahua')) return 'Dahua';
+  if (lowerResponse.includes('axis')) return 'Axis';
+  if (lowerResponse.includes('foscam')) return 'Foscam';
+  if (lowerResponse.includes('d-link')) return 'D-Link';
+  if (lowerResponse.includes('tp-link')) return 'TP-Link';
+  if (lowerResponse.includes('netgear')) return 'Netgear';
+  
+  return 'Unknown';
+}
+
+// Helper function to detect model from HTTP response
+function detectModelFromResponse(response: string): string {
+  // Look for common model patterns in HTML/HTTP responses
+  const modelMatch = response.match(/model[:\s]+([a-zA-Z0-9\-_]+)/i);
+  if (modelMatch) return modelMatch[1];
+  
+  return 'Unknown';
+}
 
 export default router;
