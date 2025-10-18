@@ -1197,12 +1197,12 @@ app.get('/api/employees', async (req, res) => {
     // Function to register multiple MAC addresses for a device
     async function registerDeviceMacAddresses(deviceId, macAddresses) {
       try {
-        // First, deactivate all existing MAC addresses for this device
-        await db('device_mac_addresses')
+        // Get existing MAC addresses for this device
+        const existingMacs = await db('device_mac_addresses')
           .where('device_id', deviceId)
-          .update({ is_active: false, updated_at: new Date().toISOString() });
+          .select('*');
 
-        // Insert new MAC addresses - filter out empty/invalid ones
+        // Filter out empty/invalid MAC addresses
         if (macAddresses && macAddresses.length > 0) {
           const validMacs = macAddresses.filter(mac => 
             mac.macAddress && 
@@ -1212,19 +1212,76 @@ app.get('/api/employees', async (req, res) => {
           );
 
           if (validMacs.length > 0) {
-            const macData = validMacs.map((mac, index) => ({
-              device_id: deviceId,
-              mac_address: mac.macAddress.trim(),
-              adapter_type: mac.adapterType.trim(),
-              adapter_name: mac.adapterName ? mac.adapterName.trim() : 'Unknown Adapter',
-              is_primary: index === 0, // First valid MAC is primary
-              is_active: mac.isActive !== false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }));
+            // Process each valid MAC address
+            for (let index = 0; index < validMacs.length; index++) {
+              const mac = validMacs[index];
+              const macAddress = mac.macAddress.trim();
+              const adapterType = mac.adapterType.trim();
+              const adapterName = mac.adapterName ? mac.adapterName.trim() : 'Unknown Adapter';
+              const isPrimary = index === 0; // First valid MAC is primary
 
-            await db('device_mac_addresses').insert(macData);
+              // Check if this MAC address already exists for this device
+              const existingMac = existingMacs.find(existing => 
+                existing.mac_address === macAddress
+              );
+
+              if (existingMac) {
+                // Update existing MAC address
+                await db('device_mac_addresses')
+                  .where('id', existingMac.id)
+                  .update({
+                    adapter_type: adapterType,
+                    adapter_name: adapterName,
+                    is_primary: isPrimary,
+                    is_active: mac.isActive !== false,
+                    updated_at: new Date().toISOString()
+                  });
+              } else {
+                // Insert new MAC address
+                await db('device_mac_addresses').insert({
+                  device_id: deviceId,
+                  mac_address: macAddress,
+                  adapter_type: adapterType,
+                  adapter_name: adapterName,
+                  is_primary: isPrimary,
+                  is_active: mac.isActive !== false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              }
+            }
+
+            // Deactivate any existing MAC addresses that are not in the new list
+            const newMacAddresses = validMacs.map(mac => mac.macAddress.trim());
+            const macsToDeactivate = existingMacs.filter(existing => 
+              !newMacAddresses.includes(existing.mac_address)
+            );
+
+            for (const macToDeactivate of macsToDeactivate) {
+              await db('device_mac_addresses')
+                .where('id', macToDeactivate.id)
+                .update({ 
+                  is_active: false, 
+                  updated_at: new Date().toISOString() 
+                });
+            }
+          } else {
+            // If no valid MACs provided, deactivate all existing ones
+            await db('device_mac_addresses')
+              .where('device_id', deviceId)
+              .update({ 
+                is_active: false, 
+                updated_at: new Date().toISOString() 
+              });
           }
+        } else {
+          // If no MACs provided, deactivate all existing ones
+          await db('device_mac_addresses')
+            .where('device_id', deviceId)
+            .update({ 
+              is_active: false, 
+              updated_at: new Date().toISOString() 
+            });
         }
 
         return true;
