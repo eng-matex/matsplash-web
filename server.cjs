@@ -687,6 +687,56 @@ async function setupDatabase() {
       });
       console.log('✅ Added default emergency access code');
     }
+
+    // Add some default factory devices for testing
+    const existingDevices = await db('authorized_devices').count('* as count').first();
+    if (existingDevices.count === 0) {
+      const defaultFactoryDevices = [
+        {
+          device_id: 'FACTORY-LAPTOP-001',
+          device_name: 'Factory Laptop 001',
+          device_type: 'laptop',
+          location: 'factory_floor',
+          device_fingerprint: 'factory-laptop-001',
+          is_factory_device: true,
+          is_active: true,
+          created_by: 1
+        },
+        {
+          device_id: 'FACTORY-DESKTOP-001',
+          device_name: 'Factory Desktop 001',
+          device_type: 'desktop',
+          location: 'office',
+          device_fingerprint: 'factory-desktop-001',
+          is_factory_device: true,
+          is_active: true,
+          created_by: 1
+        },
+        {
+          device_id: 'FACTORY-TABLET-001',
+          device_name: 'Factory Tablet 001',
+          device_type: 'tablet',
+          location: 'factory_floor',
+          device_fingerprint: 'factory-tablet-001',
+          is_factory_device: true,
+          is_active: true,
+          created_by: 1
+        },
+        {
+          device_id: 'FACTORY-MOBILE-001',
+          device_name: 'Factory Mobile 001',
+          device_type: 'mobile',
+          location: 'factory_floor',
+          device_fingerprint: 'factory-mobile-001',
+          is_factory_device: true,
+          is_active: true,
+          created_by: 1
+        }
+      ];
+
+      await db('authorized_devices').insert(defaultFactoryDevices);
+      console.log('✅ Added default factory devices');
+    }
     
     console.log('✅ Database setup complete');
   } catch (error) {
@@ -739,15 +789,15 @@ async function setupDatabase() {
         if (user.first_login) {
           console.log('Is first login?', user.first_login);
           const userResponse = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
+        id: user.id,
+        name: user.name,
+        email: user.email,
             phone: user.phone,
-            role: user.role,
-            isEmployee: user.role !== 'Admin' && user.role !== 'Director',
+        role: user.role,
+        isEmployee: user.role !== 'Admin' && user.role !== 'Director',
             isActive: user.status === 'active',
             createdAt: user.created_at,
-            first_login: user.first_login
+        first_login: user.first_login
           };
 
           return res.status(200).json({
@@ -785,19 +835,36 @@ async function setupDatabase() {
         } else {
           // Apply security restrictions based on role
           const deviceId = getDeviceFingerprint(req);
+          const deviceInfoFingerprint = getDeviceFingerprintFromInfo(deviceInfo);
+          const finalDeviceId = deviceInfoFingerprint || deviceId;
           
-          // Check if user needs device whitelist
+          console.log('Device fingerprint from request:', deviceId);
+          console.log('Device fingerprint from info:', deviceInfoFingerprint);
+          console.log('Final device ID:', finalDeviceId);
+          
+          // Check if user needs device whitelist (Manager, Sales, Admin)
           const needsWhitelist = await needsDeviceWhitelist(user.id);
           console.log('Needs device whitelist:', needsWhitelist);
           
           if (needsWhitelist) {
-            const isDeviceAuth = await isDeviceAuthorized(deviceId, user.id);
+            const isDeviceAuth = await isDeviceAuthorized(finalDeviceId, user.id);
             console.log('Device authorized:', isDeviceAuth);
 
             if (!isDeviceAuth) {
               return res.status(403).json({
                 success: false,
                 message: 'Access denied: This device is not authorized for your account. Please contact your administrator to add this device to your whitelist.'
+              });
+            }
+          } else {
+            // For all other roles (non-privileged), they must use factory devices
+            const isFactoryDev = await isFactoryDevice(finalDeviceId);
+            console.log('Is factory device:', isFactoryDev);
+
+            if (!isFactoryDev) {
+              return res.status(403).json({
+                success: false,
+                message: 'Access denied: You can only access the system from company-authorized devices. Please use a factory device (laptop, desktop, tablet, or mobile phone) that has been registered by your administrator.'
               });
             }
           }
@@ -909,17 +976,17 @@ async function setupDatabase() {
           success: true,
           user: userResponse,
           token,
-          message: 'Login successful'
-        });
+      message: 'Login successful'
+    });
 
       } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({
-          success: false,
+      success: false,
           message: 'Internal server error'
-        });
-      }
     });
+  }
+});
 
 // Mock dashboard stats
 app.get('/api/dashboard/stats', async (req, res) => {
@@ -936,9 +1003,9 @@ app.get('/api/dashboard/stats', async (req, res) => {
       .count('id as count')
       .first();
 
-    res.json({
-      success: true,
-      data: {
+  res.json({
+    success: true,
+    data: {
         totalEmployees: parseInt(totalEmployees?.count) || 5,
         activeEmployees: parseInt(activeEmployees?.count) || 5,
         totalOrders: 0,
@@ -1006,20 +1073,36 @@ app.get('/api/employees', async (req, res) => {
 
 // ===== UTILITY FUNCTIONS =====
 
-// Function to get device fingerprint
-function getDeviceFingerprint(req) {
-  const userAgent = req.get('User-Agent') || '';
-  const acceptLanguage = req.get('Accept-Language') || '';
-  const acceptEncoding = req.get('Accept-Encoding') || '';
-  const connection = req.get('Connection') || '';
-  
-  // Create a simple device fingerprint (in production, use more sophisticated methods)
-  const fingerprint = Buffer.from(
-    userAgent + acceptLanguage + acceptEncoding + connection
-  ).toString('base64').substring(0, 32);
-  
-  return fingerprint;
-}
+    // Function to get device fingerprint
+    function getDeviceFingerprint(req) {
+      const userAgent = req.get('User-Agent') || '';
+      const acceptLanguage = req.get('Accept-Language') || '';
+      const acceptEncoding = req.get('Accept-Encoding') || '';
+      const connection = req.get('Connection') || '';
+      
+      // Create a simple device fingerprint (in production, use more sophisticated methods)
+      const fingerprint = Buffer.from(
+        userAgent + acceptLanguage + acceptEncoding + connection
+      ).toString('base64').substring(0, 32);
+      
+      return fingerprint;
+    }
+
+    // Function to get device fingerprint from device info
+    function getDeviceFingerprintFromInfo(deviceInfo) {
+      if (!deviceInfo) return null;
+      
+      const userAgent = deviceInfo.userAgent || '';
+      const platform = deviceInfo.platform || '';
+      const screenResolution = deviceInfo.screenResolution || '';
+      
+      // Create a simple device fingerprint
+      const fingerprint = Buffer.from(
+        userAgent + platform + screenResolution
+      ).toString('base64').substring(0, 32);
+      
+      return fingerprint;
+    }
 
     // Function to check if device is authorized
     async function isDeviceAuthorized(deviceId, employeeId = null) {
@@ -1044,6 +1127,22 @@ function getDeviceFingerprint(req) {
       }
     }
 
+    // Function to check if device is a factory device (for non-privileged roles)
+    async function isFactoryDevice(deviceId) {
+      try {
+        const device = await db('authorized_devices')
+          .where('device_id', deviceId)
+          .where('is_active', true)
+          .where('is_factory_device', true)
+          .first();
+        
+        return !!device;
+      } catch (error) {
+        console.error('Error checking factory device:', error);
+        return false;
+      }
+    }
+
     // Function to check if employee can access remotely (updated security model)
     async function canAccessRemotely(employeeId) {
       try {
@@ -1054,6 +1153,7 @@ function getDeviceFingerprint(req) {
         if (!employee) return false;
         
         // Only Director can access remotely without device restrictions
+        // All other roles must use company devices at factory location
         return employee.role === 'Director';
       } catch (error) {
         console.error('Error checking remote access:', error);
@@ -1987,6 +2087,68 @@ app.get('/api/locations', async (req, res) => {
       }
     });
 
+    // ===== DEVICE REGISTRATION ENDPOINT (FOR TESTING) =====
+
+    // Register current device as factory device (for testing)
+    app.post('/api/devices/register-current', async (req, res) => {
+      try {
+        const { deviceInfo, deviceName, deviceType } = req.body;
+        
+        if (!deviceInfo) {
+          return res.status(400).json({
+            success: false,
+            message: 'Device information is required'
+          });
+        }
+
+        const deviceFingerprint = getDeviceFingerprintFromInfo(deviceInfo);
+        
+        if (!deviceFingerprint) {
+          return res.status(400).json({
+            success: false,
+            message: 'Could not generate device fingerprint'
+          });
+        }
+
+        // Check if device already exists
+        const existingDevice = await db('authorized_devices')
+          .where('device_fingerprint', deviceFingerprint)
+          .first();
+
+        if (existingDevice) {
+          return res.json({
+            success: true,
+            message: 'Device already registered',
+            data: existingDevice
+          });
+        }
+
+        // Register as factory device
+        const device = await db('authorized_devices').insert({
+          device_id: `FACTORY-${deviceType || 'DEVICE'}-${Date.now()}`,
+          device_name: deviceName || 'Factory Device',
+          device_type: deviceType || 'unknown',
+          location: 'factory_floor',
+          device_fingerprint: deviceFingerprint,
+          is_factory_device: true,
+          is_active: true,
+          created_by: 1 // Admin
+        }).returning('*');
+
+        res.json({
+          success: true,
+          message: 'Device registered as factory device',
+          data: device[0]
+        });
+      } catch (error) {
+        console.error('Error registering device:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to register device'
+        });
+      }
+    });
+
     // ===== EMERGENCY ACCESS ENDPOINTS =====
 
     // Get emergency access codes (Admin/Director only)
@@ -2055,7 +2217,7 @@ app.get('/api/locations', async (req, res) => {
           message: 'Failed to create emergency code'
         });
       }
-    });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

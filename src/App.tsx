@@ -478,10 +478,13 @@ const App: React.FC = () => {
                       • <strong>Manager, Sales, Admin:</strong> Must use whitelisted personal devices
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>All Other Roles:</strong> Must use factory-authorized devices only
+                      • <strong>All Other Roles:</strong> Must use company-authorized devices (laptop, desktop, tablet, mobile)
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
+                      • <strong>Location:</strong> Non-Director roles must be at factory location
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
-                      • <strong>Location:</strong> Non-Director roles must be at factory location
+                      • <strong>Factory Devices:</strong> FACTORY-LAPTOP-001, FACTORY-DESKTOP-001, FACTORY-TABLET-001, FACTORY-MOBILE-001
                     </Typography>
                   </Box>
             </CardContent>
