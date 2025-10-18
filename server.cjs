@@ -929,10 +929,15 @@ async function setupDatabase() {
             console.log('Device authorized:', isDeviceAuth);
 
             if (!isDeviceAuth) {
-              return res.status(403).json({
-                success: false,
-                message: 'Access denied: This device is not authorized for your account. Please contact your administrator to add this device to your whitelist.'
-              });
+              // For Admin and Director, allow factory device access even if not whitelisted
+              if ((user.role === 'Admin' || user.role === 'Director') && await isFactoryDevice(finalDeviceId)) {
+                console.log(`Allowing factory device access for ${user.role} without whitelist`);
+              } else {
+                return res.status(403).json({
+                  success: false,
+                  message: 'Access denied: This device is not authorized for your account. Please contact your administrator to add this device to your whitelist.'
+                });
+              }
             }
           } else {
             // For all other roles (non-privileged), they must use factory devices
