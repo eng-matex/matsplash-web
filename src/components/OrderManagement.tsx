@@ -225,6 +225,29 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
         {
           id: 3,
           order_number: 'ORD003',
+          customer_name: 'Driver Sales Route',
+          customer_phone: '08022222222',
+          customer_email: 'driver@example.com',
+          order_type: 'driver_dispatch',
+          status: 'out_for_delivery',
+          total_amount: 0,
+          items: [
+            { id: 3, product_name: 'Water Sachets (500ml)', quantity: 150, unit_price: 0, total_price: 0, unit: 'bags' }
+          ],
+          created_at: new Date(Date.now() - 1800000).toISOString(),
+          updated_at: new Date(Date.now() - 1800000).toISOString(),
+          created_by: 'Receptionist',
+          notes: 'Driver dispatch - commission based sales',
+          delivery_address: 'Various locations on route',
+          payment_method: 'cash',
+          payment_status: 'pending',
+          assigned_driver: 'Driver Name',
+          assigned_driver_id: 1,
+          storekeeper_authorized: true
+        },
+        {
+          id: 4,
+          order_number: 'ORD004',
           customer_name: 'Mini Store ABC',
           customer_phone: '08011111111',
           customer_email: 'store@example.com',
@@ -232,7 +255,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
           status: 'pending',
           total_amount: 0,
           items: [
-            { id: 3, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
+            { id: 4, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
           ],
           created_at: new Date(Date.now() - 1800000).toISOString(),
           updated_at: new Date(Date.now() - 1800000).toISOString(),
@@ -241,8 +264,8 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
           delivery_address: '789 Store Street, Lagos',
           payment_method: 'cash',
           payment_status: 'pending',
-          assigned_driver: 'Driver Name',
-          assigned_driver_id: 1,
+          assigned_driver: 'Driver Assistant',
+          assigned_driver_id: 2,
           storekeeper_authorized: false
         }
       ];
@@ -251,7 +274,8 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
         { id: 1, name: 'John Doe', phone: '08012345678', email: 'john@example.com', customer_type: 'individual' },
         { id: 2, name: 'ABC Distributors', phone: '08087654321', email: 'orders@abcdist.com', customer_type: 'distributor' },
         { id: 3, name: 'Jane Smith', phone: '08098765432', email: 'jane@example.com', customer_type: 'retailer' },
-        { id: 4, name: 'Mini Store ABC', phone: '08011111111', email: 'store@example.com', customer_type: 'retailer' }
+        { id: 4, name: 'Mini Store ABC', phone: '08011111111', email: 'store@example.com', customer_type: 'retailer' },
+        { id: 5, name: 'Driver Sales Route', phone: '08022222222', email: 'driver@example.com', customer_type: 'individual' }
       ];
 
       setOrders(mockOrders);
@@ -292,6 +316,87 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     setDialogOpen(false);
     setDialogType('');
     setSelectedOrder(null);
+  };
+
+  const handleCreateOrder = async () => {
+    if (!newOrder.customer_name || !newOrder.customer_phone || !newOrder.items?.length) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if ((newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') && !newOrder.assigned_driver_id) {
+      alert('Please assign a driver for this order type');
+      return;
+    }
+
+    try {
+      // Generate order number
+      const orderNumber = `ORD${String(orders.length + 1).padStart(3, '0')}`;
+      
+      const orderData = {
+        ...newOrder,
+        order_number: orderNumber,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        created_by: 'Receptionist', // This should come from auth context
+        status: 'pending'
+      };
+
+      // Here you would make an API call to create the order
+      console.log('Creating order:', orderData);
+      
+      // For now, add to local state
+      const newOrderWithId = {
+        ...orderData,
+        id: orders.length + 1
+      };
+      
+      setOrders(prev => [newOrderWithId, ...prev]);
+      handleCloseDialog();
+      
+      alert(`${newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' : newOrder.order_type === 'driver_dispatch' ? 'Driver Dispatch' : 'Order'} created successfully!`);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert('Error creating order. Please try again.');
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      // Here you would make an API call to update the order status
+      console.log('Updating order status:', orderId, newStatus);
+      
+      // For now, update local state
+      setOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { ...order, status: newStatus as any, updated_at: new Date().toISOString() }
+          : order
+      ));
+      
+      alert(`Order status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Error updating order status. Please try again.');
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: number) => {
+    if (!confirm('Are you sure you want to delete this order?')) {
+      return;
+    }
+
+    try {
+      // Here you would make an API call to delete the order
+      console.log('Deleting order:', orderId);
+      
+      // For now, update local state
+      setOrders(prev => prev.filter(order => order.id !== orderId));
+      
+      alert('Order deleted successfully');
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Error deleting order. Please try again.');
+    }
   };
 
   const handleAddItem = () => {
@@ -336,7 +441,19 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
   const handleProductChange = (productName: string) => {
     const product = products.find(p => p.name === productName);
     if (product) {
-      const price = newOrder.order_type === 'store_dispatch' ? 0 : product.price;
+      let price = product.price;
+      
+      // Set pricing based on order type
+      if (newOrder.order_type === 'store_dispatch') {
+        price = 0; // No price for mini store stocking
+      } else if (newOrder.order_type === 'driver_dispatch') {
+        price = 0; // No upfront price, driver sells at ₦270/₦250
+      } else if (newOrder.order_type === 'distributor_order') {
+        // Distributor pricing: 50+ bags = ₦200/bag, <50 bags = ₦240/bag
+        // This will be calculated based on quantity
+        price = product.price; // Will be adjusted based on quantity
+      }
+      
       setNewItem(prev => ({
         ...prev,
         product_name: productName,
@@ -348,10 +465,23 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
   };
 
   const handleQuantityChange = (quantity: number) => {
-    const price = newOrder.order_type === 'store_dispatch' ? 0 : (newItem.unit_price || 0);
+    let price = newItem.unit_price || 0;
+    
+    // Apply distributor pricing logic
+    if (newOrder.order_type === 'distributor_order' && newItem.product_name) {
+      const product = products.find(p => p.name === newItem.product_name);
+      if (product) {
+        // Distributor pricing: 50+ bags = ₦200/bag, <50 bags = ₦240/bag
+        price = quantity >= 50 ? 200 : 240;
+      }
+    } else if (newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') {
+      price = 0; // No upfront pricing for these types
+    }
+    
     setNewItem(prev => ({
       ...prev,
       quantity,
+      unit_price: price,
       total_price: quantity * price
     }));
   };
@@ -549,21 +679,60 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Tooltip title="View Details">
-                        <IconButton size="small" onClick={() => handleOpenDialog('view', order)}>
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit Order">
-                        <IconButton size="small" onClick={() => handleOpenDialog('edit', order)}>
-                          <Edit />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Print Order">
-                        <IconButton size="small" onClick={() => handleOpenDialog('print', order)}>
-                          <Print />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Tooltip title="View Details">
+                          <IconButton size="small" onClick={() => handleOpenDialog('view', order)}>
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Order">
+                          <IconButton size="small" onClick={() => handleOpenDialog('edit', order)}>
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                        {order.status === 'pending' && (
+                          <Tooltip title="Mark as Processing">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                              sx={{ color: '#2196f3' }}
+                            >
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {order.status === 'processing' && (
+                          <Tooltip title="Mark as Packed">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleUpdateOrderStatus(order.id, 'packed')}
+                              sx={{ color: '#4caf50' }}
+                            >
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {order.status === 'packed' && (order.order_type === 'store_dispatch' || order.order_type === 'driver_dispatch') && (
+                          <Tooltip title="Authorize Pickup">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleUpdateOrderStatus(order.id, 'out_for_delivery')}
+                              sx={{ color: '#ff9800' }}
+                            >
+                              <LocalShipping />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Delete Order">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDeleteOrder(order.id)}
+                            sx={{ color: '#f44336' }}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -650,7 +819,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 rows={2}
               />
             </Grid>
-            {newOrder.order_type === 'store_dispatch' && (
+            {(newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') && (
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>Assign Driver</InputLabel>
@@ -696,7 +865,12 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 >
                   {products.map((product) => (
                     <MenuItem key={product.name} value={product.name}>
-                      {product.name} - {newOrder.order_type === 'store_dispatch' ? 'No Price' : `₦${product.price}`}
+                      {product.name} - {
+                        newOrder.order_type === 'store_dispatch' ? 'No Price (Mini Store)' :
+                        newOrder.order_type === 'driver_dispatch' ? 'No Price (Commission Sales)' :
+                        newOrder.order_type === 'distributor_order' ? 'Dynamic Pricing (50+ = ₦200, <50 = ₦240)' :
+                        `₦${product.price}`
+                      }
                     </MenuItem>
                   ))}
                 </Select>
@@ -718,7 +892,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 type="number"
                 value={newItem.unit_price}
                 InputProps={{
-                  startAdornment: newOrder.order_type === 'store_dispatch' ? 
+                  startAdornment: (newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') ? 
                     <InputAdornment position="start">No Price</InputAdornment> :
                     <InputAdornment position="start">₦</InputAdornment>
                 }}
@@ -731,7 +905,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 label="Total"
                 value={newItem.total_price}
                 InputProps={{
-                  startAdornment: newOrder.order_type === 'store_dispatch' ? 
+                  startAdornment: (newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') ? 
                     <InputAdornment position="start">No Price</InputAdornment> :
                     <InputAdornment position="start">₦</InputAdornment>,
                   readOnly: true
@@ -787,7 +961,11 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
               </TableContainer>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">
-                  Total Amount: {newOrder.order_type === 'store_dispatch' ? 'No Price (Mini Store Stocking)' : `₦${newOrder.total_amount?.toLocaleString()}`}
+                  Total Amount: {
+                    newOrder.order_type === 'store_dispatch' ? 'No Price (Mini Store Stocking)' :
+                    newOrder.order_type === 'driver_dispatch' ? 'No Price (Commission Sales)' :
+                    `₦${newOrder.total_amount?.toLocaleString()}`
+                  }
                 </Typography>
               </Box>
             </Box>
@@ -798,10 +976,10 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-            {newOrder.order_type === 'store_dispatch' ? 'Notes' : 'Payment & Notes'}
+            {(newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') ? 'Notes' : 'Payment & Notes'}
           </Typography>
           <Grid container spacing={3}>
-            {newOrder.order_type !== 'store_dispatch' && (
+            {newOrder.order_type !== 'store_dispatch' && newOrder.order_type !== 'driver_dispatch' && (
               <>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
@@ -836,12 +1014,20 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label={newOrder.order_type === 'store_dispatch' ? 'Notes (Mini Store Stocking)' : 'Notes (Optional)'}
+                label={
+                  newOrder.order_type === 'store_dispatch' ? 'Notes (Mini Store Stocking)' :
+                  newOrder.order_type === 'driver_dispatch' ? 'Notes (Driver Commission Sales)' :
+                  'Notes (Optional)'
+                }
                 value={newOrder.notes}
                 onChange={(e) => setNewOrder(prev => ({ ...prev, notes: e.target.value }))}
                 multiline
                 rows={3}
-                placeholder={newOrder.order_type === 'store_dispatch' ? 'Enter details about the mini store stocking order...' : 'Enter any additional notes...'}
+                placeholder={
+                  newOrder.order_type === 'store_dispatch' ? 'Enter details about the mini store stocking order...' :
+                  newOrder.order_type === 'driver_dispatch' ? 'Enter details about the driver sales route and commission structure...' :
+                  'Enter any additional notes...'
+                }
               />
             </Grid>
             {newOrder.order_type === 'store_dispatch' && (
@@ -854,20 +1040,35 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 </Alert>
               </Grid>
             )}
+            {newOrder.order_type === 'driver_dispatch' && (
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Driver Dispatch Order:</strong> This order is for driver commission-based sales. 
+                    The driver will sell water at ₦270/₦250 per bag and receive commission. No upfront payment required.
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
             <Grid item xs={12}>
               <Button
                 variant="contained"
                 size="large"
                 startIcon={<CheckCircle />}
+                onClick={handleCreateOrder}
                 sx={{ bgcolor: '#13bbc6' }}
                 disabled={
                   !newOrder.customer_name || 
                   !newOrder.customer_phone || 
                   !newOrder.items?.length ||
-                  (newOrder.order_type === 'store_dispatch' && !newOrder.assigned_driver_id)
+                  ((newOrder.order_type === 'store_dispatch' || newOrder.order_type === 'driver_dispatch') && !newOrder.assigned_driver_id)
                 }
               >
-                Create {newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' : 'Order'}
+                Create {
+                  newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' :
+                  newOrder.order_type === 'driver_dispatch' ? 'Driver Dispatch' :
+                  'Order'
+                }
               </Button>
             </Grid>
           </Grid>
@@ -911,19 +1112,64 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
           {dialogType === 'print' && 'Print Order'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType === 'new' && 'Order creation functionality will be implemented here.'}
-            {dialogType === 'view' && 'Order details view will be implemented here.'}
-            {dialogType === 'edit' && 'Order editing functionality will be implemented here.'}
-            {dialogType === 'print' && 'Order printing functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'view' && selectedOrder && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Order Details</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Order Number:</strong> {selectedOrder.order_number}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Status:</strong> {selectedOrder.status}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Customer:</strong> {selectedOrder.customer_name}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Phone:</strong> {selectedOrder.customer_phone}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Order Type:</strong> {selectedOrder.order_type.replace('_', ' ')}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2"><strong>Total Amount:</strong> {
+                    selectedOrder.order_type === 'store_dispatch' ? 'No Price (Mini Store)' :
+                    selectedOrder.order_type === 'driver_dispatch' ? 'No Price (Commission Sales)' :
+                    `₦${selectedOrder.total_amount?.toLocaleString()}`
+                  }</Typography>
+                </Grid>
+                {selectedOrder.assigned_driver && (
+                  <Grid item xs={6}>
+                    <Typography variant="body2"><strong>Assigned Driver:</strong> {selectedOrder.assigned_driver}</Typography>
+                  </Grid>
+                )}
+                <Grid item xs={12}>
+                  <Typography variant="body2"><strong>Delivery Address:</strong> {selectedOrder.delivery_address}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2"><strong>Notes:</strong> {selectedOrder.notes}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+          {dialogType === 'edit' && selectedOrder && (
+            <Typography>Edit functionality will be implemented here.</Typography>
+          )}
+          {dialogType === 'print' && selectedOrder && (
+            <Typography>Print functionality will be implemented here.</Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {dialogType === 'new' && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
-              Create Order
-            </Button>
+          {dialogType === 'view' && selectedOrder && (
+            <>
+              <Button variant="outlined" onClick={() => handleOpenDialog('edit', selectedOrder)}>
+                Edit Order
+              </Button>
+              <Button variant="outlined" onClick={() => handleOpenDialog('print', selectedOrder)}>
+                Print Order
+              </Button>
+            </>
           )}
         </DialogActions>
       </Dialog>
