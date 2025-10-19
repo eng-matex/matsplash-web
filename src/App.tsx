@@ -135,7 +135,7 @@ const App: React.FC = () => {
         // Handle role-specific dashboards
         switch (user?.role?.toLowerCase()) {
           case 'director':
-            return <DirectorDashboard currentPage={currentPage} />;
+            return <DirectorDashboard currentPage={currentPage} onPageChange={setCurrentPage} />;
           case 'admin':
             return <ManagerDashboard selectedSection={currentPage} />; // Admin uses Manager dashboard
           case 'manager':
