@@ -72,11 +72,21 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   const [loading, setLoading] = useState(false);
   const [activeDispatches, setActiveDispatches] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
+  const [salesLogs, setSalesLogs] = useState<any[]>([]);
+  const [commissionData, setCommissionData] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
+  const [settlementData, setSettlementData] = useState({
+    bags_sold: 0,
+    bags_returned: 0,
+    total_sales: 0,
+    commission_earned: 0,
+    money_submitted: 0,
+    notes: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -90,100 +100,53 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
 
       switch (selectedSection) {
         case 'overview':
-          // Mock active dispatches data
-          setActiveDispatches([
-            {
-              id: 1,
-              dispatch_number: 'DISP001',
-              customer_name: 'John Doe',
-              customer_phone: '08012345678',
-              customer_address: '123 Main Street, Lagos',
-              items: [
-                { name: 'Water Sachets (500ml)', quantity: 50, unit: 'bags' },
-                { name: 'Water Sachets (1L)', quantity: 30, unit: 'bags' }
-                  ],
-              total_amount: 15000,
-              status: 'assigned',
-              assigned_at: new Date().toISOString(),
-              delivery_instructions: 'Call before delivery'
-            },
-            {
-              id: 2,
-              dispatch_number: 'DISP002',
-              customer_name: 'Jane Smith',
-              customer_phone: '08087654321',
-              customer_address: '456 Oak Avenue, Abuja',
-              items: [
-                { name: 'Water Sachets (500ml)', quantity: 100, unit: 'bags' }
-              ],
-              total_amount: 25000,
-              status: 'in_transit',
-              assigned_at: new Date(Date.now() - 3600000).toISOString(),
-              delivery_instructions: 'Leave at gate if no answer'
-            }
-          ]);
-          break;
         case 'active-dispatches':
-          // Same as overview for active dispatches
-          setActiveDispatches([
-            {
-              id: 1,
-              dispatch_number: 'DISP001',
-              customer_name: 'John Doe',
-              customer_phone: '08012345678',
-              customer_address: '123 Main Street, Lagos',
-              items: [
-                { name: 'Water Sachets (500ml)', quantity: 50, unit: 'bags' },
-                { name: 'Water Sachets (1L)', quantity: 30, unit: 'bags' }
-              ],
-              total_amount: 15000,
-              status: 'assigned',
-              assigned_at: new Date().toISOString(),
-              delivery_instructions: 'Call before delivery'
-            },
-            {
-              id: 2,
-              dispatch_number: 'DISP002',
-              customer_name: 'Jane Smith',
-              customer_phone: '08087654321',
-              customer_address: '456 Oak Avenue, Abuja',
-              items: [
-                { name: 'Water Sachets (500ml)', quantity: 100, unit: 'bags' }
-              ],
-              total_amount: 25000,
-              status: 'in_transit',
-              assigned_at: new Date(Date.now() - 3600000).toISOString(),
-              delivery_instructions: 'Leave at gate if no answer'
+          // Fetch driver dispatches from API
+          try {
+            const response = await axios.get('http://localhost:3001/api/orders?order_type=driver_dispatch&status=picked_up,in_transit', { headers });
+            if (response.data.success) {
+              setActiveDispatches(response.data.data || []);
+            } else {
+              // Fallback to mock data
+              setActiveDispatches(getMockActiveDispatches());
             }
-          ]);
+          } catch (error) {
+            console.log('API not available, using mock data');
+            setActiveDispatches(getMockActiveDispatches());
+          }
           break;
         case 'dispatch-log':
-          // Mock dispatch logs data
-          setDispatchLogs([
-            {
-              id: 1,
-              dispatch_number: 'DISP003',
-              customer_name: 'Mike Johnson',
-              customer_address: '789 Pine Street, Port Harcourt',
-              total_amount: 20000,
-              status: 'delivered',
-              assigned_at: new Date(Date.now() - 86400000).toISOString(),
-              delivered_at: new Date(Date.now() - 82800000).toISOString(),
-              payment_received: true,
-              commission: 2000
-            },
-            {
-              id: 2,
-              dispatch_number: 'DISP004',
-              customer_name: 'Sarah Wilson',
-              customer_address: '321 Elm Street, Kano',
-              total_amount: 18000,
-              status: 'failed',
-              assigned_at: new Date(Date.now() - 172800000).toISOString(),
-              failure_reason: 'Customer not available',
-              commission: 0
+          // Fetch completed dispatches
+          try {
+            const response = await axios.get('http://localhost:3001/api/orders?order_type=driver_dispatch&status=delivered,returned', { headers });
+            if (response.data.success) {
+              setDispatchLogs(response.data.data || []);
+            } else {
+              setDispatchLogs(getMockDispatchLogs());
             }
-          ]);
+          } catch (error) {
+            console.log('API not available, using mock data');
+            setDispatchLogs(getMockDispatchLogs());
+          }
+          break;
+        case 'sales-accounting':
+          // Fetch sales logs and commission data
+          try {
+            const [salesResponse, commissionResponse] = await Promise.all([
+              axios.get('http://localhost:3001/api/sales/driver-sales', { headers }),
+              axios.get('http://localhost:3001/api/salary/commission', { headers })
+            ]);
+            if (salesResponse.data.success) {
+              setSalesLogs(salesResponse.data.data || []);
+            }
+            if (commissionResponse.data.success) {
+              setCommissionData(commissionResponse.data.data || {});
+            }
+          } catch (error) {
+            console.log('API not available, using mock data');
+            setSalesLogs(getMockSalesLogs());
+            setCommissionData(getMockCommissionData());
+          }
           break;
       }
     } catch (error) {
@@ -192,6 +155,60 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       setLoading(false);
     }
   };
+
+  // Mock data functions
+  const getMockActiveDispatches = () => [
+    {
+      id: 1,
+      order_number: 'ORD-000001',
+      customer_name: 'John Doe',
+      customer_phone: '08012345678',
+      delivery_address: '123 Main Street, Lagos',
+      items: [
+        { product_name: 'Water Sachets (500ml)', quantity: 50, unit_price: 270 }
+      ],
+      total_amount: 13500,
+      status: 'picked_up',
+      created_at: new Date().toISOString(),
+      notes: 'Call before delivery'
+    }
+  ];
+
+  const getMockDispatchLogs = () => [
+    {
+      id: 1,
+      order_number: 'ORD-000001',
+      customer_name: 'John Doe',
+      status: 'delivered',
+      updated_at: new Date(Date.now() - 86400000).toISOString(),
+      total_amount: 13500
+    }
+  ];
+
+  const getMockSalesLogs = () => [
+    {
+      id: 1,
+      order_number: 'ORD-000001',
+      bags_sold: 45,
+      bags_returned: 5,
+      total_sales: 12150,
+      commission_earned: 1350,
+      money_submitted: 12150,
+      approval_status: 'Pending Approval',
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  const getMockCommissionData = () => ({
+    total_commission: 1350,
+    bags_sold_today: 45,
+    total_sales_today: 12150,
+    commission_rate: 30, // ₦30 per bag
+    expected_salary: 1350,
+    next_payment_date: '2025-11-05',
+    payment_status: 'Pending Manager Approval',
+    last_payment_date: '2025-10-18'
+  });
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
@@ -208,7 +225,39 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     setDialogType('');
     setSelectedItem(null);
     setActiveStep(0);
+    setSettlementData({
+      bags_sold: 0,
+      bags_returned: 0,
+      total_sales: 0,
+      commission_earned: 0,
+      money_submitted: 0,
+      notes: ''
+    });
   };
+
+  const handleUpdateDispatchStatus = async (dispatchId: number, newStatus: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.put(`http://localhost:3001/api/orders/${dispatchId}/status`, {
+        status: newStatus,
+        userId: 1, // This should come from auth context
+        notes: `Status updated to ${newStatus} by driver`
+      }, { headers });
+
+      if (response.data.success) {
+        fetchData(); // Refresh data
+        alert(`Dispatch status updated to ${newStatus}`);
+      } else {
+        alert('Error updating dispatch status: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error updating dispatch status:', error);
+      alert('Error updating dispatch status. Please try again.');
+    }
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -594,6 +643,131 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     </Box>
   );
 
+  const renderSalesAccounting = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+        Sales & Commission History
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Commission Summary */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                This Month's Commission
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                ₦{commissionData.total_commission?.toLocaleString() || '0'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {commissionData.bags_sold_today || 0} bags sold this month
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Rate: ₦{commissionData.commission_rate || 30} per bag
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Expected Salary */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                Expected Next Salary
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                ₦{commissionData.expected_salary?.toLocaleString() || '0'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Payment Date: {commissionData.next_payment_date || 'TBD'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Status: {commissionData.payment_status || 'Pending Approval'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Payment Status */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                Payment Status
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Chip 
+                  label={commissionData.payment_status || 'Pending Manager Approval'} 
+                  color={commissionData.payment_status === 'Approved' ? 'success' : 
+                         commissionData.payment_status === 'Pending' ? 'warning' : 'default'}
+                  size="medium"
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Last Payment: {commissionData.last_payment_date || 'N/A'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Next Payment: {commissionData.next_payment_date || 'TBD'}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Sales Logs - Read Only */}
+      <Card className="dashboard-card" sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+            Sales History (Read Only)
+          </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Settlement is handled by Receptionist. Manager reviews and approves commissions for payment.
+          </Alert>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Order ID</TableCell>
+                  <TableCell>Bags Sold</TableCell>
+                  <TableCell>Bags Returned</TableCell>
+                  <TableCell>Total Sales</TableCell>
+                  <TableCell>Commission Earned</TableCell>
+                  <TableCell>Money Submitted</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {salesLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{log.order_number}</TableCell>
+                    <TableCell>{log.bags_sold}</TableCell>
+                    <TableCell>{log.bags_returned}</TableCell>
+                    <TableCell>₦{log.total_sales?.toLocaleString()}</TableCell>
+                    <TableCell>₦{log.commission_earned?.toLocaleString()}</TableCell>
+                    <TableCell>₦{log.money_submitted?.toLocaleString()}</TableCell>
+                    <TableCell>{new Date(log.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={log.approval_status || 'Pending Approval'} 
+                        color={log.approval_status === 'Approved' ? 'success' : 
+                               log.approval_status === 'Rejected' ? 'error' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -610,6 +784,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         return renderActiveDispatches();
       case 'dispatch-log':
         return renderDispatchLog();
+      case 'sales-accounting':
+        return renderSalesAccounting();
       case 'my-attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="driver" />;
       default:
@@ -680,6 +856,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               />
             </Box>
           )}
+
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>

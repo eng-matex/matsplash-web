@@ -73,6 +73,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   const [attendance, setAttendance] = useState<any[]>([]);
   const [distributors, setDistributors] = useState<any[]>([]);
   const [systemActivity, setSystemActivity] = useState<any[]>([]);
+  const [commissionApprovals, setCommissionApprovals] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -115,6 +116,20 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
             { id: 2, user: 'Receptionist', action: 'Updated inventory', timestamp: new Date().toISOString(), details: 'Added 100 bags' }
           ]);
           break;
+        case 'commission-approval':
+          // Fetch commission approvals
+          try {
+            const commissionResponse = await axios.get('http://localhost:3001/api/sales/driver-sales', { headers });
+            if (commissionResponse.data.success) {
+              setCommissionApprovals(commissionResponse.data.data || []);
+            } else {
+              setCommissionApprovals(getMockCommissionApprovals());
+            }
+          } catch (error) {
+            console.log('Commission API not available, using mock data');
+            setCommissionApprovals(getMockCommissionApprovals());
+          }
+          break;
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -146,6 +161,66 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       case 'pending': return 'warning';
       case 'completed': return 'success';
       default: return 'default';
+    }
+  };
+
+  const getMockCommissionApprovals = () => [
+    {
+      id: 1,
+      order_number: 'ORD-000001',
+      driver_name: 'John Driver',
+      bags_sold: 45,
+      bags_returned: 5,
+      total_sales: 12150,
+      commission_earned: 1350,
+      money_submitted: 12150,
+      approval_status: 'Pending Manager Approval',
+      receptionist_notes: 'Driver submitted all money and sales data',
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  const handleApproveCommission = async (commissionId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.put(`http://localhost:3001/api/sales/commission/${commissionId}/approve`, {
+        approved_by: 1, // This should come from auth context
+        approval_notes: 'Approved by Manager'
+      }, { headers });
+
+      if (response.data.success) {
+        fetchData(); // Refresh data
+        alert('Commission approved successfully!');
+      } else {
+        alert('Error approving commission: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error approving commission:', error);
+      alert('Error approving commission. Please try again.');
+    }
+  };
+
+  const handleRejectCommission = async (commissionId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.put(`http://localhost:3001/api/sales/commission/${commissionId}/reject`, {
+        rejected_by: 1, // This should come from auth context
+        rejection_notes: 'Rejected by Manager - requires review'
+      }, { headers });
+
+      if (response.data.success) {
+        fetchData(); // Refresh data
+        alert('Commission rejected successfully!');
+      } else {
+        alert('Error rejecting commission: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error rejecting commission:', error);
+      alert('Error rejecting commission. Please try again.');
     }
   };
 
@@ -526,6 +601,139 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
     </Box>
   );
 
+  const renderCommissionApproval = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+        Commission Approval Management
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Approval Summary */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                Pending Approvals
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                {commissionApprovals.filter(approval => approval.approval_status === 'Pending Manager Approval').length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Awaiting manager approval
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Total Commission */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                Total Commission
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                ₦{commissionApprovals.reduce((sum, approval) => sum + (approval.commission_earned || 0), 0).toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total commission to approve
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Approved Today */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                Approved Today
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                {commissionApprovals.filter(approval => approval.approval_status === 'Approved').length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Commissions approved
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Commission Approvals Table */}
+      <Card className="dashboard-card" sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+            Commission Approvals
+          </Typography>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Order ID</TableCell>
+                  <TableCell>Driver</TableCell>
+                  <TableCell>Bags Sold</TableCell>
+                  <TableCell>Bags Returned</TableCell>
+                  <TableCell>Total Sales</TableCell>
+                  <TableCell>Commission</TableCell>
+                  <TableCell>Money Submitted</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {commissionApprovals.map((approval) => (
+                  <TableRow key={approval.id}>
+                    <TableCell>{approval.order_number}</TableCell>
+                    <TableCell>{approval.driver_name}</TableCell>
+                    <TableCell>{approval.bags_sold}</TableCell>
+                    <TableCell>{approval.bags_returned}</TableCell>
+                    <TableCell>₦{approval.total_sales?.toLocaleString()}</TableCell>
+                    <TableCell>₦{approval.commission_earned?.toLocaleString()}</TableCell>
+                    <TableCell>₦{approval.money_submitted?.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={approval.approval_status || 'Pending Manager Approval'} 
+                        color={approval.approval_status === 'Approved' ? 'success' : 
+                               approval.approval_status === 'Rejected' ? 'error' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {approval.approval_status === 'Pending Manager Approval' && (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Approve Commission">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApproveCommission(approval.id)}
+                              sx={{ color: '#4caf50' }}
+                            >
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Reject Commission">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRejectCommission(approval.id)}
+                              sx={{ color: '#f44336' }}
+                            >
+                              <Cancel />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -552,6 +760,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         return <ReportingAnalytics selectedSection={selectedSection} userRole="manager" />;
       case 'salary':
         return <SalaryManagement selectedSection={selectedSection} userRole="manager" />;
+      case 'commission-approval':
+        return renderCommissionApproval();
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="manager" />;
       case 'general-sales':

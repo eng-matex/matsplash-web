@@ -421,5 +421,195 @@ module.exports = (db) => {
     }
   });
 
+  // Get driver sales logs
+  router.get('/driver-sales', async (req, res) => {
+    try {
+      const driverSales = await db('driver_sales_logs')
+        .leftJoin('employees', 'driver_sales_logs.driver_id', 'employees.id')
+        .leftJoin('orders', 'driver_sales_logs.order_id', 'orders.id')
+        .select(
+          'driver_sales_logs.*',
+          'employees.name as driver_name',
+          'orders.order_number'
+        )
+        .orderBy('driver_sales_logs.created_at', 'desc');
+
+      res.json({
+        success: true,
+        data: driverSales
+      });
+    } catch (error) {
+      console.error('Error fetching driver sales:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch driver sales'
+      });
+    }
+  });
+
+  // Create driver settlement
+  router.post('/driver-settlement', async (req, res) => {
+    try {
+      const { 
+        driver_id, 
+        order_id, 
+        bags_sold, 
+        bags_returned, 
+        total_sales, 
+        money_submitted, 
+        notes, 
+        receptionist_id 
+      } = req.body;
+
+      // Calculate commission (₦30 per bag sold)
+      const commission_earned = bags_sold * 30;
+
+      const [settlementId] = await db('driver_sales_logs').insert({
+        driver_id,
+        order_id,
+        bags_sold,
+        bags_returned,
+        total_sales,
+        commission_earned,
+        money_submitted,
+        notes,
+        receptionist_id,
+        approval_status: 'Pending Manager Approval',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Log system activity
+      await db('system_activity').insert({
+        user_id: receptionist_id,
+        user_email: req.body.userEmail || 'unknown',
+        action: 'DRIVER_SETTLEMENT_CREATED',
+        details: `Driver settlement created for driver ${driver_id}, order ${order_id}`,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        created_at: new Date().toISOString()
+      });
+
+      const newSettlement = await db('driver_sales_logs')
+        .leftJoin('employees', 'driver_sales_logs.driver_id', 'employees.id')
+        .leftJoin('orders', 'driver_sales_logs.order_id', 'orders.id')
+        .select(
+          'driver_sales_logs.*',
+          'employees.name as driver_name',
+          'orders.order_number'
+        )
+        .where('driver_sales_logs.id', settlementId)
+        .first();
+
+      res.json({
+        success: true,
+        data: newSettlement,
+        message: 'Driver settlement created successfully'
+      });
+    } catch (error) {
+      console.error('Error creating driver settlement:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create driver settlement'
+      });
+    }
+  });
+
+  // Approve commission
+  router.put('/commission/:id/approve', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { approved_by, approval_notes } = req.body;
+
+      if (!approved_by) {
+        return res.status(400).json({
+          success: false,
+          message: 'Approved by is required'
+        });
+      }
+
+      // Update the driver sales log
+      await db('driver_sales_logs')
+        .where('id', id)
+        .update({
+          approval_status: 'Approved',
+          approved_by: approved_by,
+          approval_notes: approval_notes || 'Approved by Manager',
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      // Log system activity
+      await db('system_activity').insert({
+        user_id: approved_by,
+        user_email: req.body.userEmail || 'unknown',
+        action: 'COMMISSION_APPROVED',
+        details: `Commission approved for driver sales log ${id}`,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        created_at: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        message: 'Commission approved successfully'
+      });
+    } catch (error) {
+      console.error('Error approving commission:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to approve commission'
+      });
+    }
+  });
+
+  // Reject commission
+  router.put('/commission/:id/reject', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rejected_by, rejection_notes } = req.body;
+
+      if (!rejected_by) {
+        return res.status(400).json({
+          success: false,
+          message: 'Rejected by is required'
+        });
+      }
+
+      // Update the driver sales log
+      await db('driver_sales_logs')
+        .where('id', id)
+        .update({
+          approval_status: 'Rejected',
+          rejected_by: rejected_by,
+          rejection_notes: rejection_notes || 'Rejected by Manager',
+          rejected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      // Log system activity
+      await db('system_activity').insert({
+        user_id: rejected_by,
+        user_email: req.body.userEmail || 'unknown',
+        action: 'COMMISSION_REJECTED',
+        details: `Commission rejected for driver sales log ${id}`,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        created_at: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        message: 'Commission rejected successfully'
+      });
+    } catch (error) {
+      console.error('Error rejecting commission:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reject commission'
+      });
+    }
+  });
+
   return router;
 };

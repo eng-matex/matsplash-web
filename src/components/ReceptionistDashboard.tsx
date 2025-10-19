@@ -49,7 +49,8 @@ import {
   Pending,
   ShoppingCart,
   Store,
-  DeliveryDining
+  DeliveryDining,
+  Payment
 } from '@mui/icons-material';
 import axios from 'axios';
 import OrderManagement from './OrderManagement';
@@ -86,6 +87,16 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     assigned_driver_id: null
   });
   const [drivers, setDrivers] = useState([]);
+  const [driverSales, setDriverSales] = useState([]);
+  const [settlementData, setSettlementData] = useState({
+    driver_id: '',
+    order_id: '',
+    bags_sold: 0,
+    bags_returned: 0,
+    total_sales: 0,
+    money_submitted: 0,
+    notes: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -120,6 +131,20 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         case 'order-status-logs':
           const allOrdersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
+          break;
+        case 'driver-settlement':
+          // Fetch driver sales data
+          try {
+            const driverSalesResponse = await axios.get('http://localhost:3001/api/sales/driver-sales', { headers });
+            if (driverSalesResponse.data.success) {
+              setDriverSales(driverSalesResponse.data.data || []);
+            } else {
+              setDriverSales(getMockDriverSales());
+            }
+          } catch (error) {
+            console.log('Driver sales API not available, using mock data');
+            setDriverSales(getMockDriverSales());
+          }
           break;
       }
 
@@ -170,6 +195,67 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
       delivery_address: '',
       assigned_driver_id: null
     });
+    // Reset settlement form
+    setSettlementData({
+      driver_id: '',
+      order_id: '',
+      bags_sold: 0,
+      bags_returned: 0,
+      total_sales: 0,
+      money_submitted: 0,
+      notes: ''
+    });
+  };
+
+  const getMockDriverSales = () => [
+    {
+      id: 1,
+      order_number: 'ORD-000001',
+      driver_name: 'John Driver',
+      bags_sold: 45,
+      bags_returned: 5,
+      total_sales: 12150,
+      commission_earned: 1350,
+      money_submitted: 0,
+      approval_status: 'Pending Settlement',
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  const handleSubmitSettlement = async () => {
+    if (!settlementData.driver_id || !settlementData.order_id) {
+      alert('Please select driver and order');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const settlementPayload = {
+        driver_id: parseInt(settlementData.driver_id),
+        order_id: parseInt(settlementData.order_id),
+        bags_sold: settlementData.bags_sold,
+        bags_returned: settlementData.bags_returned,
+        total_sales: settlementData.total_sales,
+        money_submitted: settlementData.money_submitted,
+        notes: settlementData.notes,
+        receptionist_id: 1 // This should come from auth context
+      };
+
+      const response = await axios.post('http://localhost:3001/api/sales/driver-settlement', settlementPayload, { headers });
+
+      if (response.data.success) {
+        fetchData(); // Refresh data
+        handleCloseDialog();
+        alert('Settlement submitted successfully!');
+      } else {
+        alert('Error submitting settlement: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error submitting settlement:', error);
+      alert('Error submitting settlement. Please try again.');
+    }
   };
 
   const handleCreateOrder = async () => {
@@ -803,6 +889,231 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     );
   };
 
+  const renderDriverSettlement = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+        Driver Settlement Management
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Settlement Summary */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                Pending Settlements
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                {driverSales.filter(sale => sale.approval_status === 'Pending Settlement').length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Awaiting settlement processing
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Total Commission */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                Total Commission
+              </Typography>
+              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                ₦{driverSales.reduce((sum, sale) => sum + (sale.commission_earned || 0), 0).toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total commission earned
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Quick Actions */}
+        <Grid item xs={12} md={4}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                Quick Actions
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Payment />}
+                  onClick={() => handleOpenDialog('settlement', null)}
+                  sx={{ bgcolor: '#13bbc6' }}
+                >
+                  Process Settlement
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Driver Sales Table */}
+      <Card className="dashboard-card" sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+            Driver Sales & Settlements
+          </Typography>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Order ID</TableCell>
+                  <TableCell>Driver</TableCell>
+                  <TableCell>Bags Sold</TableCell>
+                  <TableCell>Bags Returned</TableCell>
+                  <TableCell>Total Sales</TableCell>
+                  <TableCell>Commission</TableCell>
+                  <TableCell>Money Submitted</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {driverSales.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell>{sale.order_number}</TableCell>
+                    <TableCell>{sale.driver_name}</TableCell>
+                    <TableCell>{sale.bags_sold}</TableCell>
+                    <TableCell>{sale.bags_returned}</TableCell>
+                    <TableCell>₦{sale.total_sales?.toLocaleString()}</TableCell>
+                    <TableCell>₦{sale.commission_earned?.toLocaleString()}</TableCell>
+                    <TableCell>₦{sale.money_submitted?.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={sale.approval_status || 'Pending Settlement'} 
+                        color={sale.approval_status === 'Settled' ? 'success' : 
+                               sale.approval_status === 'Pending Manager Approval' ? 'warning' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Process Settlement">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog('settlement', sale)}
+                          disabled={sale.approval_status === 'Settled'}
+                        >
+                          <Payment />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+
+  const renderSettlementForm = () => (
+    <Box sx={{ p: 2 }}>
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Process driver settlement by recording sales data and money submitted. Commission will be calculated automatically.
+      </Alert>
+      
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Select Driver</InputLabel>
+            <Select
+              value={settlementData.driver_id}
+              onChange={(e) => setSettlementData({...settlementData, driver_id: e.target.value})}
+              label="Select Driver"
+            >
+              {drivers.map((driver) => (
+                <MenuItem key={driver.id} value={driver.id}>
+                  {driver.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Select Order</InputLabel>
+            <Select
+              value={settlementData.order_id}
+              onChange={(e) => setSettlementData({...settlementData, order_id: e.target.value})}
+              label="Select Order"
+            >
+              {driverDispatches.map((order) => (
+                <MenuItem key={order.id} value={order.id}>
+                  {order.order_number} - {order.customer_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Bags Sold"
+            type="number"
+            value={settlementData.bags_sold}
+            onChange={(e) => setSettlementData({...settlementData, bags_sold: parseInt(e.target.value) || 0})}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Bags Returned"
+            type="number"
+            value={settlementData.bags_returned}
+            onChange={(e) => setSettlementData({...settlementData, bags_returned: parseInt(e.target.value) || 0})}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Total Sales (₦)"
+            type="number"
+            value={settlementData.total_sales}
+            onChange={(e) => setSettlementData({...settlementData, total_sales: parseInt(e.target.value) || 0})}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Money Submitted (₦)"
+            type="number"
+            value={settlementData.money_submitted}
+            onChange={(e) => setSettlementData({...settlementData, money_submitted: parseInt(e.target.value) || 0})}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Notes"
+            multiline
+            rows={3}
+            value={settlementData.notes}
+            onChange={(e) => setSettlementData({...settlementData, notes: e.target.value})}
+            placeholder="Any additional notes about the settlement..."
+          />
+        </Grid>
+      </Grid>
+
+      {/* Commission Calculation Display */}
+      <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+        <Typography variant="subtitle2" gutterBottom>Commission Calculation:</Typography>
+        <Typography variant="body2">
+          Bags Sold: {settlementData.bags_sold} × ₦30 = ₦{(settlementData.bags_sold * 30).toLocaleString()}
+        </Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: '#13bbc6' }}>
+          Total Commission: ₦{(settlementData.bags_sold * 30).toLocaleString()}
+        </Typography>
+      </Box>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -824,6 +1135,8 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         return <OrderManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
+      case 'driver-settlement':
+        return renderDriverSettlement();
       case 'order-status-logs':
         return renderOrderStatusLogs();
       default:
@@ -842,12 +1155,14 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           {dialogType === 'create-distributor-order' && 'Create Distributor Order'}
           {dialogType === 'create-driver-dispatch' && 'Create Driver Dispatch'}
           {dialogType === 'create-store-dispatch' && 'Create Store Dispatch'}
+          {dialogType === 'settlement' && 'Process Driver Settlement'}
           {dialogType === 'view-order' && 'Order Details'}
           {dialogType === 'edit-order' && 'Edit Order'}
           {dialogType === 'update-status' && 'Update Order Status'}
         </DialogTitle>
         <DialogContent>
           {dialogType.includes('create') && renderOrderCreationForm()}
+          {dialogType === 'settlement' && renderSettlementForm()}
           {dialogType.includes('view') && 'Order details will be displayed here.'}
           {dialogType.includes('edit') && 'Order editing form will be implemented here.'}
           {dialogType.includes('update-status') && 'Status update form will be implemented here.'}
@@ -858,9 +1173,11 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
             <Button 
               variant="contained" 
               sx={{ bgcolor: '#13bbc6' }}
-              onClick={dialogType.includes('create') ? handleCreateOrder : undefined}
+              onClick={dialogType.includes('create') ? handleCreateOrder : 
+                      dialogType === 'settlement' ? handleSubmitSettlement : undefined}
             >
-              {dialogType.includes('create') ? 'Create' : 'Save'}
+              {dialogType.includes('create') ? 'Create' : 
+               dialogType === 'settlement' ? 'Submit Settlement' : 'Save'}
             </Button>
           )}
         </DialogActions>

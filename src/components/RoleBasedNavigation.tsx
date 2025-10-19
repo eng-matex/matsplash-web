@@ -53,6 +53,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'commission-approval', label: 'Commission Approval', icon: CheckCircle, color: '#4caf50' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
@@ -82,6 +83,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'store-dispatch', label: 'Store Dispatch', icon: LocalShipping, color: '#9c27b0' },
+        { id: 'driver-settlement', label: 'Driver Settlement', icon: Payment, color: '#ff5722' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];
@@ -103,6 +105,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'active-dispatches', label: 'Active Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'dispatch-log', label: 'Dispatch Log', icon: Assessment, color: '#ff5722' },
+        { id: 'sales-accounting', label: 'Sales & Commission', icon: Payment, color: '#4caf50' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];
 
