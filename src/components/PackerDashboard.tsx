@@ -194,6 +194,37 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     setDialogOpen(false);
     setDialogType('');
     setSelectedItem(null);
+    setSelectedTask(null);
+    setTaskProgress('');
+  };
+
+  const handleUpdateProgress = async () => {
+    if (!selectedTask || !taskProgress) {
+      alert('Please enter the number of additional bags completed');
+      return;
+    }
+
+    try {
+      const additionalBags = parseInt(taskProgress);
+      if (isNaN(additionalBags) || additionalBags < 0) {
+        alert('Please enter a valid number of bags');
+        return;
+      }
+
+      // Update the task progress
+      const updatedTasks = packingTasks.map(task => 
+        task.id === selectedTask.id 
+          ? { ...task, completed_quantity: (task.completed_quantity || 0) + additionalBags }
+          : task
+      );
+      setPackingTasks(updatedTasks);
+
+      alert(`Progress updated successfully! Added ${additionalBags} bags to ${selectedTask.task_number}`);
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      alert('Error updating progress. Please try again.');
+    }
   };
 
   const handleStartTask = (task: any) => {
@@ -614,12 +645,12 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Task ID</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>#{selectedTask.id}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>#{selectedTask.task_number || selectedTask.id}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Status</Typography>
             <Chip 
-              label={selectedTask.status} 
+              label={selectedTask.status?.toUpperCase() || 'UNKNOWN'} 
               color={
                 selectedTask.status === 'completed' ? 'success' :
                 selectedTask.status === 'in_progress' ? 'warning' : 'default'
@@ -628,19 +659,36 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
             />
           </Grid>
           <Grid item xs={12}>
-            <Typography variant="subtitle2" color="text.secondary">Description</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedTask.description}</Typography>
+            <Typography variant="subtitle2" color="text.secondary">Product Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedTask.product_type || 'N/A'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">Assigned Date</Typography>
+            <Typography variant="subtitle2" color="text.secondary">Target Quantity</Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {new Date(selectedTask.assigned_date).toLocaleDateString()}
+              {selectedTask.target_quantity || 0} bags
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">Due Date</Typography>
+            <Typography variant="subtitle2" color="text.secondary">Completed Quantity</Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              {new Date(selectedTask.due_date).toLocaleDateString()}
+              {selectedTask.completed_quantity || 0} bags
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Priority</Typography>
+            <Chip 
+              label={selectedTask.priority?.toUpperCase() || 'NORMAL'} 
+              color={
+                selectedTask.priority === 'high' ? 'error' :
+                selectedTask.priority === 'medium' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Estimated Completion</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedTask.estimated_completion ? new Date(selectedTask.estimated_completion).toLocaleDateString() : 'N/A'}
             </Typography>
           </Grid>
           <Grid item xs={12}>
@@ -652,6 +700,64 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
               value={taskProgress}
               onChange={(e) => setTaskProgress(e.target.value)}
               placeholder="Update your progress on this task..."
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderUpdateProgressForm = () => {
+    if (!selectedTask) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Update Progress for {selectedTask.task_number}
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Product Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedTask.product_type || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Target Quantity</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedTask.target_quantity || 0} bags</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Current Progress</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedTask.completed_quantity || 0} / {selectedTask.target_quantity || 0} bags
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Progress Percentage</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedTask.target_quantity ? 
+                Math.round(((selectedTask.completed_quantity || 0) / selectedTask.target_quantity) * 100) : 0}%
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Additional Bags Completed"
+              type="number"
+              value={taskProgress}
+              onChange={(e) => setTaskProgress(e.target.value)}
+              placeholder="Enter number of additional bags completed"
+              helperText="Enter the number of bags you've completed since last update"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Progress Notes"
+              placeholder="Add any notes about your progress, quality issues, or concerns..."
               sx={{ mb: 2 }}
             />
           </Grid>
@@ -694,12 +800,13 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
           {dialogType === 'update-progress' && 'Update Progress'}
         </DialogTitle>
         <DialogContent>
-          {dialogType.includes('task') && renderTaskDetails()}
+          {dialogType === 'view-task' && renderTaskDetails()}
+          {dialogType === 'update-progress' && renderUpdateProgressForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'update-progress' && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleUpdateProgress}>
               Update Progress
             </Button>
           )}
