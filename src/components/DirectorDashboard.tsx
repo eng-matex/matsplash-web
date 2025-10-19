@@ -5,6 +5,7 @@ import EmployeeManagement from './EmployeeManagement';
 import DistributorManagement from './DistributorManagement';
 import PricingManagement from './PricingManagement';
 import SalaryManagement from './SalaryManagement';
+import SalesManagement from './SalesManagement';
 import ReportingAnalytics from './ReportingAnalytics';
 import SurveillanceManagement from './SurveillanceManagement';
 
@@ -25,6 +26,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage }) =>
         return <PricingManagement />;
       case 'salary':
         return <SalaryManagement />;
+      case 'sales-management':
+        return <SalesManagement />;
       case 'reports':
         return <ReportingAnalytics />;
       case 'surveillance':

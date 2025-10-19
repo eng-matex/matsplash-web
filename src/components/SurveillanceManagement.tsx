@@ -1269,30 +1269,6 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
                 </Typography>
               </Box>
             )}
-            
-            {/* Offline/Error State */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: fullscreenCamera?.status === 'online' ? 'none' : 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                gap: 2
-              }}
-            >
-              <VideocamOff sx={{ fontSize: 64, color: '#666' }} />
-              <Typography variant="h6" color="white">
-                Camera Offline
-              </Typography>
-              <Typography variant="body2" color="#999">
-                {fullscreenCamera?.name} is currently offline
-              </Typography>
-            </Box>
           </Box>
         </DialogContent>
       </Dialog>

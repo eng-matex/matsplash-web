@@ -2626,6 +2626,14 @@ app.get('/api/locations', async (req, res) => {
 const surveillanceRoutes = require('./server/routes/surveillance-minimal.cjs');
 app.use('/api/surveillance', surveillanceRoutes(db));
 
+// Import and mount salary routes
+const salaryRoutes = require('./server/routes/salary.cjs');
+app.use('/api/salary', salaryRoutes(db));
+
+// Import and mount sales routes
+const salesRoutes = require('./server/routes/sales.cjs');
+app.use('/api/sales', salesRoutes(db));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);

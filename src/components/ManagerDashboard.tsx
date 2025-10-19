@@ -59,6 +59,7 @@ import ReportingAnalytics from './ReportingAnalytics';
 import DistributorManagement from './DistributorManagement';
 import PricingManagement from './PricingManagement';
 import SalaryManagement from './SalaryManagement';
+import SalesManagement from './SalesManagement';
 
 interface ManagerDashboardProps {
   selectedSection: string;
@@ -549,6 +550,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         return <SurveillanceManagement selectedSection={selectedSection} userRole="manager" />;
       case 'reports':
         return <ReportingAnalytics selectedSection={selectedSection} userRole="manager" />;
+      case 'salary':
+        return <SalaryManagement selectedSection={selectedSection} userRole="manager" />;
+      case 'sales-management':
+        return <SalesManagement selectedSection={selectedSection} userRole="manager" />;
       case 'general-sales':
       case 'distributor-orders':
       case 'driver-dispatches':

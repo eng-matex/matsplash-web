@@ -36,6 +36,16 @@ import logo from './assets/Matsplash-logo.png';
 import { getRoleNavigation, getDefaultView } from './components/RoleBasedNavigation';
 import ClockInScreen from './components/ClockInScreen';
 import DirectorDashboard from './components/DirectorDashboard';
+import ManagerDashboard from './components/ManagerDashboard';
+import ReceptionistDashboard from './components/ReceptionistDashboard';
+import StoreKeeperDashboard from './components/StoreKeeperDashboard';
+import DriverDashboard from './components/DriverDashboard';
+import PackerDashboard from './components/PackerDashboard';
+import OperatorDashboard from './components/OperatorDashboard';
+import CleanerDashboard from './components/CleanerDashboard';
+import LoaderDashboard from './components/LoaderDashboard';
+import SalesDashboard from './components/SalesDashboard';
+import SecurityDashboard from './components/SecurityDashboard';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -121,46 +131,71 @@ const App: React.FC = () => {
           return <ClockInScreen user={user} />;
         }
 
-        // Handle Director dashboard
-        if (user?.role === 'Director') {
-          return <DirectorDashboard currentPage={currentPage} />;
+        // Handle role-specific dashboards
+        switch (user?.role?.toLowerCase()) {
+          case 'director':
+            return <DirectorDashboard currentPage={currentPage} />;
+          case 'admin':
+            return <ManagerDashboard selectedSection={currentPage} />; // Admin uses Manager dashboard
+          case 'manager':
+            return <ManagerDashboard selectedSection={currentPage} />;
+          case 'receptionist':
+            return <ReceptionistDashboard selectedSection={currentPage} />;
+          case 'storekeeper':
+            return <StoreKeeperDashboard selectedSection={currentPage} />;
+          case 'driver':
+            return <DriverDashboard selectedSection={currentPage} />;
+          case 'driver assistant':
+            return <DriverDashboard selectedSection={currentPage} />; // Driver Assistant uses Driver dashboard
+          case 'packer':
+            return <PackerDashboard selectedSection={currentPage} />;
+          case 'operator':
+            return <OperatorDashboard selectedSection={currentPage} />;
+          case 'cleaner':
+            return <CleanerDashboard selectedSection={currentPage} />;
+          case 'loader':
+            return <LoaderDashboard selectedSection={currentPage} />;
+          case 'sales':
+            return <SalesDashboard selectedSection={currentPage} />;
+          case 'security':
+            return <SecurityDashboard selectedSection={currentPage} />;
+          default:
+            return (
+              <Card sx={{ p: 3 }}>
+                <CardContent>
+                  <Typography variant="h5" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+                    Welcome, {user.name}!
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: '#13bbc6', mb: 2 }}>
+                    Role: {user.role}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                    You are currently viewing: <strong>{navigationItems.find(item => item.id === currentPage)?.label || 'Overview'}</strong>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    The complete role-based factory management system is ready! Each role has access to their specific tools and data.
+                  </Typography>
+
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                      Available Sections for {user.role}:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {navigationItems.map((item) => (
+                        <Chip
+                          key={item.id}
+                          label={item.label}
+                          onClick={() => setCurrentPage(item.id)}
+                          color={currentPage === item.id ? 'primary' : 'default'}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
         }
-
-        return (
-          <Card sx={{ p: 3 }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-                Welcome, {user.name}!
-              </Typography>
-              <Typography variant="h6" sx={{ color: '#13bbc6', mb: 2 }}>
-                Role: {user.role}
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                You are currently viewing: <strong>{navigationItems.find(item => item.id === currentPage)?.label || 'Overview'}</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                The complete role-based factory management system is ready! Each role has access to their specific tools and data.
-              </Typography>
-
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                  Available Sections for {user.role}:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {navigationItems.map((item) => (
-                    <Chip
-                      key={item.id}
-                      label={item.label}
-                      onClick={() => setCurrentPage(item.id)}
-                      color={currentPage === item.id ? 'primary' : 'default'}
-                      sx={{ cursor: 'pointer' }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        );
       };
 
   if (isLoggedIn) {

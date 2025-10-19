@@ -35,6 +35,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
         { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
@@ -50,6 +51,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
+        { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
         { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
@@ -63,6 +66,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' }
       ];
@@ -71,6 +75,7 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
+        { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'general-sales', label: 'General Sales', icon: PointOfSale, color: '#4caf50' },
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },

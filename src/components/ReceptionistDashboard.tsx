@@ -53,6 +53,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import OrderManagement from './OrderManagement';
+import SalesManagement from './SalesManagement';
 
 interface ReceptionistDashboardProps {
   selectedSection: string;
@@ -620,6 +621,8 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
       case 'distributor-orders':
       case 'driver-dispatches':
         return <OrderManagement selectedSection={selectedSection} userRole="receptionist" />;
+      case 'sales-management':
+        return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
       default:

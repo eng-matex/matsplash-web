@@ -62,7 +62,7 @@ import {
   Shield,
   Lock,
   ExitToApp,
-  Entry
+  Login
 } from '@mui/icons-material';
 import axios from 'axios';
 import SurveillanceManagement from './SurveillanceManagement';
@@ -265,7 +265,7 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
           <Card className="dashboard-card">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Entry sx={{ mr: 1, color: '#13bbc6' }} />
+                <Login sx={{ mr: 1, color: '#13bbc6' }} />
                 <Typography variant="h6" sx={{ color: '#2c3e50' }}>Visitors Inside</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
