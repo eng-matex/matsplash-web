@@ -67,6 +67,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const [generalSales, setGeneralSales] = useState<any[]>([]);
   const [distributorOrders, setDistributorOrders] = useState<any[]>([]);
   const [driverDispatches, setDriverDispatches] = useState<any[]>([]);
+  const [attendanceStatus, setAttendanceStatus] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -144,6 +145,27 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           } catch (error) {
             console.log('Driver sales API not available, using mock data');
             setDriverSales(getMockDriverSales());
+          }
+          
+          // Also fetch driver dispatches for the order dropdown
+          try {
+            const dispatchResponse = await axios.get('http://localhost:3001/api/orders?type=driver_dispatch', { headers });
+            setDriverDispatches(dispatchResponse.data.data || []);
+          } catch (error) {
+            console.log('Driver dispatches API not available, using empty array');
+            setDriverDispatches([]);
+          }
+          break;
+        case 'my-attendance':
+          // Fetch attendance data for the current user
+          try {
+            const attendanceResponse = await axios.get(`http://localhost:3001/api/attendance/status/${user?.id}`, { headers });
+            if (attendanceResponse.data.success) {
+              setAttendanceStatus(attendanceResponse.data.data);
+            }
+          } catch (error) {
+            console.log('Attendance API not available');
+            setAttendanceStatus(null);
           }
           break;
       }
@@ -292,6 +314,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         delivery_address: newOrder.delivery_address,
         payment_method: orderType === 'general_sales' ? 'cash' : null,
         payment_status: orderType === 'general_sales' ? 'pending' : null,
+        total_amount: 0, // Required field - will be calculated later for sales orders
         created_by: 1, // This should come from auth context
         assigned_driver_id: newOrder.assigned_driver_id ? parseInt(newOrder.assigned_driver_id) : null
       };
@@ -1115,6 +1138,72 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     </Box>
   );
 
+  const renderMyAttendance = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', mb: 3 }}>
+        My Attendance
+      </Typography>
+      
+      {attendanceStatus ? (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Current Status
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Chip 
+                    label={attendanceStatus.status || 'Not Clocked In'} 
+                    color={attendanceStatus.status === 'present' ? 'success' : 'default'}
+                    sx={{ mr: 2 }}
+                  />
+                </Box>
+                {attendanceStatus.clock_in_time && (
+                  <Typography variant="body2" color="text.secondary">
+                    Clocked in: {new Date(attendanceStatus.clock_in_time).toLocaleString()}
+                  </Typography>
+                )}
+                {attendanceStatus.on_break && (
+                  <Typography variant="body2" color="warning.main">
+                    Currently on break
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Today's Summary
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Hours worked: {attendanceStatus.hours_worked || '0'} hours
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Break time: {attendanceStatus.total_break_time || '0'} minutes
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      ) : (
+        <Card className="dashboard-card">
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+              No attendance data available
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your attendance information will appear here once you clock in.
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -1140,6 +1229,8 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         return renderDriverSettlement();
       case 'order-status-logs':
         return renderOrderStatusLogs();
+      case 'my-attendance':
+        return renderMyAttendance();
       default:
         return renderOverview();
     }

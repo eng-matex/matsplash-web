@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+
   // Get pricing rules
   router.get('/pricing-rules', async (req, res) => {
     try {
@@ -483,10 +484,11 @@ module.exports = (db) => {
       await db('system_activity').insert({
         user_id: receptionist_id,
         user_email: req.body.userEmail || 'unknown',
-        action: 'DRIVER_SETTLEMENT_CREATED',
-        details: `Driver settlement created for driver ${driver_id}, order ${order_id}`,
+        activity_type: 'DRIVER_SETTLEMENT_CREATED',
+        description: `Driver settlement created for driver ${driver_id}, order ${order_id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
 
@@ -543,10 +545,11 @@ module.exports = (db) => {
       await db('system_activity').insert({
         user_id: approved_by,
         user_email: req.body.userEmail || 'unknown',
-        action: 'COMMISSION_APPROVED',
-        details: `Commission approved for driver sales log ${id}`,
+        activity_type: 'COMMISSION_APPROVED',
+        description: `Commission approved for driver sales log ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
 
@@ -591,10 +594,11 @@ module.exports = (db) => {
       await db('system_activity').insert({
         user_id: rejected_by,
         user_email: req.body.userEmail || 'unknown',
-        action: 'COMMISSION_REJECTED',
-        details: `Commission rejected for driver sales log ${id}`,
+        activity_type: 'COMMISSION_REJECTED',
+        description: `Commission rejected for driver sales log ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
 

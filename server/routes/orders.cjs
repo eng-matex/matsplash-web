@@ -95,17 +95,40 @@ router.post('/', async (req, res) => {
     const db = req.app.locals.db;
     const orderData = req.body;
 
+    console.log('Order creation request:', JSON.stringify(orderData, null, 2));
+    console.log('Order data validation:', {
+      customer_name: orderData.customer_name,
+      order_type: orderData.order_type,
+      items: orderData.items,
+      items_length: orderData.items?.length
+    });
+
     // Validate required fields
     if (!orderData.customer_name || !orderData.order_type || !orderData.items?.length) {
+      console.log('Validation failed:', {
+        customer_name: orderData.customer_name,
+        order_type: orderData.order_type,
+        items: orderData.items
+      });
       return res.status(400).json({
         success: false,
         message: 'Customer name, order type, and items are required'
       });
     }
 
-    // Generate order number
-    const orderCount = await db('orders').count('id as count').first();
-    const orderNumber = `ORD-${String(parseInt(orderCount?.count || 0) + 1).padStart(6, '0')}`;
+    // Generate order number - find the highest existing order number
+    const lastOrder = await db('orders')
+      .where('order_number', 'like', 'ORD-%')
+      .orderBy('order_number', 'desc')
+      .first();
+    
+    let nextNumber = 1;
+    if (lastOrder && lastOrder.order_number) {
+      const lastNumber = parseInt(lastOrder.order_number.replace('ORD-', ''));
+      nextNumber = lastNumber + 1;
+    }
+    
+    const orderNumber = `ORD-${String(nextNumber).padStart(6, '0')}`;
 
     // Calculate total amount based on order type and items
     let totalAmount = 0;
@@ -143,10 +166,11 @@ router.post('/', async (req, res) => {
     await db('system_activity').insert({
       user_id: orderData.created_by || 1,
       user_email: req.body.userEmail || 'unknown',
-      action: 'ORDER_CREATED',
-      details: `Created order ${orderNumber} for ${orderData.customer_name}`,
+      activity_type: 'ORDER_CREATED',
+      description: `Created order ${orderNumber} for ${orderData.customer_name}`,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
+      timestamp: new Date().toISOString(),
       created_at: new Date().toISOString()
     });
 
@@ -174,9 +198,15 @@ router.post('/', async (req, res) => {
 
   } catch (error) {
     console.error('Error creating order:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     res.status(500).json({
       success: false,
-      message: 'Failed to create order'
+      message: 'Failed to create order',
+      error: error.message
     });
   }
 });
@@ -202,10 +232,11 @@ router.put('/:id', async (req, res) => {
       await db('system_activity').insert({
         user_id: updateData.userId,
         user_email: req.body.userEmail || 'unknown',
-        action: 'ORDER_UPDATED',
-        details: `Updated order ${id}`,
+        activity_type: 'ORDER_UPDATED',
+        description: `Updated order ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
     }
@@ -278,10 +309,11 @@ router.put('/:id/confirm-pickup', async (req, res) => {
     await db('system_activity').insert({
       user_id: userId || 1,
       user_email: userEmail || 'unknown',
-      action: 'PICKUP_CONFIRMED',
-      details: `StoreKeeper confirmed pickup for order ${order.order_number} - ${totalBagsRemoved} bags removed from inventory`,
+      activity_type: 'PICKUP_CONFIRMED',
+      description: `StoreKeeper confirmed pickup for order ${order.order_number} - ${totalBagsRemoved} bags removed from inventory`,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
+      timestamp: new Date().toISOString(),
       created_at: new Date().toISOString()
     });
 
@@ -357,10 +389,11 @@ router.put('/:id/status', async (req, res) => {
       await db('system_activity').insert({
         user_id: userId,
         user_email: req.body.userEmail || 'unknown',
-        action: 'ORDER_STATUS_UPDATED',
-        details: `Updated order ${id} status to ${status}`,
+        activity_type: 'ORDER_STATUS_UPDATED',
+        description: `Updated order ${id} status to ${status}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
     }
@@ -393,10 +426,11 @@ router.delete('/:id', async (req, res) => {
       await db('system_activity').insert({
         user_id: userId,
         user_email: req.body.userEmail || 'unknown',
-        action: 'ORDER_DELETED',
-        details: `Deleted order ${id}`,
+        activity_type: 'ORDER_DELETED',
+        description: `Deleted order ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
     }

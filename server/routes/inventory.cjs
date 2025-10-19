@@ -166,10 +166,11 @@ router.post('/adjust', async (req, res) => {
     await db('system_activity').insert({
       user_id: adjustmentData.performed_by,
       user_email: req.body.userEmail || 'unknown',
-      action: 'INVENTORY_ADJUSTED',
-      details: `Inventory adjusted: ${adjustmentData.bags_added || 0} added, ${adjustmentData.bags_removed || 0} removed. New stock: ${newStock}`,
+      activity_type: 'INVENTORY_ADJUSTED',
+      description: `Inventory adjusted: ${adjustmentData.bags_added || 0} added, ${adjustmentData.bags_removed || 0} removed. New stock: ${newStock}`,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
+      timestamp: new Date().toISOString(),
       created_at: new Date().toISOString()
     });
 
@@ -220,10 +221,11 @@ router.put('/logs/:id', async (req, res) => {
       await db('system_activity').insert({
         user_id: updateData.userId,
         user_email: req.body.userEmail || 'unknown',
-        action: 'INVENTORY_LOG_UPDATED',
-        details: `Updated inventory log ${id}`,
+        activity_type: 'INVENTORY_LOG_UPDATED',
+        description: `Updated inventory log ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
     }
@@ -256,10 +258,11 @@ router.delete('/logs/:id', async (req, res) => {
       await db('system_activity').insert({
         user_id: userId,
         user_email: req.body.userEmail || 'unknown',
-        action: 'INVENTORY_LOG_DELETED',
-        details: `Deleted inventory log ${id}`,
+        activity_type: 'INVENTORY_LOG_DELETED',
+        description: `Deleted inventory log ${id}`,
         ip_address: req.ip,
         user_agent: req.get('User-Agent'),
+        timestamp: new Date().toISOString(),
         created_at: new Date().toISOString()
       });
     }
@@ -318,10 +321,11 @@ router.post('/add-water', async (req, res) => {
     await db('system_activity').insert({
       user_id: performed_by,
       user_email: req.body.userEmail || 'unknown',
-      action: 'WATER_ADDED_TO_INVENTORY',
-      details: `Water production: ${bags_added} bags added. New stock: ${newStock}`,
+      activity_type: 'WATER_ADDED_TO_INVENTORY',
+      description: `Water production: ${bags_added} bags added. New stock: ${newStock}`,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
+      timestamp: new Date().toISOString(),
       created_at: new Date().toISOString()
     });
 
@@ -346,6 +350,105 @@ router.post('/add-water', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to add water to inventory'
+    });
+  }
+});
+
+// Create stock adjustment
+router.post('/adjustments', async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const { 
+      product_id, 
+      adjustment_type, 
+      quantity, 
+      reason, 
+      notes, 
+      performed_by 
+    } = req.body;
+
+    // Validate required fields
+    if (!product_id || !adjustment_type || !quantity || !reason || !performed_by) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID, adjustment type, quantity, reason, and performed_by are required'
+      });
+    }
+
+    // Get current stock from latest log
+    const latestLog = await db('inventory_logs')
+      .orderBy('created_at', 'desc')
+      .first();
+
+    const previousStock = latestLog ? latestLog.current_stock : 0;
+    
+    // Calculate new stock based on adjustment type
+    let newStock;
+    let bagsAdded = 0;
+    let bagsRemoved = 0;
+    
+    if (adjustment_type === 'add') {
+      newStock = previousStock + parseInt(quantity);
+      bagsAdded = parseInt(quantity);
+    } else if (adjustment_type === 'remove') {
+      newStock = previousStock - parseInt(quantity);
+      bagsRemoved = parseInt(quantity);
+    } else if (adjustment_type === 'correction') {
+      newStock = parseInt(quantity);
+      if (newStock > previousStock) {
+        bagsAdded = newStock - previousStock;
+      } else {
+        bagsRemoved = previousStock - newStock;
+      }
+    }
+
+    const newLog = {
+      order_id: null,
+      order_number: null,
+      bags_added: bagsAdded,
+      bags_removed: bagsRemoved,
+      current_stock: newStock,
+      operation_type: `STOCK_ADJUSTMENT_${adjustment_type.toUpperCase()}`,
+      performed_by: performed_by,
+      notes: notes || `Stock adjustment: ${adjustment_type} ${quantity} bags. Reason: ${reason}`,
+      created_at: new Date().toISOString()
+    };
+
+    const [logId] = await db('inventory_logs').insert(newLog);
+
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: performed_by,
+      user_email: req.body.userEmail || 'unknown',
+      activity_type: 'STOCK_ADJUSTMENT',
+      description: `Stock adjustment: ${adjustment_type} ${quantity} bags. Reason: ${reason}. New stock: ${newStock}`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    });
+
+    // Get the created log with joins
+    const createdLog = await db('inventory_logs')
+      .leftJoin('employees', 'inventory_logs.performed_by', 'employees.id')
+      .select(
+        'inventory_logs.*',
+        'employees.name as performed_by_name'
+      )
+      .where('inventory_logs.id', logId)
+      .first();
+
+    res.status(201).json({
+      success: true,
+      data: createdLog,
+      message: 'Stock adjustment created successfully'
+    });
+
+  } catch (error) {
+    console.error('Error creating stock adjustment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create stock adjustment'
     });
   }
 });

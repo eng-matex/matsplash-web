@@ -370,6 +370,50 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
     setDialogOpen(false);
     setDialogType('');
     setSelectedItem(null);
+    setNewAdjustment({
+      product_id: 0,
+      product_name: '',
+      adjustment_type: 'add',
+      quantity: 0,
+      reason: '',
+      notes: ''
+    });
+  };
+
+  const handleStockAdjustment = async () => {
+    if (!newAdjustment.product_id || !newAdjustment.quantity || !newAdjustment.reason) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const adjustmentData = {
+        product_id: newAdjustment.product_id,
+        adjustment_type: newAdjustment.adjustment_type,
+        quantity: newAdjustment.quantity,
+        reason: newAdjustment.reason,
+        notes: newAdjustment.notes,
+        performed_by: 1 // This should come from auth context
+      };
+
+      console.log('Creating stock adjustment:', adjustmentData);
+      
+      // Make API call to create the adjustment
+      const response = await axios.post('/api/inventory/adjustments', adjustmentData);
+      
+      if (response.data.success) {
+        // Refresh inventory data
+        fetchInventoryData();
+        handleCloseDialog();
+        
+        alert('Stock adjustment created successfully!');
+      } else {
+        alert('Error creating stock adjustment: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error creating stock adjustment:', error);
+      alert('Error creating stock adjustment. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -882,16 +926,152 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
           {dialogType === 'history' && 'Product History'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType === 'view' && 'Product details view will be implemented here.'}
-            {dialogType === 'adjust' && 'Stock adjustment functionality will be implemented here.'}
-            {dialogType === 'history' && 'Product history view will be implemented here.'}
-          </Typography>
+          {dialogType === 'view' && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Product Details
+              </Typography>
+              <Typography>
+                Product details view will be implemented here.
+              </Typography>
+            </Box>
+          )}
+          {dialogType === 'adjust' && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Stock Adjustment
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Product Name"
+                    value={newAdjustment.product_name}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Adjustment Type</InputLabel>
+                    <Select
+                      value={newAdjustment.adjustment_type}
+                      onChange={(e) => setNewAdjustment({...newAdjustment, adjustment_type: e.target.value})}
+                    >
+                      <MenuItem value="add">Add Stock</MenuItem>
+                      <MenuItem value="remove">Remove Stock</MenuItem>
+                      <MenuItem value="correction">Stock Correction</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Quantity"
+                    type="number"
+                    value={newAdjustment.quantity}
+                    onChange={(e) => setNewAdjustment({...newAdjustment, quantity: parseInt(e.target.value) || 0})}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Reason</InputLabel>
+                    <Select
+                      value={newAdjustment.reason}
+                      onChange={(e) => setNewAdjustment({...newAdjustment, reason: e.target.value})}
+                      required
+                    >
+                      <MenuItem value="production">Production</MenuItem>
+                      <MenuItem value="damage">Damage/Loss</MenuItem>
+                      <MenuItem value="theft">Theft</MenuItem>
+                      <MenuItem value="correction">Stock Correction</MenuItem>
+                      <MenuItem value="return">Return</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Notes"
+                    value={newAdjustment.notes}
+                    onChange={(e) => setNewAdjustment({...newAdjustment, notes: e.target.value})}
+                    multiline
+                    rows={3}
+                    placeholder="Additional notes about this adjustment..."
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+          {dialogType === 'history' && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Product History
+              </Typography>
+              {inventoryLogs.length > 0 ? (
+                <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Operation</TableCell>
+                        <TableCell>Bags Added</TableCell>
+                        <TableCell>Bags Removed</TableCell>
+                        <TableCell>Stock After</TableCell>
+                        <TableCell>Performed By</TableCell>
+                        <TableCell>Notes</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {inventoryLogs.map((log, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            {new Date(log.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={log.operation_type || 'Unknown'} 
+                              color={log.operation_type === 'WATER_PRODUCTION' ? 'success' : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {log.bags_added || 0}
+                          </TableCell>
+                          <TableCell>
+                            {log.bags_removed || 0}
+                          </TableCell>
+                          <TableCell>
+                            {log.current_stock || 0}
+                          </TableCell>
+                          <TableCell>
+                            {log.performed_by_name || 'System'}
+                          </TableCell>
+                          <TableCell>
+                            {log.notes || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography color="text.secondary">
+                  No inventory history available for this product.
+                </Typography>
+              )}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'adjust' && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            <Button 
+              variant="contained" 
+              onClick={handleStockAdjustment}
+              sx={{ bgcolor: '#13bbc6' }}
+            >
               Apply Adjustment
             </Button>
           )}

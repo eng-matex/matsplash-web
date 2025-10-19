@@ -154,6 +154,20 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     notes: '',
     delivery_address: ''
   });
+
+  const [editOrder, setEditOrder] = useState<Partial<Order>>({
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    order_type: 'general_sales',
+    status: 'pending',
+    total_amount: 0,
+    items: [],
+    payment_method: 'cash',
+    payment_status: 'pending',
+    notes: '',
+    delivery_address: ''
+  });
   const [newItem, setNewItem] = useState<Partial<OrderItem>>({
     product_name: '',
     quantity: 0,
@@ -337,6 +351,20 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
         notes: '',
         delivery_address: ''
       });
+    } else if (type === 'edit' && order) {
+      setEditOrder({
+        customer_name: order.customer_name || '',
+        customer_phone: order.customer_phone || '',
+        customer_email: order.customer_email || '',
+        order_type: order.order_type || 'general_sales',
+        status: order.status || 'pending',
+        total_amount: order.total_amount || 0,
+        items: order.items || [],
+        payment_method: order.payment_method || 'cash',
+        payment_status: order.payment_status || 'pending',
+        notes: order.notes || '',
+        delivery_address: order.delivery_address || ''
+      });
     }
     setDialogOpen(true);
   };
@@ -389,6 +417,54 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     } catch (error) {
       console.error('Error creating order:', error);
       alert('Error creating order. Please try again.');
+    }
+  };
+
+  const handleEditOrder = async () => {
+    if (!editOrder.customer_name || !editOrder.customer_phone || !editOrder.items?.length) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    if (!selectedOrder?.id) {
+      alert('No order selected for editing');
+      return;
+    }
+
+    try {
+      const orderData = {
+        customer_name: editOrder.customer_name,
+        customer_phone: editOrder.customer_phone,
+        customer_email: editOrder.customer_email,
+        order_type: editOrder.order_type,
+        items: editOrder.items,
+        notes: editOrder.notes,
+        delivery_address: editOrder.delivery_address,
+        payment_method: editOrder.payment_method,
+        payment_status: editOrder.payment_status,
+        status: editOrder.status,
+        userId: 1 // This should come from auth context
+      };
+
+      console.log('Updating order:', orderData);
+      
+      // Make API call to update the order
+      const response = await axios.put(`/api/orders/${selectedOrder.id}`, orderData);
+      
+      if (response.data.success) {
+        // Update local state
+        setOrders(prev => prev.map(order => 
+          order.id === selectedOrder.id ? { ...order, ...orderData } : order
+        ));
+        handleCloseDialog();
+        
+        alert('Order updated successfully!');
+      } else {
+        alert('Error updating order: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Error updating order. Please try again.');
     }
   };
 
@@ -1143,6 +1219,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
           {dialogType === 'print' && 'Print Order'}
         </DialogTitle>
         <DialogContent>
+          {dialogType === 'new' && renderNewOrderForm()}
           {dialogType === 'view' && selectedOrder && (
             <Box>
               <Typography variant="h6" gutterBottom>Order Details</Typography>
@@ -1184,7 +1261,201 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
             </Box>
           )}
           {dialogType === 'edit' && selectedOrder && (
-            <Typography>Edit functionality will be implemented here.</Typography>
+            <Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Customer Name"
+                    value={editOrder.customer_name}
+                    onChange={(e) => setEditOrder({...editOrder, customer_name: e.target.value})}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Customer Phone"
+                    value={editOrder.customer_phone}
+                    onChange={(e) => setEditOrder({...editOrder, customer_phone: e.target.value})}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Customer Email"
+                    value={editOrder.customer_email}
+                    onChange={(e) => setEditOrder({...editOrder, customer_email: e.target.value})}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Order Type</InputLabel>
+                    <Select
+                      value={editOrder.order_type}
+                      onChange={(e) => setEditOrder({...editOrder, order_type: e.target.value})}
+                    >
+                      <MenuItem value="general_sales">General Sales</MenuItem>
+                      <MenuItem value="distributor_order">Distributor Order</MenuItem>
+                      <MenuItem value="driver_dispatch">Driver Dispatch</MenuItem>
+                      <MenuItem value="store_dispatch">Store Dispatch</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      value={editOrder.status}
+                      onChange={(e) => setEditOrder({...editOrder, status: e.target.value})}
+                    >
+                      <MenuItem value="pending">Pending</MenuItem>
+                      <MenuItem value="processing">Processing</MenuItem>
+                      <MenuItem value="picked_up">Picked Up</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                      <MenuItem value="cancelled">Cancelled</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Method</InputLabel>
+                    <Select
+                      value={editOrder.payment_method}
+                      onChange={(e) => setEditOrder({...editOrder, payment_method: e.target.value})}
+                    >
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="transfer">Transfer</MenuItem>
+                      <MenuItem value="pos">POS</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Status</InputLabel>
+                    <Select
+                      value={editOrder.payment_status}
+                      onChange={(e) => setEditOrder({...editOrder, payment_status: e.target.value})}
+                    >
+                      <MenuItem value="pending">Pending</MenuItem>
+                      <MenuItem value="paid">Paid</MenuItem>
+                      <MenuItem value="partial">Partial</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Delivery Address"
+                    value={editOrder.delivery_address}
+                    onChange={(e) => setEditOrder({...editOrder, delivery_address: e.target.value})}
+                    multiline
+                    rows={2}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Notes"
+                    value={editOrder.notes}
+                    onChange={(e) => setEditOrder({...editOrder, notes: e.target.value})}
+                    multiline
+                    rows={2}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>Order Items</Typography>
+                  {editOrder.items?.map((item, index) => (
+                    <Card key={index} sx={{ mb: 2, p: 2 }}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            label="Product Name"
+                            value={item.product_name}
+                            onChange={(e) => {
+                              const newItems = [...(editOrder.items || [])];
+                              newItems[index] = { ...item, product_name: e.target.value };
+                              setEditOrder({...editOrder, items: newItems});
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={2}>
+                          <TextField
+                            fullWidth
+                            label="Quantity"
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newItems = [...(editOrder.items || [])];
+                              newItems[index] = { 
+                                ...item, 
+                                quantity: parseInt(e.target.value) || 0,
+                                total_price: (parseInt(e.target.value) || 0) * (item.unit_price || 0)
+                              };
+                              setEditOrder({...editOrder, items: newItems});
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={2}>
+                          <TextField
+                            fullWidth
+                            label="Unit Price"
+                            type="number"
+                            value={item.unit_price}
+                            onChange={(e) => {
+                              const newItems = [...(editOrder.items || [])];
+                              newItems[index] = { 
+                                ...item, 
+                                unit_price: parseFloat(e.target.value) || 0,
+                                total_price: (item.quantity || 0) * (parseFloat(e.target.value) || 0)
+                              };
+                              setEditOrder({...editOrder, items: newItems});
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={2}>
+                          <TextField
+                            fullWidth
+                            label="Total"
+                            value={item.total_price}
+                            InputProps={{ readOnly: true }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={2}>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => {
+                              const newItems = editOrder.items?.filter((_, i) => i !== index) || [];
+                              setEditOrder({...editOrder, items: newItems});
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Card>
+                  ))}
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const newItems = [...(editOrder.items || []), {
+                        product_name: 'Water Sachets (500ml)',
+                        quantity: 1,
+                        unit_price: 300,
+                        total_price: 300
+                      }];
+                      setEditOrder({...editOrder, items: newItems});
+                    }}
+                    sx={{ mt: 1 }}
+                  >
+                    Add Item
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
           )}
           {dialogType === 'print' && selectedOrder && (
             <Typography>Print functionality will be implemented here.</Typography>
@@ -1192,6 +1463,24 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
+          {dialogType === 'new' && (
+            <Button 
+              variant="contained" 
+              onClick={handleCreateOrder}
+              sx={{ bgcolor: '#13bbc6' }}
+            >
+              Create Order
+            </Button>
+          )}
+          {dialogType === 'edit' && (
+            <Button 
+              variant="contained" 
+              onClick={handleEditOrder}
+              sx={{ bgcolor: '#13bbc6' }}
+            >
+              Update Order
+            </Button>
+          )}
           {dialogType === 'view' && selectedOrder && (
             <>
               <Button variant="outlined" onClick={() => handleOpenDialog('edit', selectedOrder)}>
