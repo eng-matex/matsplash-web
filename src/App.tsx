@@ -46,6 +46,7 @@ import CleanerDashboard from './components/CleanerDashboard';
 import LoaderDashboard from './components/LoaderDashboard';
 import SalesDashboard from './components/SalesDashboard';
 import SecurityDashboard from './components/SecurityDashboard';
+import LoginPage from './components/LoginPage';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -298,249 +299,19 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #13bbc6 30%, #FFD700 90%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 3
-      }}>
-        <Container maxWidth="sm">
-          <Card sx={{ p: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-            <CardContent>
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <img src={logo} alt="MatSplash Logo" style={{ width: 200, height: 'auto', marginBottom: 20 }} />
-                    <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-                      MatSplash Factory Management
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                      Please login to access the system
-                    </Typography>
-              </Box>
-
-              {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              )}
-
-                  <Box component="form" onSubmit={handleLogin} sx={{ mt: 2 }}>
-                    <TextField
-                      fullWidth
-                      label="Email or Phone"
-                      value={loginData.emailOrPhone}
-                      onChange={(e) => setLoginData({ ...loginData, emailOrPhone: e.target.value })}
-                      margin="normal"
-                      required
-                      disabled={requiresTwoFactor}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Email />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <TextField
-                      fullWidth
-                      label="PIN"
-                      type={showPin ? 'text' : 'password'}
-                      value={loginData.pin}
-                      onChange={(e) => setLoginData({ ...loginData, pin: e.target.value })}
-                      margin="normal"
-                      required
-                      disabled={requiresTwoFactor}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Lock />
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              onClick={() => setShowPin(!showPin)}
-                              edge="end"
-                            >
-                              {showPin ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    
-                    {requiresTwoFactor && (
-                      <TextField
-                        fullWidth
-                        label="Two-Factor Authentication Code"
-                        value={loginData.twoFactorCode}
-                        onChange={(e) => setLoginData({ ...loginData, twoFactorCode: e.target.value })}
-                        margin="normal"
-                        required
-                        placeholder="Enter 6-digit code from your authenticator app"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Lock />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                    )}
-
-                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="small"
-                        onClick={() => setShowEmergencyAccess(!showEmergencyAccess)}
-                        sx={{ color: '#ff6b6b' }}
-                        disabled={!loginData.emailOrPhone || !loginData.emailOrPhone.includes('director')}
-                      >
-                        Emergency Access
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="small"
-                        onClick={() => {
-                          setRequiresTwoFactor(false);
-                          setShowEmergencyAccess(false);
-                          setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
-                        }}
-                      >
-                        Reset
-                      </Button>
-                    </Box>
-
-                    {/* Show 2FA option for Director and Admin */}
-                    {loginData.emailOrPhone && (loginData.emailOrPhone.includes('director') || loginData.emailOrPhone.includes('admin')) && !requiresTwoFactor && (
-                      <Box sx={{ mt: 2 }}>
-                        <Button
-                          type="button"
-                          variant="outlined"
-                          size="small"
-                          onClick={() => setRequiresTwoFactor(true)}
-                          sx={{ color: '#13bbc6', borderColor: '#13bbc6' }}
-                        >
-                          Use Two-Factor Authentication
-                        </Button>
-                      </Box>
-                    )}
-
-                    {showEmergencyAccess && (
-                      <TextField
-                        fullWidth
-                        label="Emergency Access Code"
-                        value={loginData.emergencyCode}
-                        onChange={(e) => setLoginData({ ...loginData, emergencyCode: e.target.value })}
-                        margin="normal"
-                        placeholder="Enter emergency access code"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Lock />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                    )}
-
-                    <Button
-                      type="submit"
-                      fullWidth
-                      variant="contained"
-                      disabled={loading}
-                      sx={{
-                        mt: 3,
-                        mb: 2,
-                        py: 1.5,
-                        bgcolor: '#13bbc6',
-                        '&:hover': { bgcolor: '#0fa8b3' }
-                      }}
-                    >
-                      {loading ? <CircularProgress size={24} /> : requiresTwoFactor ? 'Verify 2FA' : 'Login'}
-                    </Button>
-                  </Box>
-
-                  <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                    <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                      Test Credentials:
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Admin:</strong> admin@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Director:</strong> director@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Manager:</strong> manager@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Receptionist:</strong> receptionist@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Storekeeper:</strong> storekeeper@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Driver:</strong> driver@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Driver Assistant:</strong> driverassistant@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Packer:</strong> packer@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Security:</strong> security@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Cleaner:</strong> cleaner@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Operator:</strong> operator@matsplash.com / 1111
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Loader:</strong> loader@matsplash.com / 1111
-                    </Typography>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6" gutterBottom sx={{ color: '#ff6b6b' }}>
-                      Emergency Access:
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#ff6b6b' }}>
-                      <strong>Emergency Code:</strong> EMERGENCY2024
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
-                      ⚠️ Use only in emergency situations. This code bypasses all security restrictions.
-                    </Typography>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                      Security Notes:
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>Director & Admin:</strong> Require 2FA (Two-Factor Authentication)
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>Manager, Sales, Admin:</strong> Must use whitelisted personal devices
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>All Other Roles:</strong> Must use company-authorized devices (laptop, desktop, tablet, mobile)
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>Location:</strong> Non-Director roles must be at factory location
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
-                      • <strong>Factory Devices:</strong> FACTORY-LAPTOP-001, FACTORY-DESKTOP-001, FACTORY-TABLET-001, FACTORY-MOBILE-001
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#666', display: 'block' }}>
-                      • <strong>Emergency Access:</strong> Director only, requires 2FA
-                    </Typography>
-                  </Box>
-            </CardContent>
-          </Card>
-        </Container>
-      </Box>
+      <LoginPage
+        loginData={loginData}
+        setLoginData={setLoginData}
+        handleLogin={handleLogin}
+        loading={loading}
+        error={error}
+        requiresTwoFactor={requiresTwoFactor}
+        setRequiresTwoFactor={setRequiresTwoFactor}
+        showEmergencyAccess={showEmergencyAccess}
+        setShowEmergencyAccess={setShowEmergencyAccess}
+        showPin={showPin}
+        setShowPin={setShowPin}
+      />
     </ThemeProvider>
   );
 };

@@ -20,6 +20,7 @@ import {
   Lock
 } from '@mui/icons-material';
 import axios from 'axios';
+import MatsplashLogo from '../assets/Matsplash-logo.png';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -79,36 +80,90 @@ const LoginPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2
+        background: '#f5f5f5',
+        padding: 0,
+        margin: 0
       }}
     >
-      <Container maxWidth="sm">
-        <Paper elevation={10} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          <Card>
-            <CardContent sx={{ p: 4 }}>
-              {/* Header */}
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  🏭 MatSplash
-                </Typography>
-                <Typography variant="h6" color="text.secondary">
-                  Factory Management System
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Sign in to access your dashboard
-                </Typography>
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: 400,
+          margin: '0 auto',
+          padding: '40px 20px'
+        }}
+      >
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 0,
+            border: '1px solid #e0e0e0',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <CardContent sx={{ p: 0 }}>
+            {/* Header with Logo */}
+            <Box 
+              sx={{ 
+                textAlign: 'center', 
+                padding: '40px 30px 20px 30px',
+                borderBottom: '1px solid #f0f0f0'
+              }}
+            >
+              <Box sx={{ mb: 2 }}>
+                <img 
+                  src={MatsplashLogo} 
+                  alt="MatSplash Logo" 
+                  style={{ 
+                    height: '60px', 
+                    width: 'auto',
+                    maxWidth: '200px'
+                  }} 
+                />
               </Box>
+              <Typography 
+                variant="h5" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#2c3e50',
+                  fontSize: '24px',
+                  margin: 0
+                }}
+              >
+                MatSplash Suite
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#7f8c8d',
+                  fontSize: '14px',
+                  marginTop: '8px'
+                }}
+              >
+                Factory Management System
+              </Typography>
+            </Box>
 
+            {/* Login Form */}
+            <Box sx={{ padding: '30px' }}>
               {/* Error Alert */}
               {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mb: 3,
+                    fontSize: '14px',
+                    '& .MuiAlert-message': {
+                      fontSize: '14px'
+                    }
+                  }}
+                >
                   {error}
                 </Alert>
               )}
 
-              {/* Login Form */}
-              <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+              <Box component="form" onSubmit={handleSubmit}>
                 <TextField
                   fullWidth
                   label="Email or Phone Number"
@@ -118,10 +173,24 @@ const LoginPage: React.FC = () => {
                   required
                   autoComplete="email"
                   autoFocus
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '14px'
+                    },
+                    mb: 2
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        {formData.emailOrPhone.includes('@') ? <Email /> : <Phone />}
+                        {formData.emailOrPhone.includes('@') ? 
+                          <Email sx={{ fontSize: '20px', color: '#7f8c8d' }} /> : 
+                          <Phone sx={{ fontSize: '20px', color: '#7f8c8d' }} />
+                        }
                       </InputAdornment>
                     ),
                   }}
@@ -136,10 +205,21 @@ const LoginPage: React.FC = () => {
                   margin="normal"
                   required
                   autoComplete="current-password"
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '14px'
+                    },
+                    mb: 3
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Lock />
+                        <Lock sx={{ fontSize: '20px', color: '#7f8c8d' }} />
                       </InputAdornment>
                     ),
                     endAdornment: (
@@ -148,8 +228,17 @@ const LoginPage: React.FC = () => {
                           aria-label="toggle password visibility"
                           onClick={togglePinVisibility}
                           edge="end"
+                          sx={{ 
+                            padding: '8px',
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            }
+                          }}
                         >
-                          {showPin ? <VisibilityOff /> : <Visibility />}
+                          {showPin ? 
+                            <VisibilityOff sx={{ fontSize: '20px', color: '#7f8c8d' }} /> : 
+                            <Visibility sx={{ fontSize: '20px', color: '#7f8c8d' }} />
+                          }
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -160,31 +249,64 @@ const LoginPage: React.FC = () => {
                   type="submit"
                   fullWidth
                   variant="contained"
-                  size="large"
                   disabled={isSubmitting}
-                  sx={{ mt: 3, mb: 2, py: 1.5 }}
+                  sx={{ 
+                    py: 1.5,
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    backgroundColor: '#13bbc6',
+                    borderRadius: '4px',
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: '#0fa8b1'
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#bdc3c7'
+                    }
+                  }}
                 >
                   {isSubmitting ? 'Signing In...' : 'Sign In'}
                 </Button>
               </Box>
+            </Box>
 
-              {/* Test Credentials */}
-              <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Test Credentials:
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Admin: admin@matsplash.com / 1111<br/>
-                  Director: director@matsplash.com / 1111<br/>
-                  Manager: manager@matsplash.com / 1111<br/>
-                  Receptionist: receptionist@matsplash.com / 1111<br/>
-                  Storekeeper: storekeeper@matsplash.com / 1111
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Paper>
-      </Container>
+            {/* Test Credentials */}
+            <Box 
+              sx={{ 
+                padding: '20px 30px 30px 30px',
+                backgroundColor: '#f8f9fa',
+                borderTop: '1px solid #f0f0f0'
+              }}
+            >
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#2c3e50',
+                  mb: 1
+                }}
+              >
+                Test Credentials:
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '12px',
+                  color: '#7f8c8d',
+                  lineHeight: 1.5
+                }}
+              >
+                Admin: admin@matsplash.com / 1111<br/>
+                Director: director@matsplash.com / 1111<br/>
+                Manager: manager@matsplash.com / 1111<br/>
+                Receptionist: receptionist@matsplash.com / 1111<br/>
+                Storekeeper: storekeeper@matsplash.com / 1111
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 };
