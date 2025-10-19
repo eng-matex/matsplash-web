@@ -433,6 +433,24 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ selectedSection
     setSelectedReport(null);
   };
 
+  const handleGenerateReport = () => {
+    console.log('Generating report...');
+    // Report generation logic will be implemented here
+    handleCloseDialog();
+  };
+
+  const handleDownloadReport = () => {
+    console.log('Downloading report...');
+    // Report download logic will be implemented here
+    handleCloseDialog();
+  };
+
+  const handlePrintReport = () => {
+    console.log('Printing report...');
+    // Report printing logic will be implemented here
+    handleCloseDialog();
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'completed': return 'success';
@@ -763,6 +781,50 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ selectedSection
     </Box>
   );
 
+  const renderNewReportForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Generate New Report
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Report generation functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderViewReportForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Report Details
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Report details view will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderDownloadReportForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Download Report
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Report download functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderPrintReportForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Print Report
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Report printing functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -795,18 +857,26 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ selectedSection
           {dialogType === 'print-report' && 'Print Report'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType === 'new-report' && 'Report generation functionality will be implemented here.'}
-            {dialogType === 'view-report' && 'Report details view will be implemented here.'}
-            {dialogType === 'download-report' && 'Report download functionality will be implemented here.'}
-            {dialogType === 'print-report' && 'Report printing functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'new-report' && renderNewReportForm()}
+          {dialogType === 'view-report' && renderViewReportForm()}
+          {dialogType === 'download-report' && renderDownloadReportForm()}
+          {dialogType === 'print-report' && renderPrintReportForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'new-report' && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleGenerateReport}>
               Generate Report
+            </Button>
+          )}
+          {dialogType === 'download-report' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleDownloadReport}>
+              Download Report
+            </Button>
+          )}
+          {dialogType === 'print-report' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handlePrintReport}>
+              Print Report
             </Button>
           )}
         </DialogActions>
