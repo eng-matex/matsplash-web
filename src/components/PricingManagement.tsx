@@ -227,12 +227,27 @@ interface CustomerSegment {
   created_at: string;
 }
 
+interface PriceModel {
+  id: number;
+  name: string;
+  description: string;
+  base_price: number;
+  min_quantity: number;
+  max_quantity: number;
+  customer_type: 'general' | 'distributor' | 'non_distributor' | 'driver_dispatch' | 'store_dispatch';
+  is_active: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
   const [customerSegments, setCustomerSegments] = useState<CustomerSegment[]>([]);
+  const [priceModels, setPriceModels] = useState<PriceModel[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -263,6 +278,15 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     start_date: new Date().toISOString().split('T')[0],
     status: 'active'
   });
+  const [newPriceModel, setNewPriceModel] = useState<Partial<PriceModel>>({
+    name: '',
+    description: '',
+    base_price: 0,
+    min_quantity: 1,
+    max_quantity: 999999,
+    customer_type: 'general',
+    is_active: true
+  });
   const [formErrors, setFormErrors] = useState<any>({});
 
   const productCategories = [
@@ -272,6 +296,14 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     'Accessories',
     'Cleaning Supplies',
     'Packaging Materials'
+  ];
+
+  const customerTypes = [
+    { value: 'general', label: 'General Sales' },
+    { value: 'distributor', label: 'Distributor' },
+    { value: 'non_distributor', label: 'Non-Distributor Pickup' },
+    { value: 'driver_dispatch', label: 'Driver Dispatch' },
+    { value: 'store_dispatch', label: 'Store Dispatch' }
   ];
 
   const units = [
@@ -299,6 +331,87 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
   useEffect(() => {
     fetchData();
   }, [selectedSection]);
+
+  const getMockPriceModels = (): PriceModel[] => [
+    {
+      id: 1,
+      name: 'General Sales - Standard',
+      description: 'Standard pricing for general sales',
+      base_price: 300,
+      min_quantity: 1,
+      max_quantity: 49,
+      customer_type: 'general',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 2,
+      name: 'General Sales - Bulk',
+      description: 'Bulk pricing for general sales (50+ bags)',
+      base_price: 280,
+      min_quantity: 50,
+      max_quantity: 999999,
+      customer_type: 'general',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 3,
+      name: 'Distributor - Small Order',
+      description: 'Pricing for distributor orders under 50 bags',
+      base_price: 240,
+      min_quantity: 1,
+      max_quantity: 49,
+      customer_type: 'distributor',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 4,
+      name: 'Distributor - Large Order',
+      description: 'Pricing for distributor orders 50+ bags',
+      base_price: 200,
+      min_quantity: 50,
+      max_quantity: 999999,
+      customer_type: 'distributor',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 5,
+      name: 'Driver Dispatch',
+      description: 'Pricing for driver dispatch sales (commission based)',
+      base_price: 270,
+      min_quantity: 1,
+      max_quantity: 999999,
+      customer_type: 'driver_dispatch',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 6,
+      name: 'Store Dispatch',
+      description: 'No pricing for store dispatch (stocking only)',
+      base_price: 0,
+      min_quantity: 1,
+      max_quantity: 999999,
+      customer_type: 'store_dispatch',
+      is_active: true,
+      created_by: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ];
 
   const fetchData = async () => {
     setLoading(true);
@@ -495,6 +608,23 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       setPriceHistory(mockPriceHistory);
       setPricingRules(mockPricingRules);
       setCustomerSegments(mockCustomerSegments);
+
+      // Fetch price models from API
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        const response = await fetch('http://localhost:3001/api/price-models', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setPriceModels(data.data || []);
+        } else {
+          // Fallback to mock data
+          setPriceModels(getMockPriceModels());
+        }
+      } catch (error) {
+        console.error('Error fetching price models:', error);
+        setPriceModels(getMockPriceModels());
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -506,12 +636,14 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     setSelectedTab(newValue);
   };
 
-  const handleOpenDialog = (type: string, item?: Product | PricingRule) => {
+  const handleOpenDialog = (type: string, item?: Product | PricingRule | PriceModel) => {
     setDialogType(type);
     if (item && 'category' in item) {
       setSelectedProduct(item as Product);
     } else if (item && 'rule_type' in item) {
       setSelectedRule(item as PricingRule);
+    } else if (item && 'customer_type' in item) {
+      setSelectedProduct(item as any); // Store price model in selectedProduct for now
     } else {
       setSelectedProduct(null);
       setSelectedRule(null);
@@ -541,6 +673,27 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
         start_date: new Date().toISOString().split('T')[0],
         status: 'active'
       });
+    } else if (type === 'new-price-model') {
+      setNewPriceModel({
+        name: '',
+        description: '',
+        base_price: 0,
+        min_quantity: 1,
+        max_quantity: 999999,
+        customer_type: 'general',
+        is_active: true
+      });
+    } else if (type === 'edit-price-model' && item) {
+      const priceModel = item as PriceModel;
+      setNewPriceModel({
+        name: priceModel.name,
+        description: priceModel.description,
+        base_price: priceModel.base_price,
+        min_quantity: priceModel.min_quantity,
+        max_quantity: priceModel.max_quantity,
+        customer_type: priceModel.customer_type,
+        is_active: priceModel.is_active
+      });
     }
     setFormErrors({});
     setDialogOpen(true);
@@ -551,6 +704,15 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     setDialogType('');
     setSelectedProduct(null);
     setSelectedRule(null);
+    setNewPriceModel({
+      name: '',
+      description: '',
+      base_price: 0,
+      min_quantity: 1,
+      max_quantity: 999999,
+      customer_type: 'general',
+      is_active: true
+    });
   };
 
   const handleProductChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
@@ -575,6 +737,101 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
   const handleRuleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
     const { name, value } = e.target;
     setNewRule((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePriceModelChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }) => {
+    const { name, value } = e.target;
+    setNewPriceModel((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCreatePriceModel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/price-models', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newPriceModel,
+          created_by: 1, // This should come from auth context
+          userEmail: 'director@matsplash.com' // This should come from auth context
+        })
+      });
+
+      if (response.ok) {
+        await fetchData(); // Refresh the data
+        handleCloseDialog();
+        setNewPriceModel({
+          name: '',
+          description: '',
+          base_price: 0,
+          min_quantity: 1,
+          max_quantity: 999999,
+          customer_type: 'general',
+          is_active: true
+        });
+      } else {
+        console.error('Failed to create price model');
+      }
+    } catch (error) {
+      console.error('Error creating price model:', error);
+    }
+  };
+
+  const handleUpdatePriceModel = async (model: PriceModel) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/price-models/${model.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newPriceModel,
+          updated_by: 1, // This should come from auth context
+          userEmail: 'director@matsplash.com' // This should come from auth context
+        })
+      });
+
+      if (response.ok) {
+        await fetchData(); // Refresh the data
+        handleCloseDialog();
+      } else {
+        console.error('Failed to update price model');
+      }
+    } catch (error) {
+      console.error('Error updating price model:', error);
+    }
+  };
+
+  const handleDeletePriceModel = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this price model?')) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:3001/api/price-models/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            deleted_by: 1, // This should come from auth context
+            userEmail: 'director@matsplash.com' // This should come from auth context
+          })
+        });
+
+        if (response.ok) {
+          await fetchData(); // Refresh the data
+        } else {
+          console.error('Failed to delete price model');
+        }
+      } catch (error) {
+        console.error('Error deleting price model:', error);
+      }
+    }
   };
 
   const validateProductForm = () => {
@@ -920,6 +1177,96 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     </Box>
   );
 
+  const renderPriceModelsList = () => (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Price Models
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => handleOpenDialog('new-price-model')}
+          sx={{ bgcolor: '#13bbc6' }}
+          className="dashboard-button"
+        >
+          Add Price Model
+        </Button>
+      </Box>
+
+      <Card className="dashboard-card">
+        <CardContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Customer Type</TableCell>
+                  <TableCell>Base Price</TableCell>
+                  <TableCell>Quantity Range</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {priceModels.map((model) => (
+                  <TableRow key={model.id}>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                          {model.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {model.description}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={customerTypes.find(ct => ct.value === model.customer_type)?.label || model.customer_type}
+                        color="primary"
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        ₦{model.base_price.toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {model.min_quantity} - {model.max_quantity === 999999 ? '∞' : model.max_quantity} bags
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={model.is_active ? 'Active' : 'Inactive'} 
+                        color={model.is_active ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Edit Price Model">
+                        <IconButton size="small" onClick={() => handleOpenDialog('edit-price-model', model)}>
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Price Model">
+                        <IconButton size="small" onClick={() => handleDeletePriceModel(model.id)}>
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -929,12 +1276,17 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       );
     }
 
-    switch (selectedSection) {
-      case 'pricing':
-        return renderProductsList();
-      default:
-        return renderProductsList();
-    }
+    return (
+      <Box>
+        <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+          <Tab label="Product Pricing" />
+          <Tab label="Price Models" />
+        </Tabs>
+
+        {selectedTab === 0 && renderProductsList()}
+        {selectedTab === 1 && renderPriceModelsList()}
+      </Box>
+    );
   };
 
   return (
@@ -948,6 +1300,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
           {dialogType === 'edit-product' && 'Edit Product'}
           {dialogType === 'view-product' && 'Product Details'}
           {dialogType === 'price-history' && 'Price History'}
+          {dialogType === 'new-price-model' && 'Add New Price Model'}
+          {dialogType === 'edit-price-model' && 'Edit Price Model'}
         </DialogTitle>
         <DialogContent>
           {dialogType === 'new-product' && (
@@ -1098,12 +1452,119 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
               </Grid>
             </Box>
           )}
+          {(dialogType === 'new-price-model' || dialogType === 'edit-price-model') && (
+            <Box component="form" sx={{ mt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Price Model Name"
+                    name="name"
+                    fullWidth
+                    value={newPriceModel.name}
+                    onChange={handlePriceModelChange}
+                    variant="outlined"
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Customer Type</InputLabel>
+                    <Select
+                      name="customer_type"
+                      value={newPriceModel.customer_type}
+                      onChange={handlePriceModelChange}
+                      label="Customer Type"
+                    >
+                      {customerTypes.map((type) => (
+                        <MenuItem key={type.value} value={type.value}>
+                          {type.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Description"
+                    name="description"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={newPriceModel.description}
+                    onChange={handlePriceModelChange}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="Base Price (₦)"
+                    name="base_price"
+                    type="number"
+                    fullWidth
+                    value={newPriceModel.base_price}
+                    onChange={handlePriceModelChange}
+                    variant="outlined"
+                    required
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="Minimum Quantity"
+                    name="min_quantity"
+                    type="number"
+                    fullWidth
+                    value={newPriceModel.min_quantity}
+                    onChange={handlePriceModelChange}
+                    variant="outlined"
+                    required
+                    inputProps={{ min: 1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="Maximum Quantity"
+                    name="max_quantity"
+                    type="number"
+                    fullWidth
+                    value={newPriceModel.max_quantity}
+                    onChange={handlePriceModelChange}
+                    variant="outlined"
+                    required
+                    inputProps={{ min: 1 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="is_active"
+                        checked={newPriceModel.is_active}
+                        onChange={(e) => setNewPriceModel(prev => ({ ...prev, is_active: e.target.checked }))}
+                      />
+                    }
+                    label="Active"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'new-product' && (
             <Button variant="contained" onClick={handleSubmitProduct} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : 'Add Product'}
+            </Button>
+          )}
+          {dialogType === 'new-price-model' && (
+            <Button variant="contained" onClick={handleCreatePriceModel} disabled={loading}>
+              {loading ? <CircularProgress size={24} /> : 'Add Price Model'}
+            </Button>
+          )}
+          {dialogType === 'edit-price-model' && (
+            <Button variant="contained" onClick={() => handleUpdatePriceModel(selectedProduct as any)} disabled={loading}>
+              {loading ? <CircularProgress size={24} /> : 'Update Price Model'}
             </Button>
           )}
         </DialogActions>

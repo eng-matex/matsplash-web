@@ -177,9 +177,42 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
   });
 
   // Mock data for products
+  const [priceModels, setPriceModels] = useState<any[]>([]);
+  
   const products = [
     { name: 'Sachet Water', price: 300, unit: 'bags' }
   ];
+
+  // Function to get price based on order type and quantity
+  const getPriceForOrder = (orderType: string, quantity: number): number => {
+    const applicableModels = priceModels.filter(model => 
+      model.customer_type === orderType && 
+      model.is_active &&
+      quantity >= model.min_quantity && 
+      quantity <= model.max_quantity
+    );
+    
+    if (applicableModels.length > 0) {
+      // Return the price from the first applicable model
+      return applicableModels[0].base_price;
+    }
+    
+    // Fallback to default pricing
+    switch (orderType) {
+      case 'general_sales':
+        return quantity >= 50 ? 280 : 300;
+      case 'distributor_order':
+        return quantity >= 50 ? 200 : 240;
+      case 'non_distributor_pickup':
+        return quantity >= 50 ? 220 : 240;
+      case 'driver_dispatch':
+        return 270;
+      case 'store_dispatch':
+        return 0;
+      default:
+        return 300;
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -209,6 +242,22 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       } catch (error) {
         console.log('Orders API not available, using mock data');
         setOrders(getMockOrders());
+      }
+
+      // Fetch price models from API
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        const response = await fetch('http://localhost:3001/api/price-models', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setPriceModels(data.data || []);
+        } else {
+          setPriceModels([]);
+        }
+      } catch (error) {
+        console.log('Price models API not available, using empty array');
+        setPriceModels([]);
       }
 
       // Fetch customers from API (if available)
@@ -1386,10 +1435,13 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                             value={item.quantity}
                             onChange={(e) => {
                               const newItems = [...(editOrder.items || [])];
+                              const newQuantity = parseInt(e.target.value) || 0;
+                              const newUnitPrice = getPriceForOrder(editOrder.order_type || 'general_sales', newQuantity);
                               newItems[index] = { 
                                 ...item, 
-                                quantity: parseInt(e.target.value) || 0,
-                                total_price: (parseInt(e.target.value) || 0) * (item.unit_price || 0)
+                                quantity: newQuantity,
+                                unit_price: newUnitPrice,
+                                total_price: newQuantity * newUnitPrice
                               };
                               setEditOrder({...editOrder, items: newItems});
                             }}
@@ -1398,18 +1450,13 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                         <Grid item xs={12} sm={2}>
                           <TextField
                             fullWidth
-                            label="Unit Price"
+                            label="Unit Price (₦)"
                             type="number"
                             value={item.unit_price}
-                            onChange={(e) => {
-                              const newItems = [...(editOrder.items || [])];
-                              newItems[index] = { 
-                                ...item, 
-                                unit_price: parseFloat(e.target.value) || 0,
-                                total_price: (item.quantity || 0) * (parseFloat(e.target.value) || 0)
-                              };
-                              setEditOrder({...editOrder, items: newItems});
+                            InputProps={{
+                              readOnly: true,
                             }}
+                            helperText="Price from price model"
                           />
                         </Grid>
                         <Grid item xs={12} sm={2}>
@@ -1438,11 +1485,13 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                   <Button
                     variant="outlined"
                     onClick={() => {
+                      const quantity = 1;
+                      const unitPrice = getPriceForOrder(editOrder.order_type || 'general_sales', quantity);
                       const newItems = [...(editOrder.items || []), {
                         product_name: 'Sachet Water',
-                        quantity: 1,
-                        unit_price: 300,
-                        total_price: 300
+                        quantity: quantity,
+                        unit_price: unitPrice,
+                        total_price: unitPrice * quantity
                       }];
                       setEditOrder({...editOrder, items: newItems});
                     }}

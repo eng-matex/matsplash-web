@@ -2644,6 +2644,10 @@ app.use('/api/inventory', inventoryRoutes(db));
 const ordersRoutes = require('./server/routes/orders.cjs');
 app.use('/api/orders', ordersRoutes(db));
 
+// Import and mount price models routes
+const priceModelsRoutes = require('./server/routes/price-models.cjs');
+app.use('/api/price-models', priceModelsRoutes(db));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
