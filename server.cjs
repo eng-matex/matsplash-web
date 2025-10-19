@@ -2615,7 +2615,11 @@ app.use('/api/price-models', priceModelsRoutes(db));
 
 // Import and mount employees routes
 const employeesRoutes = require('./server/routes/employees.cjs');
-app.use('/api/employees', employeesRoutes);
+app.use('/api/employees', employeesRoutes(db));
+
+// Import and mount bonus routes
+const bonusRoutes = require('./server/routes/bonuses.cjs');
+app.use('/api/salary/bonuses', bonusRoutes(db));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

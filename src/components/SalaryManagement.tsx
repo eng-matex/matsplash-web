@@ -119,6 +119,22 @@ interface Employee {
   email: string;
 }
 
+interface Bonus {
+  id: number;
+  employee_id: number;
+  amount: number;
+  reason: string;
+  bonus_date: string;
+  status: string;
+  approved_by?: number;
+  approved_at?: string;
+  created_by: number;
+  created_at: string;
+  employee_name: string;
+  approved_by_name?: string;
+  created_by_name: string;
+}
+
 const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
@@ -127,11 +143,13 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
   const [packingLogs, setPackingLogs] = useState<PackingLog[]>([]);
   const [driverSalesLogs, setDriverSalesLogs] = useState<DriverSalesLog[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<PackingLog[]>([]);
+  const [bonuses, setBonuses] = useState<Bonus[]>([]);
   
   // Dialog states
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [packingDialogOpen, setPackingDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedLog, setSelectedLog] = useState<PackingLog | null>(null);
   
@@ -146,6 +164,12 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
   const [approvalData, setApprovalData] = useState({ 
     manager_notes: '', 
     final_bags: 0 
+  });
+  const [newBonus, setNewBonus] = useState({
+    employee_id: 0,
+    amount: 0,
+    reason: '',
+    bonus_date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -195,10 +219,101 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
         }
       }
 
+      // Fetch bonuses
+      try {
+        const bonusesResponse = await axios.get('/api/salary/bonuses', { headers });
+        if (bonusesResponse.data.success) {
+          setBonuses(bonusesResponse.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching bonuses:', error);
+        // Use mock data if API fails
+        setBonuses(getMockBonuses());
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getMockBonuses = (): Bonus[] => {
+    return [
+      {
+        id: 1,
+        employee_id: 1,
+        amount: 5000,
+        reason: 'Exceptional performance during peak season',
+        bonus_date: '2024-01-15',
+        status: 'approved',
+        approved_by: 1,
+        approved_at: '2024-01-16T10:00:00Z',
+        created_by: 1,
+        created_at: '2024-01-15T14:30:00Z',
+        employee_name: 'John Doe',
+        approved_by_name: 'Admin User',
+        created_by_name: 'Admin User'
+      },
+      {
+        id: 2,
+        employee_id: 2,
+        amount: 3000,
+        reason: 'Outstanding customer service',
+        bonus_date: '2024-01-20',
+        status: 'pending',
+        created_by: 1,
+        created_at: '2024-01-20T09:15:00Z',
+        employee_name: 'Jane Smith',
+        created_by_name: 'Admin User'
+      }
+    ];
+  };
+
+  const handleCreateBonus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      await axios.post('/api/salary/bonuses', newBonus, { headers });
+      
+      setBonusDialogOpen(false);
+      setNewBonus({
+        employee_id: 0,
+        amount: 0,
+        reason: '',
+        bonus_date: new Date().toISOString().split('T')[0]
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error creating bonus:', error);
+      alert('Failed to create bonus. Please try again.');
+    }
+  };
+
+  const handleApproveBonus = async (bonusId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      await axios.put(`/api/salary/bonuses/${bonusId}/approve`, {}, { headers });
+      fetchData();
+    } catch (error) {
+      console.error('Error approving bonus:', error);
+      alert('Failed to approve bonus. Please try again.');
+    }
+  };
+
+  const handleRejectBonus = async (bonusId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      await axios.put(`/api/salary/bonuses/${bonusId}/reject`, {}, { headers });
+      fetchData();
+    } catch (error) {
+      console.error('Error rejecting bonus:', error);
+      alert('Failed to reject bonus. Please try again.');
     }
   };
 
@@ -504,6 +619,115 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
     </Card>
   );
 
+  const renderBonuses = () => (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Bonus Management
+        </Typography>
+        {(userRole === 'Director' || userRole === 'Admin') && (
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setBonusDialogOpen(true)}
+            sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
+          >
+            Add Bonus
+          </Button>
+        )}
+      </Box>
+
+      <TableContainer component={Paper} sx={{ boxShadow: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Employee</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Amount</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Reason</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#2c3e50' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {bonuses.map((bonus) => (
+              <TableRow key={bonus.id} hover>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
+                    {bonus.employee_name}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="bold" color="primary">
+                    ₦{bonus.amount.toLocaleString()}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {bonus.reason}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {new Date(bonus.bonus_date).toLocaleDateString()}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={bonus.status}
+                    color={
+                      bonus.status === 'approved' ? 'success' :
+                      bonus.status === 'pending' ? 'warning' : 'error'
+                    }
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  {(userRole === 'Manager' || userRole === 'Admin' || userRole === 'Director') && 
+                   bonus.status === 'pending' && (
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleApproveBonus(bonus.id)}
+                        sx={{ minWidth: 'auto', px: 2 }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="error"
+                        onClick={() => handleRejectBonus(bonus.id)}
+                        sx={{ minWidth: 'auto', px: 2 }}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  )}
+                  {bonus.status === 'approved' && bonus.approved_by_name && (
+                    <Typography variant="caption" color="text.secondary">
+                      Approved by {bonus.approved_by_name}
+                    </Typography>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {bonuses.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="body1" color="text.secondary">
+            No bonuses found
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -520,6 +744,8 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
         return renderPackingLogs();
       case 2:
         return renderPendingApprovals();
+      case 3:
+        return renderBonuses();
       default:
         return renderSalaryRates();
     }
@@ -537,6 +763,7 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
         {(userRole === 'Manager' || userRole === 'Admin' || userRole === 'Director') && (
           <Tab label="Pending Approvals" icon={<Pending />} />
         )}
+        <Tab label="Bonus Management" icon={<Payment />} />
       </Tabs>
 
       {renderContent()}
@@ -673,6 +900,62 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
           <Button onClick={() => setApprovalDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleApproveLog} variant="contained" color="success">
             Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bonus Dialog */}
+      <Dialog open={bonusDialogOpen} onClose={() => setBonusDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Employee Bonus</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Employee</InputLabel>
+            <Select
+              value={newBonus.employee_id}
+              onChange={(e) => setNewBonus({ ...newBonus, employee_id: Number(e.target.value) })}
+              label="Employee"
+            >
+              {employees.map((employee) => (
+                <MenuItem key={employee.id} value={employee.id}>
+                  {employee.name} ({employee.role})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="Bonus Amount (₦)"
+            type="number"
+            value={newBonus.amount}
+            onChange={(e) => setNewBonus({ ...newBonus, amount: Number(e.target.value) })}
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1 }}>₦</Typography>
+            }}
+          />
+          <TextField
+            fullWidth
+            label="Reason for Bonus"
+            multiline
+            rows={3}
+            value={newBonus.reason}
+            onChange={(e) => setNewBonus({ ...newBonus, reason: e.target.value })}
+            sx={{ mb: 2 }}
+            placeholder="e.g., Exceptional performance during peak season"
+          />
+          <TextField
+            fullWidth
+            label="Bonus Date"
+            type="date"
+            value={newBonus.bonus_date}
+            onChange={(e) => setNewBonus({ ...newBonus, bonus_date: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBonusDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreateBonus} variant="contained" color="success">
+            Add Bonus
           </Button>
         </DialogActions>
       </Dialog>

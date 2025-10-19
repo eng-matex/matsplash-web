@@ -1,8 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db } = require('../database');
 
-const router = express.Router();
+module.exports = (db) => {
+  const router = express.Router();
 
 // Get all employees
 router.get('/', async (req, res) => {
@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     
     let query = db('employees')
       .where('deletion_status', 'Active')
-      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
+      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'commission_type', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
       .orderBy('name')
       .limit(parseInt(limit));
 
@@ -36,6 +36,7 @@ router.get('/', async (req, res) => {
       salary: emp.salary || 0,
       commission_rate: emp.commission_rate || 0,
       has_commission: emp.has_commission || false,
+      commission_type: emp.commission_type || 'none',
       address: emp.address,
       emergency_contact: emp.emergency_contact,
       emergency_phone: emp.emergency_phone,
@@ -151,6 +152,7 @@ router.post('/', async (req, res) => {
       salary: employeeData.salary || 0,
       commission_rate: employeeData.commission_rate || 0,
       has_commission: employeeData.has_commission || false,
+      commission_type: employeeData.commission_type || 'none',
       address: employeeData.address || '',
       emergency_contact: employeeData.emergency_contact || '',
       emergency_phone: employeeData.emergency_phone || '',
@@ -189,7 +191,7 @@ router.post('/', async (req, res) => {
     // Get the created employee
     const createdEmployee = await db('employees')
       .where('id', employeeId)
-      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
+      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'commission_type', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
       .first();
 
     const formattedEmployee = {
@@ -203,6 +205,7 @@ router.post('/', async (req, res) => {
       salary: createdEmployee.salary || 0,
       commission_rate: createdEmployee.commission_rate || 0,
       has_commission: createdEmployee.has_commission || false,
+      commission_type: createdEmployee.commission_type || 'none',
       address: createdEmployee.address,
       emergency_contact: createdEmployee.emergency_contact,
       emergency_phone: createdEmployee.emergency_phone,
@@ -389,4 +392,5 @@ router.post('/:id/reset-pin', async (req, res) => {
   }
 });
 
-module.exports = router;
+  return router;
+};

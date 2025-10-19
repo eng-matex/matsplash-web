@@ -135,6 +135,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     salary: 0,
     commission_rate: 0,
     has_commission: false,
+    commission_type: 'none',
     address: '',
     emergency_contact: '',
     emergency_phone: '',
@@ -441,6 +442,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         salary: newEmployee.salary || 0,
         commission_rate: newEmployee.commission_rate || 0,
         has_commission: newEmployee.has_commission || false,
+        commission_type: newEmployee.commission_type || 'none',
         address: newEmployee.address || '',
         emergency_contact: newEmployee.emergency_contact || '',
         emergency_phone: newEmployee.emergency_phone || '',
@@ -487,6 +489,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           salary: 0,
           commission_rate: 0,
           has_commission: false,
+          commission_type: 'none',
           address: '',
           emergency_contact: '',
           emergency_phone: '',
@@ -526,22 +529,22 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
   const getRoleDefaults = (roleId: string) => {
     const defaults = {
-      admin: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration' },
-      director: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration' },
-      manager: { salary: 150000, hasCommission: false, commissionRate: 0, department: 'Management' },
-      receptionist: { salary: 80000, hasCommission: false, commissionRate: 0, department: 'Operations' },
-      storekeeper: { salary: 70000, hasCommission: false, commissionRate: 0, department: 'Operations' },
-      driver: { salary: 60000, hasCommission: true, commissionRate: 30, department: 'Logistics' },
-      driverassistant: { salary: 50000, hasCommission: true, commissionRate: 20, department: 'Logistics' },
-      packer: { salary: 45000, hasCommission: true, commissionRate: 5, department: 'Production' },
-      sales: { salary: 0, hasCommission: true, commissionRate: 0, department: 'Sales' },
-      security: { salary: 55000, hasCommission: false, commissionRate: 0, department: 'Security' },
-      cleaner: { salary: 40000, hasCommission: false, commissionRate: 0, department: 'Maintenance' },
-      operator: { salary: 65000, hasCommission: false, commissionRate: 0, department: 'Production' },
-      loader: { salary: 50000, hasCommission: false, commissionRate: 0, department: 'Logistics' }
+      admin: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration', commissionType: 'none' },
+      director: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration', commissionType: 'none' },
+      manager: { salary: 150000, hasCommission: false, commissionRate: 0, department: 'Management', commissionType: 'none' },
+      receptionist: { salary: 80000, hasCommission: false, commissionRate: 0, department: 'Operations', commissionType: 'none' },
+      storekeeper: { salary: 70000, hasCommission: false, commissionRate: 0, department: 'Operations', commissionType: 'none' },
+      driver: { salary: 60000, hasCommission: true, commissionRate: 30, department: 'Logistics', commissionType: 'per_bag_sold' },
+      driverassistant: { salary: 50000, hasCommission: true, commissionRate: 20, department: 'Logistics', commissionType: 'per_bag_sold' },
+      packer: { salary: 45000, hasCommission: true, commissionRate: 5, department: 'Production', commissionType: 'per_bag_packed' },
+      sales: { salary: 0, hasCommission: true, commissionRate: 0, department: 'Sales', commissionType: 'per_bag_sold' },
+      security: { salary: 55000, hasCommission: false, commissionRate: 0, department: 'Security', commissionType: 'none' },
+      cleaner: { salary: 40000, hasCommission: false, commissionRate: 0, department: 'Maintenance', commissionType: 'none' },
+      operator: { salary: 65000, hasCommission: false, commissionRate: 0, department: 'Production', commissionType: 'none' },
+      loader: { salary: 50000, hasCommission: false, commissionRate: 0, department: 'Logistics', commissionType: 'none' }
     };
     
-    return defaults[roleId as keyof typeof defaults] || { salary: 50000, hasCommission: false, commissionRate: 0, department: 'General' };
+    return defaults[roleId as keyof typeof defaults] || { salary: 50000, hasCommission: false, commissionRate: 0, department: 'General', commissionType: 'none' };
   };
 
   const filteredEmployees = employees.filter(employee => {
@@ -783,10 +786,15 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                           {employee.has_commission ? (
                             <Box>
                               <Typography variant="body2" fontWeight="bold" color="primary">
-                                {employee.commission_rate}%
+                                ₦{employee.commission_rate}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                per transaction
+                                {employee.commission_type === 'per_bag_sold' 
+                                  ? 'per bag sold'
+                                  : employee.commission_type === 'per_bag_packed'
+                                  ? 'per bag packed'
+                                  : 'per transaction'
+                                }
                               </Typography>
                             </Box>
                           ) : (
@@ -940,6 +948,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                       salary: roleDefaults.salary,
                       has_commission: roleDefaults.hasCommission,
                       commission_rate: roleDefaults.commissionRate,
+                      commission_type: roleDefaults.commissionType,
                       department: roleDefaults.department
                     }));
                   }}
@@ -1004,19 +1013,41 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
               />
             </Grid>
             {newEmployee.has_commission && (
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Commission Rate (%)"
-                  type="number"
-                  value={newEmployee.commission_rate}
-                  onChange={(e) => setNewEmployee(prev => ({ ...prev, commission_rate: parseFloat(e.target.value) || 0 }))}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>
-                  }}
-                  helperText="Commission percentage per sale/transaction"
-                />
-              </Grid>
+              <>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Commission Rate (₦)"
+                    type="number"
+                    value={newEmployee.commission_rate}
+                    onChange={(e) => setNewEmployee(prev => ({ ...prev, commission_rate: parseFloat(e.target.value) || 0 }))}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">₦</InputAdornment>
+                    }}
+                    helperText={
+                      newEmployee.commission_type === 'per_bag_sold' 
+                        ? "Commission amount per bag successfully sold and approved by manager"
+                        : newEmployee.commission_type === 'per_bag_packed'
+                        ? "Commission amount per bag successfully packed"
+                        : "Commission amount per transaction"
+                    }
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Commission Type</InputLabel>
+                    <Select
+                      value={newEmployee.commission_type || 'none'}
+                      onChange={(e) => setNewEmployee(prev => ({ ...prev, commission_type: e.target.value }))}
+                      label="Commission Type"
+                    >
+                      <MenuItem value="none">No Commission</MenuItem>
+                      <MenuItem value="per_bag_sold">Per Bag Sold (Driver/Sales)</MenuItem>
+                      <MenuItem value="per_bag_packed">Per Bag Packed (Packer)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
             )}
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
