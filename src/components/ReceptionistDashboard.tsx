@@ -194,6 +194,31 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const handleOpenDialog = (type: string, item?: any) => {
     setDialogType(type);
     setSelectedItem(item || null);
+    setSelectedOrder(item || null);
+    
+    // Populate form data for editing
+    if (type.includes('edit') && item) {
+      setNewOrder({
+        customer_name: item.customer_name || '',
+        customer_phone: item.customer_phone || '',
+        order_type: item.order_type || 'general_sales',
+        status: item.status || 'pending',
+        notes: item.notes || '',
+        assigned_driver_id: item.assigned_driver_id || null,
+        items: item.items || []
+      });
+    } else if (type.includes('update-status') && item) {
+      setNewOrder({
+        customer_name: item.customer_name || '',
+        customer_phone: item.customer_phone || '',
+        order_type: item.order_type || 'general_sales',
+        status: item.status || 'pending',
+        notes: '',
+        assigned_driver_id: item.assigned_driver_id || null,
+        items: item.items || []
+      });
+    }
+    
     setDialogOpen(true);
   };
 
@@ -352,6 +377,71 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
       case 'distributor_order': return <Store />;
       case 'driver_dispatch': return <DeliveryDining />;
       default: return <PointOfSale />;
+    }
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          customer_name: newOrder.customer_name,
+          customer_phone: newOrder.customer_phone,
+          order_type: newOrder.order_type,
+          status: newOrder.status,
+          notes: newOrder.notes
+        })
+      });
+
+      if (response.ok) {
+        alert('Order updated successfully!');
+        fetchData();
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to update order: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Failed to update order. Please try again.');
+    }
+  };
+
+  const handleUpdateOrderStatus = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/orders/${selectedOrder.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: newOrder.status,
+          notes: newOrder.notes
+        })
+      });
+
+      if (response.ok) {
+        alert('Order status updated successfully!');
+        fetchData();
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to update order status: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status. Please try again.');
     }
   };
 
@@ -1204,6 +1294,215 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     </Box>
   );
 
+  const renderOrderDetails = () => {
+    if (!selectedOrder) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Order Details
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Order ID</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>#{selectedOrder.id}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Order Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedOrder.order_type}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedOrder.customer_name}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedOrder.customer_phone}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Total Amount</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>₦{selectedOrder.total_amount?.toLocaleString()}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip 
+              label={selectedOrder.status} 
+              color={
+                selectedOrder.status === 'completed' ? 'success' :
+                selectedOrder.status === 'pending' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Items</Typography>
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Item</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Unit Price</TableCell>
+                    <TableCell>Total</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedOrder.items?.map((item: any, index: number) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>₦{item.unit_price?.toLocaleString()}</TableCell>
+                      <TableCell>₦{item.total_price?.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedOrder.notes || 'No notes'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Created</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleString() : 'N/A'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Updated</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedOrder.updated_at ? new Date(selectedOrder.updated_at).toLocaleString() : 'N/A'}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderEditOrderForm = () => {
+    if (!selectedOrder) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Edit Order: #{selectedOrder.id}
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Customer Name"
+              value={newOrder.customer_name}
+              onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Customer Phone"
+              value={newOrder.customer_phone}
+              onChange={(e) => setNewOrder({ ...newOrder, customer_phone: e.target.value })}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Order Type</InputLabel>
+              <Select
+                value={newOrder.order_type}
+                onChange={(e) => setNewOrder({ ...newOrder, order_type: e.target.value })}
+                label="Order Type"
+              >
+                <MenuItem value="general_sales">General Sales</MenuItem>
+                <MenuItem value="distributor">Distributor Order</MenuItem>
+                <MenuItem value="driver_dispatch">Driver Dispatch</MenuItem>
+                <MenuItem value="store_dispatch">Store Dispatch</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={newOrder.status}
+                onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value })}
+                label="Status"
+              >
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="confirmed">Confirmed</MenuItem>
+                <MenuItem value="processing">Processing</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              multiline
+              rows={3}
+              value={newOrder.notes}
+              onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderUpdateStatusForm = () => {
+    if (!selectedOrder) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Update Order Status: #{selectedOrder.id}
+        </Typography>
+        
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            Current Status: <strong>{selectedOrder.status}</strong>
+          </Typography>
+        </Alert>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <FormControl fullWidth>
+              <InputLabel>New Status</InputLabel>
+              <Select
+                value={newOrder.status}
+                onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value })}
+                label="New Status"
+              >
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="confirmed">Confirmed</MenuItem>
+                <MenuItem value="processing">Processing</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Status Update Notes"
+              multiline
+              rows={3}
+              value={newOrder.notes}
+              onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
+              placeholder="Add any notes about this status change..."
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -1255,21 +1554,29 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         <DialogContent>
           {dialogType.includes('create') && renderOrderCreationForm()}
           {dialogType === 'settlement' && renderSettlementForm()}
-          {dialogType.includes('view') && 'Order details will be displayed here.'}
-          {dialogType.includes('edit') && 'Order editing form will be implemented here.'}
-          {dialogType.includes('update-status') && 'Status update form will be implemented here.'}
+          {dialogType.includes('view') && renderOrderDetails()}
+          {dialogType.includes('edit') && renderEditOrderForm()}
+          {dialogType.includes('update-status') && renderUpdateStatusForm()}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Close</Button>
+          <Button onClick={handleCloseDialog}>
+            {dialogType.includes('view') ? 'Close' : 'Cancel'}
+          </Button>
           {!dialogType.includes('view') && (
             <Button 
               variant="contained" 
               sx={{ bgcolor: '#13bbc6' }}
-              onClick={dialogType.includes('create') ? handleCreateOrder : 
-                      dialogType === 'settlement' ? handleSubmitSettlement : undefined}
+              onClick={
+                dialogType.includes('create') ? handleCreateOrder : 
+                dialogType === 'settlement' ? handleSubmitSettlement :
+                dialogType.includes('edit') ? handleUpdateOrder :
+                dialogType.includes('update-status') ? handleUpdateOrderStatus : undefined
+              }
             >
               {dialogType.includes('create') ? 'Create' : 
-               dialogType === 'settlement' ? 'Submit Settlement' : 'Save'}
+               dialogType === 'settlement' ? 'Submit Settlement' :
+               dialogType.includes('edit') ? 'Update Order' :
+               dialogType.includes('update-status') ? 'Update Status' : 'Save'}
             </Button>
           )}
         </DialogActions>

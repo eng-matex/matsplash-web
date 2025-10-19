@@ -72,6 +72,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
   const [inventoryLogs, setInventoryLogs] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+  const [newWaterQuantity, setNewWaterQuantity] = useState<number>(0);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -174,6 +175,42 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     } catch (error) {
       console.error('Error confirming pickup:', error);
       alert('Error confirming pickup. Please try again.');
+    }
+  };
+
+  const handleAddWater = async () => {
+    if (!newWaterQuantity || newWaterQuantity <= 0) {
+      alert('Please enter a valid quantity');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/inventory/add-water', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          quantity: newWaterQuantity,
+          reason: 'Water production completed',
+          userId: 1, // This should come from auth context
+          userEmail: 'storekeeper@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert(`Successfully added ${newWaterQuantity} bags of water to inventory!`);
+        setNewWaterQuantity(0);
+        fetchData();
+      } else {
+        const error = await response.json();
+        alert(`Failed to add water: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error adding water:', error);
+      alert('Failed to add water. Please try again.');
     }
   };
 
@@ -805,6 +842,102 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     );
   };
 
+  const renderInventoryManagement = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Inventory Management
+        </Typography>
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Current Stock
+                </Typography>
+                <Typography variant="h4" color="primary" sx={{ mb: 2 }}>
+                  {inventoryStats.currentStock || 0} bags
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sachet Water (500ml)
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Add Water to Inventory
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
+                  <TextField
+                    label="Quantity"
+                    type="number"
+                    value={newWaterQuantity}
+                    onChange={(e) => setNewWaterQuantity(Number(e.target.value))}
+                    size="small"
+                    sx={{ width: 120 }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleAddWater}
+                    disabled={!newWaterQuantity || newWaterQuantity <= 0}
+                    sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
+                  >
+                    Add Water
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Card sx={{ boxShadow: 2, mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+              Recent Inventory Activity
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Reason</TableCell>
+                    <TableCell>User</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {inventoryLogs.map((log, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        {new Date(log.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={log.type}
+                          color={log.type === 'in' ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{log.quantity}</TableCell>
+                      <TableCell>{log.reason}</TableCell>
+                      <TableCell>{log.user}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -933,11 +1066,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
             </Box>
           )}
 
-          {dialogType.includes('inventory') && (
-            <Typography>
-              Inventory management functionality will be implemented here.
-            </Typography>
-          )}
+          {dialogType.includes('inventory') && renderInventoryManagement()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>

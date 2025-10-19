@@ -76,6 +76,8 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [taskProgress, setTaskProgress] = useState<string>('');
 
   useEffect(() => {
     fetchData();
@@ -184,6 +186,7 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
   const handleOpenDialog = (type: string, item?: any) => {
     setDialogType(type);
     setSelectedItem(item || null);
+    setSelectedTask(item || null);
     setDialogOpen(true);
   };
 
@@ -599,6 +602,64 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     </Box>
   );
 
+  const renderTaskDetails = () => {
+    if (!selectedTask) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Task Details
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Task ID</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>#{selectedTask.id}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip 
+              label={selectedTask.status} 
+              color={
+                selectedTask.status === 'completed' ? 'success' :
+                selectedTask.status === 'in_progress' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Description</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedTask.description}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Assigned Date</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {new Date(selectedTask.assigned_date).toLocaleDateString()}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Due Date</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {new Date(selectedTask.due_date).toLocaleDateString()}
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Progress Update</Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={taskProgress}
+              onChange={(e) => setTaskProgress(e.target.value)}
+              placeholder="Update your progress on this task..."
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -633,9 +694,7 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
           {dialogType === 'update-progress' && 'Update Progress'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('task') && 'Task details and progress update functionality will be implemented here.'}
-          </Typography>
+          {dialogType.includes('task') && renderTaskDetails()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>

@@ -74,6 +74,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   const [distributors, setDistributors] = useState<any[]>([]);
   const [systemActivity, setSystemActivity] = useState<any[]>([]);
   const [commissionApprovals, setCommissionApprovals] = useState<any[]>([]);
+  const [employeeStats, setEmployeeStats] = useState<any>({});
+  const [distributorStats, setDistributorStats] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -734,6 +736,136 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
     </Box>
   );
 
+  const renderEmployeeManagementDialog = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Employee Management
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Quick Actions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => handleOpenDialog('add-employee')}
+                    sx={{ bgcolor: '#13bbc6' }}
+                  >
+                    Add New Employee
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={() => handleOpenDialog('edit-employee')}
+                  >
+                    Edit Employee
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Visibility />}
+                    onClick={() => handleOpenDialog('view-employee')}
+                  >
+                    View Employee Details
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Employee Statistics
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Total Employees: {employeeStats.total || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Active: {employeeStats.active || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Inactive: {employeeStats.inactive || 0}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderDistributorManagementDialog = () => {
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Distributor Management
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Distributor Actions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => handleOpenDialog('add-distributor')}
+                    sx={{ bgcolor: '#13bbc6' }}
+                  >
+                    Add New Distributor
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={() => handleOpenDialog('edit-distributor')}
+                  >
+                    Edit Distributor
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Visibility />}
+                    onClick={() => handleOpenDialog('view-distributor')}
+                  >
+                    View Distributor Details
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <Card sx={{ boxShadow: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Distributor Statistics
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Total Distributors: {distributorStats.total || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Active: {distributorStats.active || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  This Month Orders: {distributorStats.monthlyOrders || 0}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -790,8 +922,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         </DialogTitle>
         <DialogContent>
           <Typography>
-            {dialogType.includes('employee') && 'Employee management functionality will be implemented here.'}
-            {dialogType.includes('distributor') && 'Distributor management functionality will be implemented here.'}
+            {dialogType.includes('employee') && renderEmployeeManagementDialog()}
+            {dialogType.includes('distributor') && renderDistributorManagementDialog()}
           </Typography>
         </DialogContent>
         <DialogActions>
