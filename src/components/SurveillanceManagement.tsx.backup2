@@ -1078,6 +1078,196 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
   );
 
 
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    switch (selectedSection) {
+      case 'surveillance':
+        return renderSurveillanceOverview();
+      case 'surveillance-logs':
+        return renderSurveillanceLogs();
+      default:
+        return renderSurveillanceOverview();
+    }
+  };
+                <TableRow key={camera.id}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Avatar sx={{ mr: 2, bgcolor: camera.status === 'online' ? '#4caf50' : '#f44336' }}>
+                        <Videocam />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body2" fontWeight="bold">
+                          {camera.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {camera.manufacturer} {camera.model}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={camera.status}
+                      color={camera.status === 'online' ? 'success' : 'error'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {camera.ip_address}:{camera.port}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {camera.location || 'Not specified'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {camera.model || 'Unknown'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {camera.last_seen ? new Date(camera.last_seen).toLocaleString() : 'Never'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="View Live Feed">
+                        <IconButton
+                          size="small"
+                          onClick={() => setFullscreenCamera(camera)}
+                          disabled={camera.status !== 'online'}
+                        >
+                          <PlayArrow />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog('view-camera', camera)}
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Camera">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog('edit-camera', camera)}
+                        >
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Camera">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteCamera(camera.id)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </CardContent>
+    </Card>
+  );
+
+  const renderSurveillanceLogs = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+        Surveillance Logs
+      </Typography>
+
+      <Card>
+        <CardContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Camera</TableCell>
+                  <TableCell>Event Type</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Severity</TableCell>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {surveillanceLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="bold">
+                        {log.camera_name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {getEventIcon(log.event_type)}
+                        <Typography sx={{ ml: 1, textTransform: 'capitalize' }}>
+                          {log.event_type.replace('_', ' ')}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {log.description}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={log.severity.charAt(0).toUpperCase() + log.severity.slice(1)} 
+                        color={getSeverityColor(log.severity) as any}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={log.resolved ? 'Resolved' : 'Active'} 
+                        color={log.resolved ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="View Details">
+                        <IconButton size="small">
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Mark as Resolved">
+                        <IconButton size="small">
+                          <CheckCircle />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
+  );
 
   const renderSurveillanceLogs = () => (
     <Box>
@@ -1131,6 +1321,7 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
         return renderSurveillanceOverview();
     }
   };
+
   return (
     <Box>
       {renderContent()}
@@ -1166,109 +1357,22 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
             position: 'relative'
           }}>
             {fullscreenCamera?.status === 'online' ? (
-              <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
-                <img
-                  src={fullscreenCamera.stream_url}
-                  alt={fullscreenCamera.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    borderRadius: '8px'
-                  }}
-                  onError={(e) => {
-                    // Hide the broken image and show error message
-                    e.currentTarget.style.display = 'none';
-                    const errorDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (errorDiv) errorDiv.style.display = 'flex';
-                  }}
-                />
-                <Box sx={{
-                  display: 'none',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
+              <img
+                src={fullscreenCamera.stream_url}
+                alt={fullscreenCamera.name}
+                style={{
                   width: '100%',
                   height: '100%',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  textAlign: 'center',
-                  p: 2
-                }}>
-                  <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Camera Stream Unavailable
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>
-                    The camera stream URL is not accessible. This could be due to:
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>
-                    • Incorrect stream path
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>
-                    • Camera authentication required
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>
-                    • Camera using RTSP instead of HTTP
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
-                    Stream URL: {fullscreenCamera.stream_url}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        const newUrl = `http://${fullscreenCamera.ip_address}:${fullscreenCamera.port}/cgi-bin/snapshot.cgi`;
-                        setFullscreenCamera({...fullscreenCamera, stream_url: newUrl});
-                      }}
-                    >
-                      Try Snapshot
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        const newUrl = `http://${fullscreenCamera.ip_address}:${fullscreenCamera.port}/img/snapshot.cgi`;
-                        setFullscreenCamera({...fullscreenCamera, stream_url: newUrl});
-                      }}
-                    >
-                      Try /img/snapshot
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        const newUrl = `rtsp://${fullscreenCamera.username}:${fullscreenCamera.password}@${fullscreenCamera.ip_address}:554/stream1`;
-                        setFullscreenCamera({...fullscreenCamera, stream_url: newUrl});
-                      }}
-                    >
-                      Try RTSP
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
-            ) : (
-              <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                textAlign: 'center',
-                p: 2
-              }}>
-                <Videocam sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                <Typography variant="h6" gutterBottom>
-                  Camera Offline
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  This camera is currently offline or unreachable.
-                </Typography>
-              </Box>
-            )}
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+                onError={(e) => {
+                  // Fallback if stream fails
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
             
             {/* Offline/Error State */}
             <Box

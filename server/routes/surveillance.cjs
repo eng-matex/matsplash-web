@@ -252,6 +252,80 @@ router.get('/credentials', async (req, res) => {
 });
 
 // Network scanning functionality
+const net = require('net');
+
+// Helper function to test port connectivity
+function testPort(ip, port, timeout = 3000) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const startTime = Date.now();
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      const responseTime = Date.now() - startTime;
+      socket.destroy();
+      resolve({ status: 'online', responseTime });
+    });
+    
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve({ status: 'offline' });
+    });
+    
+    socket.on('error', () => {
+      socket.destroy();
+      resolve({ status: 'offline' });
+    });
+    
+    socket.connect(port, ip);
+  });
+}
+
+// Helper function to generate IP list
+function generateIpList(startIp, endIp) {
+  const ips = [];
+  const startParts = startIp.split('.').map(Number);
+  const endParts = endIp.split('.').map(Number);
+  
+  for (let a = startParts[0]; a <= endParts[0]; a++) {
+    for (let b = startParts[1]; b <= endParts[1]; b++) {
+      for (let c = startParts[2]; c <= endParts[2]; c++) {
+        for (let d = startParts[3]; d <= endParts[3]; d++) {
+          ips.push(`${a}.${b}.${c}.${d}`);
+        }
+      }
+    }
+  }
+  
+  return ips;
+}
+
+// Helper function to parse network range
+function parseNetworkRange(networkRange) {
+  const parts = networkRange.split('-');
+  if (parts.length !== 2) return [null, null];
+  
+  const [startPart, endPart] = parts;
+  const startIpParts = startPart.split('.');
+  const endIpParts = endPart.split('.');
+  
+  if (startIpParts.length !== 4) return [null, null];
+  
+  // Handle cases like "192.168.1.1-254" or "192.168.1.1-10"
+  if (endIpParts.length === 1) {
+    const baseIp = startIpParts.slice(0, 3).join('.');
+    return [`${baseIp}.${startIpParts[3]}`, `${baseIp}.${endIpParts[0]}`];
+  }
+  
+  // Handle cases like "192.168.1.1-192.168.1.254"
+  if (endIpParts.length === 4) {
+    return [startPart, endPart];
+  }
+  
+  return [null, null];
+}
+
 // Scan network for devices
 router.post('/scan-network', async (req, res) => {
   try {
@@ -259,40 +333,58 @@ router.post('/scan-network', async (req, res) => {
     
     console.log(`🔍 Scanning network range: ${networkRange} on ports: ${ports.join(', ')}`);
     
-    // For now, return mock data since we can't easily do network scanning in CommonJS
-    const mockDevices = [
-      {
-        ip: '192.168.1.100',
-        port: 80,
-        status: 'online',
-        responseTime: 45,
-        deviceType: 'web_camera',
-        manufacturer: 'Hikvision',
-        model: 'DS-2CD2143G0-I'
-      },
-      {
-        ip: '192.168.1.101',
-        port: 8080,
-        status: 'online',
-        responseTime: 32,
-        deviceType: 'web_camera',
-        manufacturer: 'Dahua',
-        model: 'IPC-HFW4431R-Z'
-      }
+    // For now, let's do a simple scan of common IPs to test the functionality
+    const devices = [];
+    
+    // Test a focused range of common IPs where cameras are likely to be
+    const testIps = [
+      '192.168.1.1',   // Router
+      '192.168.1.2',   // Common device
+      '192.168.1.10',  // Common device
+      '192.168.1.20',  // Common device
+      '192.168.1.50',  // Common device
+      '192.168.1.100', // Common camera IP
+      '192.168.1.101', // Common camera IP
+      '192.168.1.102', // Common camera IP
+      '192.168.1.150', // Common device
+      '192.168.1.200', // Common device
+      '192.168.1.254'  // Gateway
     ];
     
-    // Log system activity
-    await db('system_activity').insert({
-      employee_id: req.body.userId || 1,
-      activity_type: 'NETWORK_SCAN',
-      description: `Scanned network range ${networkRange} - found ${mockDevices.length} devices`,
-      timestamp: new Date().toISOString()
-    });
+    for (const ip of testIps) {
+      for (const port of ports) {
+        try {
+          const result = await testPort(ip, port, 1000); // 1 second timeout
+          if (result.status === 'online') {
+            devices.push({
+              ip,
+              port,
+              status: 'online',
+              responseTime: result.responseTime,
+              deviceType: port === 554 ? 'rtsp_camera' : port === 1935 ? 'rtmp_camera' : 'web_camera',
+              manufacturer: 'Unknown',
+              model: 'Unknown'
+            });
+            console.log(`✅ Found device: ${ip}:${port} (${result.responseTime}ms)`);
+          }
+        } catch (error) {
+          // Port is closed or unreachable
+        }
+      }
+    }
+    
+    // Log system activity (commented out for debugging)
+    // await db('system_activity').insert({
+    //   employee_id: req.body.userId || 1,
+    //   activity_type: 'NETWORK_SCAN',
+    //   description: `Scanned network range ${networkRange} - found ${devices.length} devices`,
+    //   timestamp: new Date().toISOString()
+    // });
 
     res.json({
       success: true,
-      data: mockDevices,
-      message: `Found ${mockDevices.length} devices on the network`
+      data: devices,
+      message: `Found ${devices.length} devices on the network`
     });
 
   } catch (error) {
@@ -318,16 +410,75 @@ router.post('/test-camera', async (req, res) => {
 
     console.log(`🔍 Testing camera connection: ${ip_address}:${port}`);
     
-    // Mock test result
+    // Test basic connectivity first
+    const connectivityResult = await testPort(ip_address, port, timeout);
+    
+    if (connectivityResult.status === 'offline') {
+      return res.json({
+        success: false,
+        data: {
+          ip: ip_address,
+          port: port,
+          status: 'offline',
+          error: 'Connection timeout or refused'
+        },
+        message: 'Camera is not reachable'
+      });
+    }
+    
+    // If port is open, try to determine if it's a camera
+    let deviceType = 'unknown';
+    let manufacturer = 'Unknown';
+    let model = 'Unknown';
+    let streamUrl = '';
+    let authRequired = false;
+    let capabilities = [];
+    
+    // Common camera ports and their typical services
+    if (port === 80 || port === 8080) {
+      deviceType = 'web_camera';
+      streamUrl = `http://${ip_address}:${port}/video.mjpg`;
+      capabilities = ['video'];
+    } else if (port === 554) {
+      deviceType = 'rtsp_camera';
+      streamUrl = `rtsp://${ip_address}:${port}/stream1`;
+      capabilities = ['video', 'audio'];
+    } else if (port === 1935) {
+      deviceType = 'rtmp_camera';
+      streamUrl = `rtmp://${ip_address}:${port}/live/stream1`;
+      capabilities = ['video', 'audio'];
+    }
+    
+    // If username/password provided, assume auth is required
+    if (username && password) {
+      authRequired = true;
+      if (streamUrl.includes('http://')) {
+        streamUrl = `http://${username}:${password}@${ip_address}:${port}/video.mjpg`;
+      } else if (streamUrl.includes('rtsp://')) {
+        streamUrl = `rtsp://${username}:${password}@${ip_address}:${port}/stream1`;
+      }
+    }
+    
     const result = {
       ip: ip_address,
-      port,
+      port: port,
       status: 'online',
-      responseTime: Math.floor(Math.random() * 100) + 20,
-      deviceType: 'camera',
-      manufacturer: 'Unknown',
-      model: 'Unknown'
+      responseTime: connectivityResult.responseTime,
+      deviceType: deviceType,
+      manufacturer: manufacturer,
+      model: model,
+      streamUrl: streamUrl,
+      authRequired: authRequired,
+      capabilities: capabilities
     };
+    
+    // Log system activity
+    await db('system_activity').insert({
+      employee_id: req.body.userId || 1,
+      activity_type: 'CAMERA_TEST',
+      description: `Tested camera connection to ${ip_address}:${port} - ${connectivityResult.status}`,
+      timestamp: new Date().toISOString()
+    });
     
     res.json({
       success: true,

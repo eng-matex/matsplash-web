@@ -2623,7 +2623,7 @@ app.get('/api/locations', async (req, res) => {
 });
 
 // Import and mount surveillance routes
-const surveillanceRoutes = require('./server/routes/surveillance.cjs');
+const surveillanceRoutes = require('./server/routes/surveillance-minimal.cjs');
 app.use('/api/surveillance', surveillanceRoutes(db));
 
 // Error handling middleware
