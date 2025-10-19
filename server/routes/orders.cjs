@@ -247,12 +247,39 @@ router.put('/:id/confirm-pickup', async (req, res) => {
       updated_at: new Date().toISOString()
     });
 
+    // Update inventory - reduce stock when water is picked up
+    const items = order.items ? JSON.parse(order.items) : [];
+    const totalBagsRemoved = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    
+    if (totalBagsRemoved > 0) {
+      // Get current stock from latest inventory log
+      const latestLog = await db('inventory_logs')
+        .orderBy('created_at', 'desc')
+        .first();
+
+      const previousStock = latestLog ? latestLog.current_stock : 0;
+      const newStock = previousStock - totalBagsRemoved;
+
+      // Create inventory log for the pickup
+      await db('inventory_logs').insert({
+        order_id: id,
+        order_number: order.order_number,
+        bags_added: 0,
+        bags_removed: totalBagsRemoved,
+        current_stock: newStock,
+        operation_type: 'PICKUP_CONFIRMED',
+        performed_by: userId || 1,
+        notes: `Water picked up for order ${order.order_number} - ${totalBagsRemoved} bags removed`,
+        created_at: new Date().toISOString()
+      });
+    }
+
     // Log system activity
     await db('system_activity').insert({
       user_id: userId || 1,
       user_email: userEmail || 'unknown',
       action: 'PICKUP_CONFIRMED',
-      details: `StoreKeeper confirmed pickup for order ${order.order_number}`,
+      details: `StoreKeeper confirmed pickup for order ${order.order_number} - ${totalBagsRemoved} bags removed from inventory`,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
       created_at: new Date().toISOString()

@@ -278,6 +278,78 @@ router.delete('/logs/:id', async (req, res) => {
   }
 });
 
+// Add water to inventory (when water is produced/cleared)
+router.post('/add-water', async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const { bags_added, performed_by, notes } = req.body;
+
+    // Validate required fields
+    if (!bags_added || !performed_by) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bags added and performed_by are required'
+      });
+    }
+
+    // Get current stock from latest log
+    const latestLog = await db('inventory_logs')
+      .orderBy('created_at', 'desc')
+      .first();
+
+    const previousStock = latestLog ? latestLog.current_stock : 0;
+    const newStock = previousStock + parseInt(bags_added);
+
+    const newLog = {
+      order_id: null,
+      order_number: null,
+      bags_added: parseInt(bags_added),
+      bags_removed: 0,
+      current_stock: newStock,
+      operation_type: 'WATER_PRODUCTION',
+      performed_by: performed_by,
+      notes: notes || `Water production - ${bags_added} bags added to inventory`,
+      created_at: new Date().toISOString()
+    };
+
+    const [logId] = await db('inventory_logs').insert(newLog);
+
+    // Log system activity
+    await db('system_activity').insert({
+      user_id: performed_by,
+      user_email: req.body.userEmail || 'unknown',
+      action: 'WATER_ADDED_TO_INVENTORY',
+      details: `Water production: ${bags_added} bags added. New stock: ${newStock}`,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      created_at: new Date().toISOString()
+    });
+
+    // Get the created log with joins
+    const createdLog = await db('inventory_logs')
+      .leftJoin('employees', 'inventory_logs.performed_by', 'employees.id')
+      .select(
+        'inventory_logs.*',
+        'employees.name as performed_by_name'
+      )
+      .where('inventory_logs.id', logId)
+      .first();
+
+    res.status(201).json({
+      success: true,
+      data: createdLog,
+      message: 'Water added to inventory successfully'
+    });
+
+  } catch (error) {
+    console.error('Error adding water to inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add water to inventory'
+    });
+  }
+});
+
 module.exports = (db) => {
   return (req, res, next) => {
     req.app.locals.db = db;

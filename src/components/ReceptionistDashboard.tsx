@@ -913,18 +913,18 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           </Card>
         </Grid>
 
-        {/* Total Commission */}
+        {/* Total Sales Processed */}
         <Grid item xs={12} md={4}>
           <Card className="dashboard-card">
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
-                Total Commission
+                Total Sales Processed
               </Typography>
               <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                ₦{driverSales.reduce((sum, sale) => sum + (sale.commission_earned || 0), 0).toLocaleString()}
+                ₦{driverSales.reduce((sum, sale) => sum + (sale.total_sales || 0), 0).toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total commission earned
+                Total sales value processed
               </Typography>
             </CardContent>
           </Card>
@@ -968,7 +968,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                   <TableCell>Bags Sold</TableCell>
                   <TableCell>Bags Returned</TableCell>
                   <TableCell>Total Sales</TableCell>
-                  <TableCell>Commission</TableCell>
                   <TableCell>Money Submitted</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Actions</TableCell>
@@ -982,7 +981,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                     <TableCell>{sale.bags_sold}</TableCell>
                     <TableCell>{sale.bags_returned}</TableCell>
                     <TableCell>₦{sale.total_sales?.toLocaleString()}</TableCell>
-                    <TableCell>₦{sale.commission_earned?.toLocaleString()}</TableCell>
                     <TableCell>₦{sale.money_submitted?.toLocaleString()}</TableCell>
                     <TableCell>
                       <Chip 
@@ -1016,7 +1014,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const renderSettlementForm = () => (
     <Box sx={{ p: 2 }}>
       <Alert severity="info" sx={{ mb: 3 }}>
-        Process driver settlement by recording sales data and money submitted. Commission will be calculated automatically.
+        Process driver settlement by recording sales data and money submitted. Manager will review and approve commission separately.
       </Alert>
       
       <Grid container spacing={2}>
@@ -1101,14 +1099,17 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         </Grid>
       </Grid>
 
-      {/* Commission Calculation Display */}
+      {/* Settlement Summary */}
       <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-        <Typography variant="subtitle2" gutterBottom>Commission Calculation:</Typography>
+        <Typography variant="subtitle2" gutterBottom>Settlement Summary:</Typography>
         <Typography variant="body2">
-          Bags Sold: {settlementData.bags_sold} × ₦30 = ₦{(settlementData.bags_sold * 30).toLocaleString()}
+          Bags Sold: {settlementData.bags_sold} bags
+        </Typography>
+        <Typography variant="body2">
+          Bags Returned: {settlementData.bags_returned} bags
         </Typography>
         <Typography variant="body2" sx={{ fontWeight: 600, color: '#13bbc6' }}>
-          Total Commission: ₦{(settlementData.bags_sold * 30).toLocaleString()}
+          Net Sales: {settlementData.bags_sold - settlementData.bags_returned} bags
         </Typography>
       </Box>
     </Box>
