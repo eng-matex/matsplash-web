@@ -133,6 +133,8 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     department: '',
     status: 'active',
     salary: 0,
+    commission_rate: 0,
+    has_commission: false,
     address: '',
     emergency_contact: '',
     emergency_phone: '',
@@ -410,9 +412,47 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     try {
       // Validate required fields
       if (!newEmployee.name || !newEmployee.email || !newEmployee.phone || !newEmployee.role) {
-        alert('Please fill in all required fields');
+        alert('Please fill in all required fields (Name, Email, Phone, Role)');
         return;
       }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmployee.email)) {
+        alert('Please enter a valid email address');
+        return;
+      }
+
+      // Validate phone format
+      const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+      if (!phoneRegex.test(newEmployee.phone)) {
+        alert('Please enter a valid phone number');
+        return;
+      }
+
+      // Prepare employee data
+      const employeeData = {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        phone: newEmployee.phone,
+        role: newEmployee.role,
+        department: newEmployee.department || 'General',
+        position: newEmployee.position || newEmployee.role,
+        salary: newEmployee.salary || 0,
+        commission_rate: newEmployee.commission_rate || 0,
+        has_commission: newEmployee.has_commission || false,
+        address: newEmployee.address || '',
+        emergency_contact: newEmployee.emergency_contact || '',
+        emergency_phone: newEmployee.emergency_phone || '',
+        notes: newEmployee.notes || '',
+        status: newEmployee.status || 'active',
+        is_active: true,
+        pin: '1111', // Default PIN
+        hire_date: new Date().toISOString().split('T')[0],
+        created_by: 1 // This should come from auth context
+      };
+
+      console.log('Creating employee with data:', employeeData);
 
       // Create employee via API
       const token = localStorage.getItem('token');
@@ -422,19 +462,20 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...newEmployee,
-          pin: '1111', // Default PIN
-          created_by: 1 // This should come from auth context
-        })
+        body: JSON.stringify(employeeData)
       });
 
       if (response.ok) {
         const result = await response.json();
         console.log('Employee created successfully:', result);
+        
+        // Show success message
+        alert('Employee created successfully!');
+        
         // Refresh the employee list
         fetchData();
         handleCloseDialog();
+        
         // Reset form
         setNewEmployee({
           name: '',
@@ -442,19 +483,24 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           phone: '',
           role: '',
           department: '',
-          position: '',
-          hire_date: new Date().toISOString().split('T')[0],
+          status: 'active',
           salary: 0,
-          is_active: true
+          commission_rate: 0,
+          has_commission: false,
+          address: '',
+          emergency_contact: '',
+          emergency_phone: '',
+          notes: '',
+          permissions: []
         });
       } else {
         const errorData = await response.json();
         console.error('Failed to create employee:', errorData);
-        alert('Failed to create employee. Please try again.');
+        alert(`Failed to create employee: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error creating employee:', error);
-      alert('Error creating employee. Please try again.');
+      alert(`Error creating employee: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -476,6 +522,26 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
       color: '#666',
       icon: Person
     };
+  };
+
+  const getRoleDefaults = (roleId: string) => {
+    const defaults = {
+      admin: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration' },
+      director: { salary: 0, hasCommission: false, commissionRate: 0, department: 'Administration' },
+      manager: { salary: 150000, hasCommission: false, commissionRate: 0, department: 'Management' },
+      receptionist: { salary: 80000, hasCommission: false, commissionRate: 0, department: 'Operations' },
+      storekeeper: { salary: 70000, hasCommission: false, commissionRate: 0, department: 'Operations' },
+      driver: { salary: 60000, hasCommission: true, commissionRate: 30, department: 'Logistics' },
+      driverassistant: { salary: 50000, hasCommission: true, commissionRate: 20, department: 'Logistics' },
+      packer: { salary: 45000, hasCommission: true, commissionRate: 5, department: 'Production' },
+      sales: { salary: 0, hasCommission: true, commissionRate: 0, department: 'Sales' },
+      security: { salary: 55000, hasCommission: false, commissionRate: 0, department: 'Security' },
+      cleaner: { salary: 40000, hasCommission: false, commissionRate: 0, department: 'Maintenance' },
+      operator: { salary: 65000, hasCommission: false, commissionRate: 0, department: 'Production' },
+      loader: { salary: 50000, hasCommission: false, commissionRate: 0, department: 'Logistics' }
+    };
+    
+    return defaults[roleId as keyof typeof defaults] || { salary: 50000, hasCommission: false, commissionRate: 0, department: 'General' };
   };
 
   const filteredEmployees = employees.filter(employee => {
@@ -662,8 +728,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                   <TableCell>Employee</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Department</TableCell>
-                  <TableCell>Status</TableCell>
                   <TableCell>Salary</TableCell>
+                  <TableCell>Commission</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Last Login</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
@@ -707,16 +774,34 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                         </Typography>
                       </TableCell>
                       <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          ₦{employee.salary.toLocaleString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {employee.has_commission ? (
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold" color="primary">
+                                {employee.commission_rate}%
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                per transaction
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No Commission
+                            </Typography>
+                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
                         <Chip 
                           label={employee.status.charAt(0).toUpperCase() + employee.status.slice(1)} 
                           color={getStatusColor(employee.status) as any}
                           size="small"
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
-                          ₦{employee.salary.toLocaleString()}
-                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
@@ -844,10 +929,18 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                   onChange={(e) => {
                     const roleId = e.target.value;
                     const role = roles.find(r => r.id === roleId);
+                    
+                    // Set role-based defaults
+                    const roleDefaults = getRoleDefaults(roleId);
+                    
                     setNewEmployee(prev => ({ 
                       ...prev, 
                       role: roleId,
-                      permissions: role?.permissions || []
+                      permissions: role?.permissions || [],
+                      salary: roleDefaults.salary,
+                      has_commission: roleDefaults.hasCommission,
+                      commission_rate: roleDefaults.commissionRate,
+                      department: roleDefaults.department
                     }));
                   }}
                   label="Role"
@@ -884,7 +977,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Salary"
+                label="Base Salary"
                 type="number"
                 value={newEmployee.salary}
                 onChange={(e) => setNewEmployee(prev => ({ ...prev, salary: parseFloat(e.target.value) || 0 }))}
@@ -892,8 +985,39 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                   startAdornment: <InputAdornment position="start">₦</InputAdornment>
                 }}
                 required
+                helperText="Monthly base salary"
               />
             </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newEmployee.has_commission || false}
+                    onChange={(e) => setNewEmployee(prev => ({ 
+                      ...prev, 
+                      has_commission: e.target.checked,
+                      commission_rate: e.target.checked ? prev.commission_rate : 0
+                    }))}
+                  />
+                }
+                label="Has Commission"
+              />
+            </Grid>
+            {newEmployee.has_commission && (
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Commission Rate (%)"
+                  type="number"
+                  value={newEmployee.commission_rate}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, commission_rate: parseFloat(e.target.value) || 0 }))}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>
+                  }}
+                  helperText="Commission percentage per sale/transaction"
+                />
+              </Grid>
+            )}
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>

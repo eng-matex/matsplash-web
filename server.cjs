@@ -1140,42 +1140,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
   }
 });
 
-// Mock employees endpoint
-app.get('/api/employees', async (req, res) => {
-  try {
-    const employees = await db('employees')
-      .where('deletion_status', 'Active')
-      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary_type', 'fixed_salary', 'commission_rate', 'can_access_remotely')
-      .orderBy('name');
-
-    const formattedEmployees = employees.map((emp) => ({
-      id: emp.id,
-      name: emp.name,
-      email: emp.email,
-      phone: emp.phone,
-      role: emp.role,
-      isEmployee: emp.role !== 'Admin' && emp.role !== 'Director',
-      isActive: emp.status === 'active',
-      createdAt: emp.created_at,
-      lastLogin: emp.last_login,
-      salary_type: emp.salary_type,
-      fixed_salary: emp.fixed_salary,
-      commission_rate: emp.commission_rate,
-      can_access_remotely: emp.can_access_remotely
-    }));
-  
-  res.json({
-    success: true,
-      data: formattedEmployees
-    });
-  } catch (error) {
-    console.error('Error fetching employees:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch employees'
-    });
-  }
-});
+// Employees endpoint is now handled by the dedicated employees routes
 
 // ===== UTILITY FUNCTIONS =====
 
@@ -2647,6 +2612,10 @@ app.use('/api/orders', ordersRoutes(db));
 // Import and mount price models routes
 const priceModelsRoutes = require('./server/routes/price-models.cjs');
 app.use('/api/price-models', priceModelsRoutes(db));
+
+// Import and mount employees routes
+const employeesRoutes = require('./server/routes/employees.cjs');
+app.use('/api/employees', employeesRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
