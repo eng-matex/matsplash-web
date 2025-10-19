@@ -79,6 +79,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'general-sales', label: 'General Sales', icon: PointOfSale, color: '#4caf50' },
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
+        { id: 'store-dispatch', label: 'Store Dispatch', icon: LocalShipping, color: '#9c27b0' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];

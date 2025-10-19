@@ -83,8 +83,8 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
-  order_type: 'general_sales' | 'distributor_order' | 'driver_dispatch';
-  status: 'pending' | 'processing' | 'packed' | 'dispatched' | 'delivered' | 'cancelled';
+  order_type: 'general_sales' | 'distributor_order' | 'driver_dispatch' | 'store_dispatch';
+  status: 'pending' | 'processing' | 'packed' | 'dispatched' | 'delivered' | 'cancelled' | 'out_for_delivery' | 'returned';
   total_amount: number;
   items: OrderItem[];
   created_at: string;
@@ -94,6 +94,11 @@ interface Order {
   delivery_address?: string;
   payment_method: 'cash' | 'transfer' | 'card';
   payment_status: 'pending' | 'paid' | 'partial';
+  assigned_driver?: string;
+  assigned_driver_id?: number;
+  storekeeper_authorized?: boolean;
+  authorization_time?: string;
+  authorization_by?: string;
 }
 
 interface OrderItem {
@@ -114,10 +119,20 @@ interface Customer {
   customer_type: 'individual' | 'distributor' | 'retailer';
 }
 
+interface Driver {
+  id: number;
+  name: string;
+  phone: string;
+  email?: string;
+  role: string;
+  is_active: boolean;
+}
+
 const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, userRole }) => {
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -161,6 +176,10 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Fetch drivers from API
+      const driversResponse = await axios.get('/api/sales/drivers');
+      setDrivers(driversResponse.data);
+
       // Mock data for orders
       const mockOrders: Order[] = [
         {
@@ -202,13 +221,37 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
           delivery_address: '456 Business District, Lagos',
           payment_method: 'transfer',
           payment_status: 'paid'
+        },
+        {
+          id: 3,
+          order_number: 'ORD003',
+          customer_name: 'Mini Store ABC',
+          customer_phone: '08011111111',
+          customer_email: 'store@example.com',
+          order_type: 'store_dispatch',
+          status: 'pending',
+          total_amount: 0,
+          items: [
+            { id: 3, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
+          ],
+          created_at: new Date(Date.now() - 1800000).toISOString(),
+          updated_at: new Date(Date.now() - 1800000).toISOString(),
+          created_by: 'Receptionist',
+          notes: 'Mini store stocking - no price',
+          delivery_address: '789 Store Street, Lagos',
+          payment_method: 'cash',
+          payment_status: 'pending',
+          assigned_driver: 'Driver Name',
+          assigned_driver_id: 1,
+          storekeeper_authorized: false
         }
       ];
 
       const mockCustomers: Customer[] = [
         { id: 1, name: 'John Doe', phone: '08012345678', email: 'john@example.com', customer_type: 'individual' },
         { id: 2, name: 'ABC Distributors', phone: '08087654321', email: 'orders@abcdist.com', customer_type: 'distributor' },
-        { id: 3, name: 'Jane Smith', phone: '08098765432', email: 'jane@example.com', customer_type: 'retailer' }
+        { id: 3, name: 'Jane Smith', phone: '08098765432', email: 'jane@example.com', customer_type: 'retailer' },
+        { id: 4, name: 'Mini Store ABC', phone: '08011111111', email: 'store@example.com', customer_type: 'retailer' }
       ];
 
       setOrders(mockOrders);
@@ -293,21 +336,23 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
   const handleProductChange = (productName: string) => {
     const product = products.find(p => p.name === productName);
     if (product) {
+      const price = newOrder.order_type === 'store_dispatch' ? 0 : product.price;
       setNewItem(prev => ({
         ...prev,
         product_name: productName,
-        unit_price: product.price,
+        unit_price: price,
         unit: product.unit,
-        total_price: (prev.quantity || 0) * product.price
+        total_price: (prev.quantity || 0) * price
       }));
     }
   };
 
   const handleQuantityChange = (quantity: number) => {
+    const price = newOrder.order_type === 'store_dispatch' ? 0 : (newItem.unit_price || 0);
     setNewItem(prev => ({
       ...prev,
       quantity,
-      total_price: quantity * (prev.unit_price || 0)
+      total_price: quantity * price
     }));
   };
 
@@ -328,6 +373,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       case 'general_sales': return <ShoppingCart />;
       case 'distributor_order': return <Business />;
       case 'driver_dispatch': return <LocalShipping />;
+      case 'store_dispatch': return <LocalShipping />;
       default: return <Receipt />;
     }
   };
@@ -388,7 +434,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                   <MenuItem value="processing">Processing</MenuItem>
                   <MenuItem value="packed">Packed</MenuItem>
                   <MenuItem value="dispatched">Dispatched</MenuItem>
+                  <MenuItem value="out_for_delivery">Out for Delivery</MenuItem>
                   <MenuItem value="delivered">Delivered</MenuItem>
+                  <MenuItem value="returned">Returned</MenuItem>
                   <MenuItem value="cancelled">Cancelled</MenuItem>
                 </Select>
               </FormControl>
@@ -405,6 +453,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                   <MenuItem value="general_sales">General Sales</MenuItem>
                   <MenuItem value="distributor_order">Distributor Order</MenuItem>
                   <MenuItem value="driver_dispatch">Driver Dispatch</MenuItem>
+                  <MenuItem value="store_dispatch">Store Dispatch</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -587,6 +636,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                   <MenuItem value="general_sales">General Sales</MenuItem>
                   <MenuItem value="distributor_order">Distributor Order</MenuItem>
                   <MenuItem value="driver_dispatch">Driver Dispatch</MenuItem>
+                  <MenuItem value="store_dispatch">Store Dispatch</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -600,6 +650,32 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 rows={2}
               />
             </Grid>
+            {newOrder.order_type === 'store_dispatch' && (
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Assign Driver</InputLabel>
+                  <Select
+                    value={newOrder.assigned_driver_id || ''}
+                    onChange={(e) => {
+                      const driverId = e.target.value as number;
+                      const driver = drivers.find(d => d.id === driverId);
+                      setNewOrder(prev => ({ 
+                        ...prev, 
+                        assigned_driver_id: driverId,
+                        assigned_driver: driver?.name || ''
+                      }));
+                    }}
+                    label="Assign Driver"
+                  >
+                    {drivers.map((driver) => (
+                      <MenuItem key={driver.id} value={driver.id}>
+                        {driver.name} ({driver.role})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
           </Grid>
         </CardContent>
       </Card>
@@ -620,7 +696,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 >
                   {products.map((product) => (
                     <MenuItem key={product.name} value={product.name}>
-                      {product.name} - ₦{product.price}
+                      {product.name} - {newOrder.order_type === 'store_dispatch' ? 'No Price' : `₦${product.price}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -642,7 +718,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 type="number"
                 value={newItem.unit_price}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">₦</InputAdornment>
+                  startAdornment: newOrder.order_type === 'store_dispatch' ? 
+                    <InputAdornment position="start">No Price</InputAdornment> :
+                    <InputAdornment position="start">₦</InputAdornment>
                 }}
                 disabled
               />
@@ -653,7 +731,9 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                 label="Total"
                 value={newItem.total_price}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">₦</InputAdornment>,
+                  startAdornment: newOrder.order_type === 'store_dispatch' ? 
+                    <InputAdornment position="start">No Price</InputAdornment> :
+                    <InputAdornment position="start">₦</InputAdornment>,
                   readOnly: true
                 }}
               />
@@ -707,7 +787,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
               </TableContainer>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">
-                  Total Amount: ₦{newOrder.total_amount?.toLocaleString()}
+                  Total Amount: {newOrder.order_type === 'store_dispatch' ? 'No Price (Mini Store Stocking)' : `₦${newOrder.total_amount?.toLocaleString()}`}
                 </Typography>
               </Box>
             </Box>
@@ -718,56 +798,76 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-            Payment & Notes
+            {newOrder.order_type === 'store_dispatch' ? 'Notes' : 'Payment & Notes'}
           </Typography>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Payment Method</InputLabel>
-                <Select
-                  value={newOrder.payment_method}
-                  onChange={(e) => setNewOrder(prev => ({ ...prev, payment_method: e.target.value as any }))}
-                  label="Payment Method"
-                >
-                  <MenuItem value="cash">Cash</MenuItem>
-                  <MenuItem value="transfer">Bank Transfer</MenuItem>
-                  <MenuItem value="card">Card Payment</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Payment Status</InputLabel>
-                <Select
-                  value={newOrder.payment_status}
-                  onChange={(e) => setNewOrder(prev => ({ ...prev, payment_status: e.target.value as any }))}
-                  label="Payment Status"
-                >
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="paid">Paid</MenuItem>
-                  <MenuItem value="partial">Partial</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            {newOrder.order_type !== 'store_dispatch' && (
+              <>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Method</InputLabel>
+                    <Select
+                      value={newOrder.payment_method}
+                      onChange={(e) => setNewOrder(prev => ({ ...prev, payment_method: e.target.value as any }))}
+                      label="Payment Method"
+                    >
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="transfer">Bank Transfer</MenuItem>
+                      <MenuItem value="card">Card Payment</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Status</InputLabel>
+                    <Select
+                      value={newOrder.payment_status}
+                      onChange={(e) => setNewOrder(prev => ({ ...prev, payment_status: e.target.value as any }))}
+                      label="Payment Status"
+                    >
+                      <MenuItem value="pending">Pending</MenuItem>
+                      <MenuItem value="paid">Paid</MenuItem>
+                      <MenuItem value="partial">Partial</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Notes (Optional)"
+                label={newOrder.order_type === 'store_dispatch' ? 'Notes (Mini Store Stocking)' : 'Notes (Optional)'}
                 value={newOrder.notes}
                 onChange={(e) => setNewOrder(prev => ({ ...prev, notes: e.target.value }))}
                 multiline
                 rows={3}
+                placeholder={newOrder.order_type === 'store_dispatch' ? 'Enter details about the mini store stocking order...' : 'Enter any additional notes...'}
               />
             </Grid>
+            {newOrder.order_type === 'store_dispatch' && (
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Store Dispatch Order:</strong> This order is for mini store stocking with no pricing. 
+                    The assigned driver will pick up the items from the storekeeper and deliver to the mini store.
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
             <Grid item xs={12}>
               <Button
                 variant="contained"
                 size="large"
                 startIcon={<CheckCircle />}
                 sx={{ bgcolor: '#13bbc6' }}
-                disabled={!newOrder.customer_name || !newOrder.customer_phone || !newOrder.items?.length}
+                disabled={
+                  !newOrder.customer_name || 
+                  !newOrder.customer_phone || 
+                  !newOrder.items?.length ||
+                  (newOrder.order_type === 'store_dispatch' && !newOrder.assigned_driver_id)
+                }
               >
-                Create Order
+                Create {newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' : 'Order'}
               </Button>
             </Grid>
           </Grid>
@@ -789,6 +889,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       case 'general-sales':
       case 'distributor-orders':
       case 'driver-dispatches':
+      case 'store-dispatch':
         return renderOrderList();
       case 'new-order':
         return renderNewOrderForm();
