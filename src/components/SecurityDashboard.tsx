@@ -89,6 +89,15 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
     reported_by: '',
     status: 'open'
   });
+  const [newVisitor, setNewVisitor] = useState({
+    visitor_name: '',
+    visitor_phone: '',
+    visitor_company: '',
+    purpose: '',
+    vehicle_number: '',
+    id_number: '',
+    contact_person: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -220,6 +229,15 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
       reported_by: '',
       status: 'open'
     });
+    setNewVisitor({
+      visitor_name: '',
+      visitor_phone: '',
+      visitor_company: '',
+      purpose: '',
+      vehicle_number: '',
+      id_number: '',
+      contact_person: ''
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -251,6 +269,92 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
       case 'meeting': return <Business />;
       case 'maintenance': return <Edit />;
       default: return <Person />;
+    }
+  };
+
+  const handleSubmitVisitor = async () => {
+    if (!newVisitor.visitor_name || !newVisitor.visitor_phone || !newVisitor.purpose) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const newLog = {
+        id: gateLogs.length + 1,
+        log_number: `GATE${String(gateLogs.length + 1).padStart(3, '0')}`,
+        ...newVisitor,
+        entry_time: new Date().toISOString(),
+        exit_time: null,
+        status: 'inside',
+        security_guard: 'Current Security Guard'
+      };
+
+      setGateLogs([newLog, ...gateLogs]);
+      alert('Visitor entry recorded successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error recording visitor entry:', error);
+      alert('Error recording visitor entry. Please try again.');
+    }
+  };
+
+  const handleRecordExit = async () => {
+    if (!selectedItem) return;
+
+    try {
+      const updatedLogs = gateLogs.map(log =>
+        log.id === selectedItem.id
+          ? { ...log, exit_time: new Date().toISOString(), status: 'exited' }
+          : log
+      );
+      setGateLogs(updatedLogs);
+      alert('Visitor exit recorded successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error recording exit:', error);
+      alert('Error recording exit. Please try again.');
+    }
+  };
+
+  const handleSubmitIncident = async () => {
+    if (!newIncident.type || !newIncident.description || !newIncident.location) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const newReport = {
+        id: incidentReports.length + 1,
+        report_number: `INC${String(incidentReports.length + 1).padStart(3, '0')}`,
+        ...newIncident,
+        reported_by: 'Current Security Guard',
+        created_at: new Date().toISOString()
+      };
+
+      setIncidentReports([newReport, ...incidentReports]);
+      alert('Incident report submitted successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error submitting incident report:', error);
+      alert('Error submitting incident report. Please try again.');
+    }
+  };
+
+  const handleUpdateIncidentStatus = async () => {
+    if (!selectedItem) return;
+
+    try {
+      const updatedReports = incidentReports.map(incident =>
+        incident.id === selectedItem.id
+          ? { ...incident, status: incident.status === 'open' ? 'investigating' : 'resolved' }
+          : incident
+      );
+      setIncidentReports(updatedReports);
+      alert('Incident status updated successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error updating incident status:', error);
+      alert('Error updating incident status. Please try again.');
     }
   };
 
@@ -535,6 +639,314 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
     </Box>
   );
 
+  const renderNewVisitorForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        New Visitor Entry
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Visitor Name *"
+            value={newVisitor.visitor_name}
+            onChange={(e) => setNewVisitor({ ...newVisitor, visitor_name: e.target.value })}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Phone Number *"
+            value={newVisitor.visitor_phone}
+            onChange={(e) => setNewVisitor({ ...newVisitor, visitor_phone: e.target.value })}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Company/Organization"
+            value={newVisitor.visitor_company}
+            onChange={(e) => setNewVisitor({ ...newVisitor, visitor_company: e.target.value })}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Purpose of Visit *</InputLabel>
+            <Select
+              value={newVisitor.purpose}
+              onChange={(e) => setNewVisitor({ ...newVisitor, purpose: e.target.value })}
+            >
+              <MenuItem value="delivery">Delivery</MenuItem>
+              <MenuItem value="pickup">Pickup</MenuItem>
+              <MenuItem value="meeting">Meeting</MenuItem>
+              <MenuItem value="maintenance">Maintenance</MenuItem>
+              <MenuItem value="inspection">Inspection</MenuItem>
+              <MenuItem value="other">Other</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Vehicle Number"
+            value={newVisitor.vehicle_number}
+            onChange={(e) => setNewVisitor({ ...newVisitor, vehicle_number: e.target.value })}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="ID Number"
+            value={newVisitor.id_number}
+            onChange={(e) => setNewVisitor({ ...newVisitor, id_number: e.target.value })}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Contact Person"
+            value={newVisitor.contact_person}
+            onChange={(e) => setNewVisitor({ ...newVisitor, contact_person: e.target.value })}
+            placeholder="Name of person they are visiting"
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const renderExitVisitorForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Record Visitor Exit
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Visitor: {selectedItem.visitor_name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Company: {selectedItem.visitor_company}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Purpose: {selectedItem.purpose}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Entry Time: {new Date(selectedItem.entry_time).toLocaleString()}
+            </Typography>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              This will record the visitor's exit time as {new Date().toLocaleString()}
+            </Alert>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderNewIncidentForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Report New Incident
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Incident Type *</InputLabel>
+            <Select
+              value={newIncident.type}
+              onChange={(e) => setNewIncident({ ...newIncident, type: e.target.value })}
+            >
+              <MenuItem value="Unauthorized Access">Unauthorized Access</MenuItem>
+              <MenuItem value="Vehicle Accident">Vehicle Accident</MenuItem>
+              <MenuItem value="Theft">Theft</MenuItem>
+              <MenuItem value="Vandalism">Vandalism</MenuItem>
+              <MenuItem value="Suspicious Activity">Suspicious Activity</MenuItem>
+              <MenuItem value="Equipment Damage">Equipment Damage</MenuItem>
+              <MenuItem value="Other">Other</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Severity *</InputLabel>
+            <Select
+              value={newIncident.severity}
+              onChange={(e) => setNewIncident({ ...newIncident, severity: e.target.value })}
+            >
+              <MenuItem value="low">Low</MenuItem>
+              <MenuItem value="medium">Medium</MenuItem>
+              <MenuItem value="high">High</MenuItem>
+              <MenuItem value="critical">Critical</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Location *"
+            value={newIncident.location}
+            onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
+            required
+            placeholder="e.g., Main Gate, Loading Bay, Production Floor"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Description *"
+            value={newIncident.description}
+            onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
+            required
+            placeholder="Provide detailed description of the incident..."
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  const renderViewLogDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Gate Log Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Log Number</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.log_number}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status.toUpperCase()}
+              color={getStatusColor(selectedItem.status) as any}
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Visitor Name</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.visitor_name}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Phone Number</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.visitor_phone}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Company</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.visitor_company}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Purpose</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.purpose}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Vehicle Number</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.vehicle_number || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Security Guard</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.security_guard}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Entry Time</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{new Date(selectedItem.entry_time).toLocaleString()}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Exit Time</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedItem.exit_time ? new Date(selectedItem.exit_time).toLocaleString() : 'Still inside'}
+            </Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderViewIncidentDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Incident Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Report Number</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.report_number}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status}
+              color={getStatusColor(selectedItem.status) as any}
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.type}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Severity</Typography>
+            <Chip
+              label={selectedItem.severity.toUpperCase()}
+              color={getSeverityColor(selectedItem.severity) as any}
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Location</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.location}</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Description</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.description}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Reported By</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.reported_by}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Date Reported</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{new Date(selectedItem.created_at).toLocaleString()}</Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderUpdateIncidentForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Update Incident Status
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Incident: {selectedItem.report_number} - {selectedItem.type}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Current Status: {selectedItem.status}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Severity: {selectedItem.severity}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Location: {selectedItem.location}
+            </Typography>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              This will update the status to: {selectedItem.status === 'open' ? 'Investigating' : 'Resolved'}
+            </Alert>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
   const renderIncidentReports = () => (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -673,16 +1085,33 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
           {dialogType === 'update-incident' && 'Update Incident Status'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('visitor') && 'Visitor management functionality will be implemented here.'}
-            {dialogType.includes('incident') && 'Incident reporting and management functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'new-visitor' && renderNewVisitorForm()}
+          {dialogType === 'view-log' && renderViewLogDetails()}
+          {dialogType === 'exit-visitor' && renderExitVisitorForm()}
+          {dialogType === 'new-incident' && renderNewIncidentForm()}
+          {dialogType === 'view-incident' && renderViewIncidentDetails()}
+          {dialogType === 'update-incident' && renderUpdateIncidentForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {!dialogType.includes('view') && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
-              {dialogType.includes('new') ? 'Submit' : 'Update'}
+          {dialogType === 'new-visitor' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleSubmitVisitor}>
+              Submit
+            </Button>
+          )}
+          {dialogType === 'exit-visitor' && (
+            <Button variant="contained" sx={{ bgcolor: '#f44336' }} onClick={handleRecordExit}>
+              Record Exit
+            </Button>
+          )}
+          {dialogType === 'new-incident' && (
+            <Button variant="contained" sx={{ bgcolor: '#f44336' }} onClick={handleSubmitIncident}>
+              Submit
+            </Button>
+          )}
+          {dialogType === 'update-incident' && (
+            <Button variant="contained" sx={{ bgcolor: '#ff9800' }} onClick={handleUpdateIncidentStatus}>
+              Update Status
             </Button>
           )}
         </DialogActions>

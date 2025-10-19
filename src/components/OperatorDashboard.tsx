@@ -82,6 +82,16 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [taskProgress, setTaskProgress] = useState('');
+  const [maintenanceNotes, setMaintenanceNotes] = useState('');
+  const [newMaintenance, setNewMaintenance] = useState({
+    equipment_id: '',
+    type: '',
+    description: '',
+    priority: 'medium',
+    scheduled_date: '',
+    estimated_duration: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -235,11 +245,77 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
     setDialogOpen(false);
     setDialogType('');
     setSelectedItem(null);
+    setTaskProgress('');
+    setMaintenanceNotes('');
+    setNewMaintenance({
+      equipment_id: '',
+      type: '',
+      description: '',
+      priority: 'medium',
+      scheduled_date: '',
+      estimated_duration: ''
+    });
   };
 
   const handleStartTask = (task: any) => {
     setCurrentTask(task);
     setIsWorking(true);
+  };
+
+  const handleUpdateTaskProgress = async () => {
+    if (!selectedItem || !taskProgress) {
+      alert('Please enter progress information');
+      return;
+    }
+
+    try {
+      const updatedTasks = maintenanceTasks.map(task =>
+        task.id === selectedItem.id
+          ? { 
+              ...task, 
+              progress: Math.min(100, (task.progress || 0) + parseInt(taskProgress)),
+              status: Math.min(100, (task.progress || 0) + parseInt(taskProgress)) >= 100 ? 'completed' : 'in_progress',
+              notes: maintenanceNotes
+            }
+          : task
+      );
+      setMaintenanceTasks(updatedTasks);
+      alert('Task progress updated successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error updating task progress:', error);
+      alert('Error updating task progress. Please try again.');
+    }
+  };
+
+  const handleScheduleMaintenance = async () => {
+    if (!newMaintenance.equipment_id || !newMaintenance.type || !newMaintenance.description) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const newTask = {
+        id: maintenanceTasks.length + 1,
+        task_number: `MAINT${String(maintenanceTasks.length + 1).padStart(3, '0')}`,
+        equipment_name: equipmentStatus.find(eq => eq.id === newMaintenance.equipment_id)?.name || 'Unknown Equipment',
+        type: newMaintenance.type,
+        description: newMaintenance.description,
+        priority: newMaintenance.priority,
+        duration: newMaintenance.estimated_duration,
+        progress: 0,
+        status: 'pending',
+        scheduled_date: newMaintenance.scheduled_date,
+        created_at: new Date().toISOString()
+      };
+
+      setMaintenanceTasks([newTask, ...maintenanceTasks]);
+      alert('Maintenance task scheduled successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error scheduling maintenance:', error);
+      alert('Error scheduling maintenance. Please try again.');
+    }
   };
 
   const handleStopTask = () => {
@@ -694,6 +770,242 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
     </Box>
   );
 
+  const renderTaskDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Task Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Task ID</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.task_number || selectedItem.id}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status?.toUpperCase() || 'UNKNOWN'}
+              color={
+                selectedItem.status === 'completed' ? 'success' :
+                selectedItem.status === 'in_progress' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Equipment</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.equipment_name || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.type || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Priority</Typography>
+            <Chip
+              label={selectedItem.priority?.toUpperCase() || 'NORMAL'}
+              color={
+                selectedItem.priority === 'high' ? 'error' :
+                selectedItem.priority === 'medium' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Duration</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.duration || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Progress</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.progress || 0}%</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Description</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.description || 'N/A'}</Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderUpdateTaskForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Update Task Progress
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Task: {selectedItem.task_number} - {selectedItem.equipment_name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Current Progress: {selectedItem.progress || 0}%
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Additional Progress (%)"
+              type="number"
+              value={taskProgress}
+              onChange={(e) => setTaskProgress(e.target.value)}
+              placeholder="Enter percentage to add"
+              helperText="Enter the percentage of progress to add"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Maintenance Notes"
+              value={maintenanceNotes}
+              onChange={(e) => setMaintenanceNotes(e.target.value)}
+              placeholder="Add any notes about the maintenance work performed..."
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderEquipmentDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Equipment Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Equipment Name</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.name || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.type || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status?.toUpperCase() || 'UNKNOWN'}
+              color={
+                selectedItem.status === 'operational' ? 'success' :
+                selectedItem.status === 'maintenance' ? 'warning' :
+                selectedItem.status === 'warning' ? 'error' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Efficiency</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.efficiency || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Operating Hours</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.operating_hours || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Location</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.location || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Last Maintenance</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.last_maintenance || 'N/A'}</Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderScheduleMaintenanceForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Schedule Maintenance
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Equipment *</InputLabel>
+            <Select
+              value={newMaintenance.equipment_id}
+              onChange={(e) => setNewMaintenance({ ...newMaintenance, equipment_id: e.target.value })}
+            >
+              {equipmentStatus.map((equipment) => (
+                <MenuItem key={equipment.id} value={equipment.id}>
+                  {equipment.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Maintenance Type *</InputLabel>
+            <Select
+              value={newMaintenance.type}
+              onChange={(e) => setNewMaintenance({ ...newMaintenance, type: e.target.value })}
+            >
+              <MenuItem value="Routine Maintenance">Routine Maintenance</MenuItem>
+              <MenuItem value="Repair">Repair</MenuItem>
+              <MenuItem value="Inspection">Inspection</MenuItem>
+              <MenuItem value="Calibration">Calibration</MenuItem>
+              <MenuItem value="Cleaning">Cleaning</MenuItem>
+              <MenuItem value="Replacement">Replacement</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth required>
+            <InputLabel>Priority *</InputLabel>
+            <Select
+              value={newMaintenance.priority}
+              onChange={(e) => setNewMaintenance({ ...newMaintenance, priority: e.target.value })}
+            >
+              <MenuItem value="low">Low</MenuItem>
+              <MenuItem value="medium">Medium</MenuItem>
+              <MenuItem value="high">High</MenuItem>
+              <MenuItem value="critical">Critical</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Estimated Duration"
+            value={newMaintenance.estimated_duration}
+            onChange={(e) => setNewMaintenance({ ...newMaintenance, estimated_duration: e.target.value })}
+            placeholder="e.g., 2 hours, 1 day"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Scheduled Date"
+            type="date"
+            value={newMaintenance.scheduled_date}
+            onChange={(e) => setNewMaintenance({ ...newMaintenance, scheduled_date: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Description *"
+            value={newMaintenance.description}
+            onChange={(e) => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
+            required
+            placeholder="Describe the maintenance work to be performed..."
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -728,16 +1040,21 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
           {dialogType === 'schedule-maintenance' && 'Schedule Maintenance'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('task') && 'Maintenance task management functionality will be implemented here.'}
-            {dialogType.includes('equipment') && 'Equipment management functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'view-task' && renderTaskDetails()}
+          {dialogType === 'update-task' && renderUpdateTaskForm()}
+          {dialogType === 'view-equipment' && renderEquipmentDetails()}
+          {dialogType === 'schedule-maintenance' && renderScheduleMaintenanceForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {!dialogType.includes('view') && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
-              {dialogType.includes('schedule') ? 'Schedule' : 'Update'}
+          {dialogType === 'update-task' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleUpdateTaskProgress}>
+              Update Progress
+            </Button>
+          )}
+          {dialogType === 'schedule-maintenance' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleScheduleMaintenance}>
+              Schedule
             </Button>
           )}
         </DialogActions>

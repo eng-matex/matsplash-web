@@ -82,6 +82,15 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState('');
+  const [loadingNotes, setLoadingNotes] = useState('');
+  const [moveItem, setMoveItem] = useState({
+    item_id: '',
+    from_location: '',
+    to_location: '',
+    quantity: '',
+    reason: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -249,11 +258,71 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
     setDialogOpen(false);
     setDialogType('');
     setSelectedItem(null);
+    setLoadingProgress('');
+    setLoadingNotes('');
+    setMoveItem({
+      item_id: '',
+      from_location: '',
+      to_location: '',
+      quantity: '',
+      reason: ''
+    });
   };
 
   const handleStartTask = (task: any) => {
     setCurrentTask(task);
     setIsWorking(true);
+  };
+
+  const handleUpdateLoadingProgress = async () => {
+    if (!selectedItem || !loadingProgress) {
+      alert('Please enter progress information');
+      return;
+    }
+
+    try {
+      const updatedTasks = loadingTasks.map(task =>
+        task.id === selectedItem.id
+          ? { 
+              ...task, 
+              progress: Math.min(100, (task.progress || 0) + parseInt(loadingProgress)),
+              status: Math.min(100, (task.progress || 0) + parseInt(loadingProgress)) >= 100 ? 'completed' : 'in_progress',
+              notes: loadingNotes
+            }
+          : task
+      );
+      setLoadingTasks(updatedTasks);
+      alert('Loading progress updated successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error updating loading progress:', error);
+      alert('Error updating loading progress. Please try again.');
+    }
+  };
+
+  const handleMoveItem = async () => {
+    if (!moveItem.item_id || !moveItem.to_location || !moveItem.quantity) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const updatedItems = inventoryItems.map(item =>
+        item.id === moveItem.item_id
+          ? { 
+              ...item, 
+              location: moveItem.to_location,
+              last_moved: new Date().toISOString()
+            }
+          : item
+      );
+      setInventoryItems(updatedItems);
+      alert('Item moved successfully!');
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error moving item:', error);
+      alert('Error moving item. Please try again.');
+    }
   };
 
   const handleStopTask = () => {
@@ -701,6 +770,206 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
     </Box>
   );
 
+  const renderTaskDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Loading Task Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Task ID</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.task_id || selectedItem.id}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status?.toUpperCase() || 'UNKNOWN'}
+              color={
+                selectedItem.status === 'completed' ? 'success' :
+                selectedItem.status === 'in_progress' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.customer || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Vehicle</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.vehicle || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Bay</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.bay || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Priority</Typography>
+            <Chip
+              label={selectedItem.priority?.toUpperCase() || 'NORMAL'}
+              color={
+                selectedItem.priority === 'high' ? 'error' :
+                selectedItem.priority === 'medium' ? 'warning' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Progress</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.progress || 0}%</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Items</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.items || 'N/A'}</Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderUpdateLoadingForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Update Loading Progress
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Task: {selectedItem.task_id} - {selectedItem.customer}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Current Progress: {selectedItem.progress || 0}%
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Additional Progress (%)"
+              type="number"
+              value={loadingProgress}
+              onChange={(e) => setLoadingProgress(e.target.value)}
+              placeholder="Enter percentage to add"
+              helperText="Enter the percentage of loading progress to add"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Loading Notes"
+              value={loadingNotes}
+              onChange={(e) => setLoadingNotes(e.target.value)}
+              placeholder="Add any notes about the loading process..."
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderItemDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Inventory Item Details
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Item Name</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.name || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Current Stock</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.stock || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Location</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.location || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip
+              label={selectedItem.status?.toUpperCase() || 'UNKNOWN'}
+              color={
+                selectedItem.status === 'available' ? 'success' :
+                selectedItem.status === 'low_stock' ? 'warning' :
+                selectedItem.status === 'critical' ? 'error' : 'default'
+              }
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Last Moved</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedItem.last_moved || 'N/A'}</Typography>
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
+  const renderMoveItemForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Move Inventory Item
+      </Typography>
+      {selectedItem && (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Item: {selectedItem.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Current Location: {selectedItem.location}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Current Stock: {selectedItem.stock}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Quantity to Move"
+              type="number"
+              value={moveItem.quantity}
+              onChange={(e) => setMoveItem({ ...moveItem, quantity: e.target.value })}
+              placeholder="Enter quantity"
+              helperText="Enter the quantity to move"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="To Location"
+              value={moveItem.to_location}
+              onChange={(e) => setMoveItem({ ...moveItem, to_location: e.target.value })}
+              placeholder="e.g., Bay A, Warehouse B"
+              helperText="Enter the destination location"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Reason for Move"
+              value={moveItem.reason}
+              onChange={(e) => setMoveItem({ ...moveItem, reason: e.target.value })}
+              placeholder="Enter reason for moving this item..."
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -735,16 +1004,21 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
           {dialogType === 'move-item' && 'Move Inventory Item'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('task') && 'Loading task management functionality will be implemented here.'}
-            {dialogType.includes('item') && 'Inventory management functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'view-task' && renderTaskDetails()}
+          {dialogType === 'update-task' && renderUpdateLoadingForm()}
+          {dialogType === 'view-item' && renderItemDetails()}
+          {dialogType === 'move-item' && renderMoveItemForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {!dialogType.includes('view') && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
-              {dialogType.includes('move') ? 'Move' : 'Update'}
+          {dialogType === 'update-task' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleUpdateLoadingProgress}>
+              Update Progress
+            </Button>
+          )}
+          {dialogType === 'move-item' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleMoveItem}>
+              Move Item
             </Button>
           )}
         </DialogActions>
