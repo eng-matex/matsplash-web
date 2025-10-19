@@ -745,6 +745,10 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
   };
 
   const handleCreatePriceModel = async () => {
+    if (!validatePriceModelForm()) {
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/price-models', {
@@ -761,6 +765,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('Price model created successfully:', result);
         await fetchData(); // Refresh the data
         handleCloseDialog();
         setNewPriceModel({
@@ -773,17 +779,29 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
           is_active: true
         });
       } else {
-        console.error('Failed to create price model');
+        const errorData = await response.json();
+        console.error('Failed to create price model:', errorData);
       }
     } catch (error) {
       console.error('Error creating price model:', error);
     }
   };
 
-  const handleUpdatePriceModel = async (model: PriceModel) => {
+  const handleUpdatePriceModel = async () => {
+    if (!validatePriceModelForm()) {
+      return;
+    }
+
     try {
+      if (!selectedProduct || !selectedProduct.id) {
+        console.error('No price model selected for update');
+        return;
+      }
+
+      console.log('Updating price model:', selectedProduct.id, newPriceModel);
+      
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/price-models/${model.id}`, {
+      const response = await fetch(`http://localhost:3001/api/price-models/${selectedProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -797,10 +815,13 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('Price model updated successfully:', result);
         await fetchData(); // Refresh the data
         handleCloseDialog();
       } else {
-        console.error('Failed to update price model');
+        const errorData = await response.json();
+        console.error('Failed to update price model:', errorData);
       }
     } catch (error) {
       console.error('Error updating price model:', error);
@@ -840,6 +861,17 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     if (!newProduct.category) errors.category = 'Category is required';
     if (!newProduct.base_cost || newProduct.base_cost <= 0) errors.base_cost = 'Base cost must be greater than 0';
     if (!newProduct.current_price || newProduct.current_price <= 0) errors.current_price = 'Current price must be greater than 0';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validatePriceModelForm = () => {
+    const errors: any = {};
+    if (!newPriceModel.name) errors.name = 'Price model name is required';
+    if (!newPriceModel.customer_type) errors.customer_type = 'Customer type is required';
+    if (!newPriceModel.base_price || newPriceModel.base_price < 0) errors.base_price = 'Base price must be 0 or greater';
+    if (!newPriceModel.min_quantity || newPriceModel.min_quantity < 1) errors.min_quantity = 'Minimum quantity must be at least 1';
+    if (!newPriceModel.max_quantity || newPriceModel.max_quantity < newPriceModel.min_quantity) errors.max_quantity = 'Maximum quantity must be greater than minimum quantity';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -1464,10 +1496,12 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                     onChange={handlePriceModelChange}
                     variant="outlined"
                     required
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth variant="outlined">
+                  <FormControl fullWidth variant="outlined" error={!!formErrors.customer_type}>
                     <InputLabel>Customer Type</InputLabel>
                     <Select
                       name="customer_type"
@@ -1481,6 +1515,11 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                         </MenuItem>
                       ))}
                     </Select>
+                    {formErrors.customer_type && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                        {formErrors.customer_type}
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
                 <Grid item xs={12}>
@@ -1505,6 +1544,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                     onChange={handlePriceModelChange}
                     variant="outlined"
                     required
+                    error={!!formErrors.base_price}
+                    helperText={formErrors.base_price}
                     inputProps={{ min: 0, step: 0.01 }}
                   />
                 </Grid>
@@ -1518,6 +1559,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                     onChange={handlePriceModelChange}
                     variant="outlined"
                     required
+                    error={!!formErrors.min_quantity}
+                    helperText={formErrors.min_quantity}
                     inputProps={{ min: 1 }}
                   />
                 </Grid>
@@ -1531,6 +1574,8 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                     onChange={handlePriceModelChange}
                     variant="outlined"
                     required
+                    error={!!formErrors.max_quantity}
+                    helperText={formErrors.max_quantity}
                     inputProps={{ min: 1 }}
                   />
                 </Grid>
@@ -1563,7 +1608,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
             </Button>
           )}
           {dialogType === 'edit-price-model' && (
-            <Button variant="contained" onClick={() => handleUpdatePriceModel(selectedProduct as any)} disabled={loading}>
+            <Button variant="contained" onClick={handleUpdatePriceModel} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : 'Update Price Model'}
             </Button>
           )}
