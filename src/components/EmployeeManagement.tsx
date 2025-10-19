@@ -393,10 +393,32 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         department: '',
         status: 'active',
         salary: 0,
+        commission_rate: 0,
+        has_commission: false,
+        commission_type: 'none',
         address: '',
         emergency_contact: '',
         emergency_phone: '',
         notes: '',
+        permissions: []
+      });
+    } else if (type === 'edit' && employee) {
+      // Populate form data for editing
+      setNewEmployee({
+        name: employee.name || '',
+        email: employee.email || '',
+        phone: employee.phone || '',
+        role: employee.role || '',
+        department: employee.department || '',
+        status: employee.status || 'active',
+        salary: employee.salary || 0,
+        commission_rate: employee.commission_rate || 0,
+        has_commission: employee.has_commission || false,
+        commission_type: employee.commission_type || 'none',
+        address: employee.address || '',
+        emergency_contact: employee.emergency_contact || '',
+        emergency_phone: employee.emergency_phone || '',
+        notes: employee.notes || '',
         permissions: []
       });
     }
@@ -407,6 +429,179 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     setDialogOpen(false);
     setDialogType('');
     setSelectedEmployee(null);
+  };
+
+  const handleResetPin = async () => {
+    if (!selectedEmployee) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}/reset-pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: 1, // This should come from auth context
+          userEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert('PIN reset successfully! Default PIN is 1111');
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to reset PIN: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error resetting PIN:', error);
+      alert('Failed to reset PIN. Please try again.');
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!selectedEmployee) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const newStatus = selectedEmployee.status === 'active' ? 'inactive' : 'active';
+      
+      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          userId: 1, // This should come from auth context
+          userEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert(`Employee ${newStatus === 'active' ? 'activated' : 'suspended'} successfully!`);
+        fetchData();
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to update status: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!selectedEmployee) return;
+
+    // Prevent deletion of Admin and Director accounts
+    if (selectedEmployee.role === 'Admin' || selectedEmployee.role === 'Director') {
+      alert('Admin and Director accounts cannot be deleted for security reasons.');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${selectedEmployee.name}? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: 1, // This should come from auth context
+          userEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert('Employee deleted successfully!');
+        fetchData();
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete employee: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert('Failed to delete employee. Please try again.');
+    }
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!selectedEmployee) return;
+
+    try {
+      // Validate required fields
+      if (!newEmployee.name || !newEmployee.email || !newEmployee.phone || !newEmployee.role) {
+        alert('Please fill in all required fields (Name, Email, Phone, Role)');
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmployee.email)) {
+        alert('Please enter a valid email address');
+        return;
+      }
+
+      // Validate phone format
+      const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+      if (!phoneRegex.test(newEmployee.phone)) {
+        alert('Please enter a valid phone number');
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newEmployee.name,
+          email: newEmployee.email,
+          phone: newEmployee.phone,
+          role: newEmployee.role,
+          department: newEmployee.department,
+          position: newEmployee.position,
+          salary: newEmployee.salary,
+          commission_rate: newEmployee.commission_rate,
+          has_commission: newEmployee.has_commission,
+          commission_type: newEmployee.commission_type,
+          address: newEmployee.address,
+          emergency_contact: newEmployee.emergency_contact,
+          emergency_phone: newEmployee.emergency_phone,
+          notes: newEmployee.notes,
+          status: newEmployee.status,
+          userId: 1, // This should come from auth context
+          userEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert('Employee updated successfully!');
+        fetchData();
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        alert(`Failed to update employee: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      alert('Failed to update employee. Please try again.');
+    }
   };
 
   const handleSubmit = async () => {
@@ -825,10 +1020,16 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                             <Visibility />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit Employee">
-                          <IconButton size="small" onClick={() => handleOpenDialog('edit', employee)}>
-                            <Edit />
-                          </IconButton>
+                        <Tooltip title={employee.role === 'Admin' || employee.role === 'Director' ? 'Cannot edit Admin/Director accounts' : 'Edit Employee'}>
+                          <span>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenDialog('edit', employee)}
+                              disabled={employee.role === 'Admin' || employee.role === 'Director'}
+                            >
+                              <Edit />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                         <Tooltip title="Reset PIN">
                           <IconButton size="small" onClick={() => handleOpenDialog('reset-pin', employee)}>
@@ -839,6 +1040,18 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                           <IconButton size="small" onClick={() => handleOpenDialog('toggle-status', employee)}>
                             {employee.status === 'active' ? <Cancel /> : <CheckCircle />}
                           </IconButton>
+                        </Tooltip>
+                        <Tooltip title={employee.role === 'Admin' || employee.role === 'Director' ? 'Cannot delete Admin/Director accounts' : 'Delete Employee'}>
+                          <span>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenDialog('delete', employee)}
+                              disabled={employee.role === 'Admin' || employee.role === 'Director'}
+                              sx={{ color: 'error.main' }}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       </TableCell>
                     </TableRow>
@@ -1133,49 +1346,383 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     </Box>
   );
 
-  const renderEmployeeDetails = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-        Employee Details
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Employee details functionality will be implemented here.
-      </Typography>
-    </Box>
-  );
+  const renderEmployeeDetails = () => {
+    if (!selectedEmployee) return null;
 
-  const renderEditEmployeeForm = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-        Edit Employee
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Employee editing functionality will be implemented here.
-      </Typography>
-    </Box>
-  );
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Employee Details
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Name</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.name}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.email}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.phone}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Role</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.role}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Department</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.department || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+            <Chip 
+              label={selectedEmployee.status} 
+              color={selectedEmployee.status === 'active' ? 'success' : 'error'}
+              size="small"
+              sx={{ mb: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Base Salary</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>₦{selectedEmployee.salary?.toLocaleString() || '0'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Commission</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedEmployee.has_commission ? 
+                `₦${selectedEmployee.commission_rate} ${selectedEmployee.commission_type === 'per_bag_sold' ? 'per bag sold' : 'per bag packed'}` : 
+                'No Commission'
+              }
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Address</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.address || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Emergency Contact</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.emergency_contact || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Emergency Phone</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.emergency_phone || 'N/A'}</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.notes || 'No notes'}</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Created</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedEmployee.created_at ? new Date(selectedEmployee.created_at).toLocaleDateString() : 'N/A'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">Last Login</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {selectedEmployee.last_login ? new Date(selectedEmployee.last_login).toLocaleDateString() : 'Never'}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
 
-  const renderResetPinForm = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-        Reset Employee PIN
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        PIN reset functionality will be implemented here.
-      </Typography>
-    </Box>
-  );
+  const renderEditEmployeeForm = () => {
+    if (!selectedEmployee) return null;
 
-  const renderToggleStatusForm = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-        Change Employee Status
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Status change functionality will be implemented here.
-      </Typography>
-    </Box>
-  );
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Edit Employee: {selectedEmployee.name}
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={newEmployee.name}
+              onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={newEmployee.email}
+              onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Phone"
+              value={newEmployee.phone}
+              onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={newEmployee.role}
+                onChange={(e) => {
+                  const roleId = e.target.value;
+                  const defaults = getRoleDefaults(roleId);
+                  setNewEmployee({ 
+                    ...newEmployee, 
+                    role: roleId,
+                    salary: defaults.salary,
+                    has_commission: defaults.hasCommission,
+                    commission_rate: defaults.commissionRate,
+                    commission_type: defaults.commissionType,
+                    department: defaults.department
+                  });
+                }}
+                label="Role"
+                disabled={selectedEmployee.role === 'Admin' || selectedEmployee.role === 'Director'}
+              >
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Department"
+              value={newEmployee.department}
+              onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={newEmployee.status}
+                onChange={(e) => setNewEmployee({ ...newEmployee, status: e.target.value })}
+                label="Status"
+              >
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Base Salary (₦)"
+              type="number"
+              value={newEmployee.salary}
+              onChange={(e) => setNewEmployee({ ...newEmployee, salary: Number(e.target.value) })}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₦</InputAdornment>
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={newEmployee.has_commission}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, has_commission: e.target.checked })}
+                />
+              }
+              label="Has Commission"
+            />
+          </Grid>
+          {newEmployee.has_commission && (
+            <>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Commission Rate (₦)"
+                  type="number"
+                  value={newEmployee.commission_rate}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, commission_rate: Number(e.target.value) })}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₦</InputAdornment>
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Commission Type</InputLabel>
+                  <Select
+                    value={newEmployee.commission_type}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, commission_type: e.target.value })}
+                    label="Commission Type"
+                  >
+                    <MenuItem value="none">No Commission</MenuItem>
+                    <MenuItem value="per_bag_sold">Per Bag Sold (Driver/Sales)</MenuItem>
+                    <MenuItem value="per_bag_packed">Per Bag Packed (Packer)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </>
+          )}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Address"
+              multiline
+              rows={2}
+              value={newEmployee.address}
+              onChange={(e) => setNewEmployee({ ...newEmployee, address: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Emergency Contact"
+              value={newEmployee.emergency_contact}
+              onChange={(e) => setNewEmployee({ ...newEmployee, emergency_contact: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Emergency Phone"
+              value={newEmployee.emergency_phone}
+              onChange={(e) => setNewEmployee({ ...newEmployee, emergency_phone: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              multiline
+              rows={3}
+              value={newEmployee.notes}
+              onChange={(e) => setNewEmployee({ ...newEmployee, notes: e.target.value })}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  };
+
+  const renderResetPinForm = () => {
+    if (!selectedEmployee) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Reset PIN for {selectedEmployee.name}
+        </Typography>
+        
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            This will reset the employee's PIN to the default value (1111). 
+            The employee will be required to change their PIN on their next login.
+          </Typography>
+        </Alert>
+
+        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>Employee Details:</Typography>
+          <Typography variant="body2"><strong>Name:</strong> {selectedEmployee.name}</Typography>
+          <Typography variant="body2"><strong>Email:</strong> {selectedEmployee.email}</Typography>
+          <Typography variant="body2"><strong>Role:</strong> {selectedEmployee.role}</Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Are you sure you want to reset the PIN for this employee?
+        </Typography>
+      </Box>
+    );
+  };
+
+  const renderToggleStatusForm = () => {
+    if (!selectedEmployee) return null;
+
+    const newStatus = selectedEmployee.status === 'active' ? 'inactive' : 'active';
+    const actionText = newStatus === 'active' ? 'activate' : 'suspend';
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          {actionText === 'activate' ? 'Activate' : 'Suspend'} Employee
+        </Typography>
+        
+        <Alert severity={actionText === 'activate' ? 'success' : 'warning'} sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            {actionText === 'activate' 
+              ? 'This will activate the employee account and allow them to log in.'
+              : 'This will suspend the employee account and prevent them from logging in.'
+            }
+          </Typography>
+        </Alert>
+
+        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>Employee Details:</Typography>
+          <Typography variant="body2"><strong>Name:</strong> {selectedEmployee.name}</Typography>
+          <Typography variant="body2"><strong>Email:</strong> {selectedEmployee.email}</Typography>
+          <Typography variant="body2"><strong>Role:</strong> {selectedEmployee.role}</Typography>
+          <Typography variant="body2"><strong>Current Status:</strong> 
+            <Chip 
+              label={selectedEmployee.status} 
+              color={selectedEmployee.status === 'active' ? 'success' : 'error'}
+              size="small"
+              sx={{ ml: 1 }}
+            />
+          </Typography>
+          <Typography variant="body2"><strong>New Status:</strong> 
+            <Chip 
+              label={newStatus} 
+              color={newStatus === 'active' ? 'success' : 'error'}
+              size="small"
+              sx={{ ml: 1 }}
+            />
+          </Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Are you sure you want to {actionText} this employee?
+        </Typography>
+      </Box>
+    );
+  };
+
+  const renderDeleteForm = () => {
+    if (!selectedEmployee) return null;
+
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+          Delete Employee: {selectedEmployee.name}
+        </Typography>
+        
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Warning:</strong> This action cannot be undone. The employee will be permanently removed from the system.
+          </Typography>
+        </Alert>
+
+        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>Employee Details:</Typography>
+          <Typography variant="body2"><strong>Name:</strong> {selectedEmployee.name}</Typography>
+          <Typography variant="body2"><strong>Email:</strong> {selectedEmployee.email}</Typography>
+          <Typography variant="body2"><strong>Role:</strong> {selectedEmployee.role}</Typography>
+          <Typography variant="body2"><strong>Department:</strong> {selectedEmployee.department || 'N/A'}</Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Are you absolutely sure you want to delete this employee? This action cannot be undone.
+        </Typography>
+      </Box>
+    );
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -1208,6 +1755,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           {dialogType === 'edit' && 'Edit Employee'}
           {dialogType === 'reset-pin' && 'Reset Employee PIN'}
           {dialogType === 'toggle-status' && 'Change Employee Status'}
+          {dialogType === 'delete' && 'Delete Employee'}
         </DialogTitle>
         <DialogContent>
           {dialogType === 'new' && renderNewEmployeeForm()}
@@ -1215,12 +1763,39 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           {dialogType === 'edit' && renderEditEmployeeForm()}
           {dialogType === 'reset-pin' && renderResetPinForm()}
           {dialogType === 'toggle-status' && renderToggleStatusForm()}
+          {dialogType === 'delete' && renderDeleteForm()}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Close</Button>
+          <Button onClick={handleCloseDialog}>
+            {dialogType === 'view' ? 'Close' : 'Cancel'}
+          </Button>
           {dialogType === 'new' && (
             <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleSubmit}>
               Create Employee
+            </Button>
+          )}
+          {dialogType === 'edit' && (
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleUpdateEmployee}>
+              Update Employee
+            </Button>
+          )}
+          {dialogType === 'reset-pin' && (
+            <Button variant="contained" color="warning" onClick={handleResetPin}>
+              Reset PIN
+            </Button>
+          )}
+          {dialogType === 'toggle-status' && (
+            <Button 
+              variant="contained" 
+              color={selectedEmployee?.status === 'active' ? 'error' : 'success'} 
+              onClick={handleToggleStatus}
+            >
+              {selectedEmployee?.status === 'active' ? 'Suspend' : 'Activate'}
+            </Button>
+          )}
+          {dialogType === 'delete' && (
+            <Button variant="contained" color="error" onClick={handleDeleteEmployee}>
+              Delete Employee
             </Button>
           )}
         </DialogActions>
