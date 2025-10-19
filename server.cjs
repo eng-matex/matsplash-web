@@ -1613,8 +1613,8 @@ app.get('/api/attendance/test', async (req, res) => {
     const attendanceTable = await db.schema.hasTable('attendance_logs');
     const attendanceColumns = await db.raw("PRAGMA table_info(attendance_logs)");
     const systemActivityColumns = await db.raw("PRAGMA table_info(system_activity)");
-    res.json({
-      success: true,
+  res.json({
+    success: true,
       data: {
         tables: tables,
         hasAttendanceTable: attendanceTable,
