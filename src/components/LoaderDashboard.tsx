@@ -103,8 +103,8 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
               order_number: 'ORD001',
               customer_name: 'John Doe',
               items: [
-                { name: 'Water Sachets (500ml)', quantity: 50, unit: 'bags' },
-                { name: 'Water Sachets (1L)', quantity: 30, unit: 'bags' }
+                { name: 'Sachet Water', quantity: 50, unit: 'bags' },
+                { name: 'Sachet Water', quantity: 30, unit: 'bags' }
               ],
               total_items: 80,
               priority: 'high',
@@ -120,7 +120,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
               order_number: 'ORD002',
               customer_name: 'Jane Smith',
               items: [
-                { name: 'Water Sachets (500ml)', quantity: 100, unit: 'bags' }
+                { name: 'Sachet Water', quantity: 100, unit: 'bags' }
               ],
               total_items: 100,
               priority: 'medium',
@@ -137,7 +137,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
               order_number: 'ORD003',
               customer_name: 'Mike Johnson',
               items: [
-                { name: 'Water Sachets (1L)', quantity: 75, unit: 'bags' },
+                { name: 'Sachet Water', quantity: 75, unit: 'bags' },
                 { name: 'Water Bottles (500ml)', quantity: 50, unit: 'bottles' }
               ],
               total_items: 125,
@@ -160,8 +160,8 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
               order_number: 'ORD001',
               customer_name: 'John Doe',
               items: [
-                { name: 'Water Sachets (500ml)', quantity: 50, unit: 'bags' },
-                { name: 'Water Sachets (1L)', quantity: 30, unit: 'bags' }
+                { name: 'Sachet Water', quantity: 50, unit: 'bags' },
+                { name: 'Sachet Water', quantity: 30, unit: 'bags' }
               ],
               total_items: 80,
               priority: 'high',
@@ -177,7 +177,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
               order_number: 'ORD002',
               customer_name: 'Jane Smith',
               items: [
-                { name: 'Water Sachets (500ml)', quantity: 100, unit: 'bags' }
+                { name: 'Sachet Water', quantity: 100, unit: 'bags' }
               ],
               total_items: 100,
               priority: 'medium',
@@ -195,7 +195,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
           setInventoryItems([
             {
               id: 1,
-              item_name: 'Water Sachets (500ml)',
+              item_name: 'Sachet Water',
               current_stock: 1500,
               location: 'Warehouse A - Section 1',
               last_moved: new Date(Date.now() - 3600000).toISOString(),
@@ -203,7 +203,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
             },
             {
               id: 2,
-              item_name: 'Water Sachets (1L)',
+              item_name: 'Sachet Water',
               current_stock: 800,
               location: 'Warehouse A - Section 2',
               last_moved: new Date(Date.now() - 7200000).toISOString(),

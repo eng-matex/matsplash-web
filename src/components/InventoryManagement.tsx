@@ -154,7 +154,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
   });
 
   const productTypes = [
-    'Water Sachets',
+    'Sachet Water',
     'Water Bottles',
     'Packaging Materials',
     'Cleaning Supplies',
@@ -197,8 +197,8 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
           const inventoryItems: InventoryItem[] = [
             {
               id: 1,
-              product_name: 'Water Sachets (500ml)',
-              product_type: 'Water Sachets',
+              product_name: 'Sachet Water',
+              product_type: 'Sachet Water',
               current_stock: currentStock,
               minimum_stock: 200,
               maximum_stock: 2000,
@@ -225,8 +225,8 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
       const mockInventory: InventoryItem[] = [
         {
           id: 1,
-          product_name: 'Water Sachets (500ml)',
-          product_type: 'Water Sachets',
+          product_name: 'Sachet Water',
+          product_type: 'Sachet Water',
           current_stock: 1500,
           minimum_stock: 200,
           maximum_stock: 2000,
@@ -241,8 +241,8 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
         },
         {
           id: 2,
-          product_name: 'Water Sachets (1L)',
-          product_type: 'Water Sachets',
+          product_name: 'Sachet Water',
+          product_type: 'Sachet Water',
           current_stock: 800,
           minimum_stock: 150,
           maximum_stock: 1500,
@@ -293,7 +293,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
         {
           id: 1,
           product_id: 1,
-          product_name: 'Water Sachets (500ml)',
+          product_name: 'Sachet Water',
           operation_type: 'in',
           quantity: 100,
           unit: 'bags',
@@ -309,7 +309,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
           id: 2,
           product_id: 2,
           operation_type: 'out',
-          product_name: 'Water Sachets (1L)',
+          product_name: 'Sachet Water',
           quantity: 50,
           unit: 'bags',
           reason: 'Sale',

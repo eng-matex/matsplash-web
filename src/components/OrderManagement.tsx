@@ -178,10 +178,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
 
   // Mock data for products
   const products = [
-    { name: 'Water Sachets (500ml)', price: 300, unit: 'bags' },
-    { name: 'Water Sachets (1L)', price: 500, unit: 'bags' },
-    { name: 'Water Bottles (500ml)', price: 200, unit: 'bottles' },
-    { name: 'Water Bottles (1L)', price: 350, unit: 'bottles' }
+    { name: 'Sachet Water', price: 300, unit: 'bags' }
   ];
 
   useEffect(() => {
@@ -244,7 +241,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       status: 'pending',
       total_amount: 15000,
       items: [
-        { id: 1, product_name: 'Water Sachets (500ml)', quantity: 50, unit_price: 300, total_price: 15000, unit: 'bags' }
+        { id: 1, product_name: 'Sachet Water', quantity: 50, unit_price: 300, total_price: 15000, unit: 'bags' }
       ],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -264,7 +261,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       status: 'processing',
       total_amount: 50000,
       items: [
-        { id: 2, product_name: 'Water Sachets (1L)', quantity: 100, unit_price: 500, total_price: 50000, unit: 'bags' }
+        { id: 2, product_name: 'Sachet Water', quantity: 100, unit_price: 300, total_price: 30000, unit: 'bags' }
       ],
       created_at: new Date(Date.now() - 3600000).toISOString(),
       updated_at: new Date(Date.now() - 1800000).toISOString(),
@@ -284,7 +281,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       status: 'out_for_delivery',
       total_amount: 0,
       items: [
-        { id: 3, product_name: 'Water Sachets (500ml)', quantity: 150, unit_price: 0, total_price: 0, unit: 'bags' }
+        { id: 3, product_name: 'Sachet Water', quantity: 150, unit_price: 0, total_price: 0, unit: 'bags' }
       ],
       created_at: new Date(Date.now() - 1800000).toISOString(),
       updated_at: new Date(Date.now() - 1800000).toISOString(),
@@ -307,7 +304,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       status: 'pending',
       total_amount: 0,
       items: [
-        { id: 4, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
+        { id: 4, product_name: 'Sachet Water', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
       ],
       created_at: new Date(Date.now() - 1800000).toISOString(),
       updated_at: new Date(Date.now() - 1800000).toISOString(),
@@ -1442,7 +1439,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
                     variant="outlined"
                     onClick={() => {
                       const newItems = [...(editOrder.items || []), {
-                        product_name: 'Water Sachets (500ml)',
+                        product_name: 'Sachet Water',
                         quantity: 1,
                         unit_price: 300,
                         total_price: 300

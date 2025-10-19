@@ -165,7 +165,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       customer_phone: '08012345678',
       delivery_address: '123 Main Street, Lagos',
       items: [
-        { product_name: 'Water Sachets (500ml)', quantity: 50, unit_price: 270 }
+        { product_name: 'Sachet Water', quantity: 50, unit_price: 270 }
       ],
       total_amount: 13500,
       status: 'picked_up',

@@ -309,7 +309,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         customer_phone: newOrder.customer_phone,
         customer_email: newOrder.customer_email,
         order_type: orderType,
-        items: [{ product_name: 'Water Sachets (500ml)', quantity: 1, unit_price: 0 }], // Default item
+        items: [{ product_name: 'Sachet Water', quantity: 1, unit_price: 0 }], // Default item
         notes: newOrder.notes,
         delivery_address: newOrder.delivery_address,
         payment_method: orderType === 'general_sales' ? 'cash' : null,

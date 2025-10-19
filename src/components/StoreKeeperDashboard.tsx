@@ -95,10 +95,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           
           // Mock inventory data
           setInventory([
-            { id: 1, item_name: 'Water Sachets (500ml)', current_stock: 1500, min_stock: 500, unit: 'bags', status: 'good' },
-            { id: 2, item_name: 'Water Sachets (1L)', current_stock: 800, min_stock: 300, unit: 'bags', status: 'good' },
-            { id: 3, item_name: 'Packaging Materials', current_stock: 200, min_stock: 100, unit: 'rolls', status: 'low' },
-            { id: 4, item_name: 'Labels', current_stock: 50, min_stock: 200, unit: 'sheets', status: 'critical' }
+            { id: 1, item_name: 'Sachet Water', current_stock: 1500, min_stock: 500, unit: 'bags', status: 'good' }
           ]);
           break;
         case 'inventory-audit':

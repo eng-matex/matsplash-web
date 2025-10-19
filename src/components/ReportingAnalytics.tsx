@@ -559,7 +559,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ selectedSection
                     <Avatar sx={{ bgcolor: '#4caf50' }}>1</Avatar>
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Water Sachets (500ml)" 
+                    primary="Sachet Water" 
                     secondary="45% of total sales"
                   />
                 </ListItem>
@@ -568,7 +568,7 @@ const ReportingAnalytics: React.FC<ReportingAnalyticsProps> = ({ selectedSection
                     <Avatar sx={{ bgcolor: '#2196f3' }}>2</Avatar>
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Water Sachets (1L)" 
+                    primary="Sachet Water" 
                     secondary="30% of total sales"
                   />
                 </ListItem>

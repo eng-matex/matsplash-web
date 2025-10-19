@@ -374,14 +374,14 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
           items: [
             {
               product_id: 1,
-              product_name: 'Water Sachets (500ml)',
+              product_name: 'Sachet Water',
               quantity: 500,
               unit_price: 150,
               total_price: 75000
             },
             {
               product_id: 2,
-              product_name: 'Water Sachets (1L)',
+              product_name: 'Sachet Water',
               quantity: 200,
               unit_price: 250,
               total_price: 50000
@@ -405,7 +405,7 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
           items: [
             {
               product_id: 1,
-              product_name: 'Water Sachets (500ml)',
+              product_name: 'Sachet Water',
               quantity: 300,
               unit_price: 150,
               total_price: 45000

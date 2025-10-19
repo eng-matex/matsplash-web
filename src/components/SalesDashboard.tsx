@@ -108,7 +108,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
               sale_number: 'SALE001',
               customer_name: 'John Doe',
               customer_phone: '08012345678',
-              product_type: 'Water Sachets (500ml)',
+              product_type: 'Sachet Water',
               quantity: 50,
               unit_price: 300,
               total_amount: 15000,
@@ -121,7 +121,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
               sale_number: 'SALE002',
               customer_name: 'Jane Smith',
               customer_phone: '08087654321',
-              product_type: 'Water Sachets (1L)',
+              product_type: 'Sachet Water',
               quantity: 30,
               unit_price: 500,
               total_amount: 15000,
@@ -134,8 +134,8 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
         case 'sales-entry':
           // Mock products data
           setProducts([
-            { id: 1, name: 'Water Sachets (500ml)', price: 300, unit: 'bags', stock: 1000 },
-            { id: 2, name: 'Water Sachets (1L)', price: 500, unit: 'bags', stock: 500 },
+            { id: 1, name: 'Sachet Water', price: 300, unit: 'bags', stock: 1000 },
+            { id: 2, name: 'Sachet Water', price: 500, unit: 'bags', stock: 500 },
             { id: 3, name: 'Water Bottles (500ml)', price: 200, unit: 'bottles', stock: 200 }
           ]);
           break;
@@ -146,7 +146,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
               id: 1,
               sale_number: 'SALE001',
               customer_name: 'John Doe',
-              product_type: 'Water Sachets (500ml)',
+              product_type: 'Sachet Water',
               quantity: 50,
               total_amount: 15000,
               payment_method: 'cash',
@@ -157,7 +157,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
               id: 2,
               sale_number: 'SALE002',
               customer_name: 'Jane Smith',
-              product_type: 'Water Sachets (1L)',
+              product_type: 'Sachet Water',
               quantity: 30,
               total_amount: 15000,
               payment_method: 'transfer',
