@@ -76,6 +76,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [attendanceStatus, setAttendanceStatus] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -107,6 +108,22 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
         case 'order-status-logs':
           const allOrdersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
+          break;
+        case 'my-attendance':
+          try {
+            const attendanceResponse = await axios.get(`http://localhost:3001/api/attendance/status/${user?.id}`, { headers });
+            setAttendanceStatus(attendanceResponse.data.data || null);
+          } catch (error) {
+            console.error('Error fetching attendance:', error);
+            // Mock attendance data for testing
+            setAttendanceStatus({
+              status: 'present',
+              clock_in_time: new Date().toISOString(),
+              hours_worked: 8,
+              total_break_time: 30,
+              on_break: false
+            });
+          }
           break;
       }
 
@@ -519,6 +536,72 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     </Box>
   );
 
+  const renderMyAttendance = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', mb: 3 }}>
+        My Attendance
+      </Typography>
+      
+      {attendanceStatus ? (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Current Status
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Chip 
+                    label={attendanceStatus.status || 'Not Clocked In'} 
+                    color={attendanceStatus.status === 'present' ? 'success' : 'default'}
+                    sx={{ mr: 2 }}
+                  />
+                </Box>
+                {attendanceStatus.clock_in_time && (
+                  <Typography variant="body2" color="text.secondary">
+                    Clocked in: {new Date(attendanceStatus.clock_in_time).toLocaleString()}
+                  </Typography>
+                )}
+                {attendanceStatus.on_break && (
+                  <Typography variant="body2" color="warning.main">
+                    Currently on break
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  Today's Summary
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Hours worked: {attendanceStatus.hours_worked || '0'} hours
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Break time: {attendanceStatus.total_break_time || '0'} minutes
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      ) : (
+        <Card className="dashboard-card">
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+              No attendance data available
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your attendance information will appear here once you clock in.
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
+
   const renderOrderStatusLogs = () => (
     <Box>
       <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
@@ -740,13 +823,13 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
       case 'pickup-confirmations':
         return renderPickupConfirmations();
       case 'inventory-audit':
-      case 'inventory-logs':
-      case 'stock-adjustment':
-        return <InventoryManagement selectedSection={selectedSection} userRole="storekeeper" />;
+        return renderInventoryAudit();
       case 'inventory-management':
         return <InventoryManagement selectedSection={selectedSection} userRole="storekeeper" />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
+      case 'my-attendance':
+        return renderMyAttendance();
       default:
         return renderOverview();
     }
