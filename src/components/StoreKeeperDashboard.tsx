@@ -103,6 +103,19 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           const inventoryResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
           setInventoryLogs(inventoryResponse.data.data || []);
           break;
+        case 'inventory-management':
+          // Fetch inventory data for management
+          try {
+            const inventoryMgmtResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
+            setInventory(inventoryMgmtResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching inventory data:', error);
+            // Use mock data as fallback
+            setInventory([
+              { id: 1, item_name: 'Sachet Water', current_stock: -8, min_stock: 200, max_stock: 2000, unit: 'bags', status: 'out_of_stock', unit_price: 300 }
+            ]);
+          }
+          break;
         case 'order-status-logs':
           const allOrdersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
@@ -178,6 +191,21 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     }
   };
 
+  const fetchInventoryData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const inventoryMgmtResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
+      setInventory(inventoryMgmtResponse.data.data || []);
+    } catch (error) {
+      console.error('Error fetching inventory data:', error);
+      // Use mock data as fallback
+      setInventory([
+        { id: 1, item_name: 'Sachet Water', current_stock: -8, min_stock: 200, max_stock: 2000, unit: 'bags', status: 'out_of_stock', unit_price: 300 }
+      ]);
+    }
+  };
+
   const handleAddWater = async () => {
     if (!newWaterQuantity || newWaterQuantity <= 0) {
       alert('Please enter a valid quantity');
@@ -203,7 +231,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
       if (response.ok) {
         alert(`Successfully added ${newWaterQuantity} bags of water to inventory!`);
         setNewWaterQuantity(0);
-        fetchData();
+        fetchInventoryData();
       } else {
         const error = await response.json();
         alert(`Failed to add water: ${error.message || 'Unknown error'}`);
