@@ -72,6 +72,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
