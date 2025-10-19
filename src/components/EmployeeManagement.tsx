@@ -406,6 +406,58 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     setSelectedEmployee(null);
   };
 
+  const handleSubmit = async () => {
+    try {
+      // Validate required fields
+      if (!newEmployee.name || !newEmployee.email || !newEmployee.phone || !newEmployee.role) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      // Create employee via API
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newEmployee,
+          pin: '1111', // Default PIN
+          created_by: 1 // This should come from auth context
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Employee created successfully:', result);
+        // Refresh the employee list
+        fetchData();
+        handleCloseDialog();
+        // Reset form
+        setNewEmployee({
+          name: '',
+          email: '',
+          phone: '',
+          role: '',
+          department: '',
+          position: '',
+          hire_date: new Date().toISOString().split('T')[0],
+          salary: 0,
+          is_active: true
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to create employee:', errorData);
+        alert('Failed to create employee. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      alert('Error creating employee. Please try again.');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'success';
@@ -926,6 +978,50 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     </Box>
   );
 
+  const renderEmployeeDetails = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Employee Details
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Employee details functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderEditEmployeeForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Edit Employee
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Employee editing functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderResetPinForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Reset Employee PIN
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        PIN reset functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
+  const renderToggleStatusForm = () => (
+    <Box>
+      <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+        Change Employee Status
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Status change functionality will be implemented here.
+      </Typography>
+    </Box>
+  );
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -959,18 +1055,16 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           {dialogType === 'toggle-status' && 'Change Employee Status'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType === 'new' && 'Employee creation functionality will be implemented here.'}
-            {dialogType === 'view' && 'Employee details view will be implemented here.'}
-            {dialogType === 'edit' && 'Employee editing functionality will be implemented here.'}
-            {dialogType === 'reset-pin' && 'PIN reset functionality will be implemented here.'}
-            {dialogType === 'toggle-status' && 'Status change functionality will be implemented here.'}
-          </Typography>
+          {dialogType === 'new' && renderNewEmployeeForm()}
+          {dialogType === 'view' && renderEmployeeDetails()}
+          {dialogType === 'edit' && renderEditEmployeeForm()}
+          {dialogType === 'reset-pin' && renderResetPinForm()}
+          {dialogType === 'toggle-status' && renderToggleStatusForm()}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {dialogType === 'new' && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }} onClick={handleSubmit}>
               Create Employee
             </Button>
           )}

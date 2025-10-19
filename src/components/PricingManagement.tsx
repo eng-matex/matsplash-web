@@ -1602,6 +1602,11 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
               {loading ? <CircularProgress size={24} /> : 'Add Product'}
             </Button>
           )}
+          {dialogType === 'edit-product' && (
+            <Button variant="contained" onClick={handleSubmitProduct} disabled={loading}>
+              {loading ? <CircularProgress size={24} /> : 'Update Product'}
+            </Button>
+          )}
           {dialogType === 'new-price-model' && (
             <Button variant="contained" onClick={handleCreatePriceModel} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : 'Add Price Model'}
