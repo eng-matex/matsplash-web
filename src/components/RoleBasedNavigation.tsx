@@ -18,6 +18,7 @@ import {
   Payment,
   Lock,
   Search,
+  CheckCircle,
   Devices
 } from '@mui/icons-material';
 
@@ -75,6 +76,7 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
+        { id: 'inventory', label: 'Inventory Management', icon: Inventory, color: '#ff9800' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'general-sales', label: 'General Sales', icon: PointOfSale, color: '#4caf50' },
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
@@ -88,7 +90,9 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
+        { id: 'pickup-confirmations', label: 'Pickup Confirmations', icon: CheckCircle, color: '#4caf50' },
         { id: 'inventory-audit', label: 'Inventory Audit', icon: Assessment, color: '#ff5722' },
+        { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#ff9800' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];

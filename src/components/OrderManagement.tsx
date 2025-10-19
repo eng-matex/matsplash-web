@@ -75,6 +75,7 @@ import axios from 'axios';
 interface OrderManagementProps {
   selectedSection: string;
   userRole?: string;
+  defaultOrderType?: string;
 }
 
 interface Order {
@@ -128,7 +129,7 @@ interface Driver {
   is_active: boolean;
 }
 
-const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, userRole }) => {
+const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, userRole, defaultOrderType }) => {
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -144,7 +145,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     customer_name: '',
     customer_phone: '',
     customer_email: '',
-    order_type: 'general_sales',
+    order_type: (defaultOrderType as any) || 'general_sales',
     status: 'pending',
     total_amount: 0,
     items: [],
@@ -177,115 +178,143 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     setLoading(true);
     try {
       // Fetch drivers from API
-      const driversResponse = await axios.get('/api/sales/drivers');
-      setDrivers(driversResponse.data);
+      try {
+        const driversResponse = await axios.get('/api/sales/drivers');
+        setDrivers(Array.isArray(driversResponse.data) ? driversResponse.data : []);
+      } catch (error) {
+        console.log('Drivers API not available, using empty array');
+        setDrivers([]);
+      }
 
-      // Mock data for orders
-      const mockOrders: Order[] = [
-        {
-          id: 1,
-          order_number: 'ORD001',
-          customer_name: 'John Doe',
-          customer_phone: '08012345678',
-          customer_email: 'john@example.com',
-          order_type: 'general_sales',
-          status: 'pending',
-          total_amount: 15000,
-          items: [
-            { id: 1, product_name: 'Water Sachets (500ml)', quantity: 50, unit_price: 300, total_price: 15000, unit: 'bags' }
-          ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          created_by: 'Receptionist',
-          notes: 'Urgent delivery needed',
-          delivery_address: '123 Main Street, Lagos',
-          payment_method: 'cash',
-          payment_status: 'pending'
-        },
-        {
-          id: 2,
-          order_number: 'ORD002',
-          customer_name: 'ABC Distributors',
-          customer_phone: '08087654321',
-          customer_email: 'orders@abcdist.com',
-          order_type: 'distributor_order',
-          status: 'processing',
-          total_amount: 50000,
-          items: [
-            { id: 2, product_name: 'Water Sachets (1L)', quantity: 100, unit_price: 500, total_price: 50000, unit: 'bags' }
-          ],
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          updated_at: new Date(Date.now() - 1800000).toISOString(),
-          created_by: 'Manager',
-          notes: 'Bulk order for distribution',
-          delivery_address: '456 Business District, Lagos',
-          payment_method: 'transfer',
-          payment_status: 'paid'
-        },
-        {
-          id: 3,
-          order_number: 'ORD003',
-          customer_name: 'Driver Sales Route',
-          customer_phone: '08022222222',
-          customer_email: 'driver@example.com',
-          order_type: 'driver_dispatch',
-          status: 'out_for_delivery',
-          total_amount: 0,
-          items: [
-            { id: 3, product_name: 'Water Sachets (500ml)', quantity: 150, unit_price: 0, total_price: 0, unit: 'bags' }
-          ],
-          created_at: new Date(Date.now() - 1800000).toISOString(),
-          updated_at: new Date(Date.now() - 1800000).toISOString(),
-          created_by: 'Receptionist',
-          notes: 'Driver dispatch - commission based sales',
-          delivery_address: 'Various locations on route',
-          payment_method: 'cash',
-          payment_status: 'pending',
-          assigned_driver: 'Driver Name',
-          assigned_driver_id: 1,
-          storekeeper_authorized: true
-        },
-        {
-          id: 4,
-          order_number: 'ORD004',
-          customer_name: 'Mini Store ABC',
-          customer_phone: '08011111111',
-          customer_email: 'store@example.com',
-          order_type: 'store_dispatch',
-          status: 'pending',
-          total_amount: 0,
-          items: [
-            { id: 4, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
-          ],
-          created_at: new Date(Date.now() - 1800000).toISOString(),
-          updated_at: new Date(Date.now() - 1800000).toISOString(),
-          created_by: 'Receptionist',
-          notes: 'Mini store stocking - no price',
-          delivery_address: '789 Store Street, Lagos',
-          payment_method: 'cash',
-          payment_status: 'pending',
-          assigned_driver: 'Driver Assistant',
-          assigned_driver_id: 2,
-          storekeeper_authorized: false
+      // Fetch orders from API
+      try {
+        const ordersResponse = await axios.get('/api/sales/orders');
+        if (ordersResponse.data.success) {
+          setOrders(ordersResponse.data.data);
+        } else {
+          // Fallback to mock data if API fails
+          setOrders(getMockOrders());
         }
-      ];
+      } catch (error) {
+        console.log('Orders API not available, using mock data');
+        setOrders(getMockOrders());
+      }
 
-      const mockCustomers: Customer[] = [
-        { id: 1, name: 'John Doe', phone: '08012345678', email: 'john@example.com', customer_type: 'individual' },
-        { id: 2, name: 'ABC Distributors', phone: '08087654321', email: 'orders@abcdist.com', customer_type: 'distributor' },
-        { id: 3, name: 'Jane Smith', phone: '08098765432', email: 'jane@example.com', customer_type: 'retailer' },
-        { id: 4, name: 'Mini Store ABC', phone: '08011111111', email: 'store@example.com', customer_type: 'retailer' },
-        { id: 5, name: 'Driver Sales Route', phone: '08022222222', email: 'driver@example.com', customer_type: 'individual' }
-      ];
-
-      setOrders(mockOrders);
-      setCustomers(mockCustomers);
+      // Fetch customers from API (if available)
+      try {
+        const customersResponse = await axios.get('/api/sales/customers');
+        if (customersResponse.data.success) {
+          setCustomers(customersResponse.data.data);
+        } else {
+          setCustomers(getMockCustomers());
+        }
+      } catch (error) {
+        console.log('Customers API not available, using mock data');
+        setCustomers(getMockCustomers());
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const getMockOrders = (): Order[] => [
+    {
+      id: 1,
+      order_number: 'ORD001',
+      customer_name: 'John Doe',
+      customer_phone: '08012345678',
+      customer_email: 'john@example.com',
+      order_type: 'general_sales',
+      status: 'pending',
+      total_amount: 15000,
+      items: [
+        { id: 1, product_name: 'Water Sachets (500ml)', quantity: 50, unit_price: 300, total_price: 15000, unit: 'bags' }
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: 'Receptionist',
+      notes: 'Urgent delivery needed',
+      delivery_address: '123 Main Street, Lagos',
+      payment_method: 'cash',
+      payment_status: 'pending'
+    },
+    {
+      id: 2,
+      order_number: 'ORD002',
+      customer_name: 'ABC Distributors',
+      customer_phone: '08087654321',
+      customer_email: 'orders@abcdist.com',
+      order_type: 'distributor_order',
+      status: 'processing',
+      total_amount: 50000,
+      items: [
+        { id: 2, product_name: 'Water Sachets (1L)', quantity: 100, unit_price: 500, total_price: 50000, unit: 'bags' }
+      ],
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date(Date.now() - 1800000).toISOString(),
+      created_by: 'Manager',
+      notes: 'Bulk order for distribution',
+      delivery_address: '456 Business District, Lagos',
+      payment_method: 'transfer',
+      payment_status: 'paid'
+    },
+    {
+      id: 3,
+      order_number: 'ORD003',
+      customer_name: 'Driver Sales Route',
+      customer_phone: '08022222222',
+      customer_email: 'driver@example.com',
+      order_type: 'driver_dispatch',
+      status: 'out_for_delivery',
+      total_amount: 0,
+      items: [
+        { id: 3, product_name: 'Water Sachets (500ml)', quantity: 150, unit_price: 0, total_price: 0, unit: 'bags' }
+      ],
+      created_at: new Date(Date.now() - 1800000).toISOString(),
+      updated_at: new Date(Date.now() - 1800000).toISOString(),
+      created_by: 'Receptionist',
+      notes: 'Driver dispatch - commission based sales',
+      delivery_address: 'Various locations on route',
+      payment_method: 'cash',
+      payment_status: 'pending',
+      assigned_driver: 'Driver Name',
+      assigned_driver_id: 1,
+      storekeeper_authorized: true
+    },
+    {
+      id: 4,
+      order_number: 'ORD004',
+      customer_name: 'Mini Store ABC',
+      customer_phone: '08011111111',
+      customer_email: 'store@example.com',
+      order_type: 'store_dispatch',
+      status: 'pending',
+      total_amount: 0,
+      items: [
+        { id: 4, product_name: 'Water Sachets (500ml)', quantity: 200, unit_price: 0, total_price: 0, unit: 'bags' }
+      ],
+      created_at: new Date(Date.now() - 1800000).toISOString(),
+      updated_at: new Date(Date.now() - 1800000).toISOString(),
+      created_by: 'Receptionist',
+      notes: 'Mini store stocking - no price',
+      delivery_address: '789 Store Street, Lagos',
+      payment_method: 'cash',
+      payment_status: 'pending',
+      assigned_driver: 'Driver Assistant',
+      assigned_driver_id: 2,
+      storekeeper_authorized: false
+    }
+  ];
+
+  const getMockCustomers = (): Customer[] => [
+    { id: 1, name: 'John Doe', phone: '08012345678', email: 'john@example.com', customer_type: 'individual' },
+    { id: 2, name: 'ABC Distributors', phone: '08087654321', email: 'orders@abcdist.com', customer_type: 'distributor' },
+    { id: 3, name: 'Jane Smith', phone: '08098765432', email: 'jane@example.com', customer_type: 'retailer' },
+    { id: 4, name: 'Mini Store ABC', phone: '08011111111', email: 'store@example.com', customer_type: 'retailer' },
+    { id: 5, name: 'Driver Sales Route', phone: '08022222222', email: 'driver@example.com', customer_type: 'individual' }
+  ];
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
@@ -330,31 +359,33 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
     }
 
     try {
-      // Generate order number
-      const orderNumber = `ORD${String(orders.length + 1).padStart(3, '0')}`;
-      
       const orderData = {
-        ...newOrder,
-        order_number: orderNumber,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: 'Receptionist', // This should come from auth context
-        status: 'pending'
+        customer_name: newOrder.customer_name,
+        customer_phone: newOrder.customer_phone,
+        customer_email: newOrder.customer_email,
+        order_type: newOrder.order_type,
+        items: newOrder.items,
+        notes: newOrder.notes,
+        delivery_address: newOrder.delivery_address,
+        payment_method: newOrder.payment_method,
+        payment_status: newOrder.payment_status,
+        created_by: 1 // This should come from auth context
       };
 
-      // Here you would make an API call to create the order
       console.log('Creating order:', orderData);
       
-      // For now, add to local state
-      const newOrderWithId = {
-        ...orderData,
-        id: orders.length + 1
-      };
+      // Make API call to create the order
+      const response = await axios.post('/api/orders', orderData);
       
-      setOrders(prev => [newOrderWithId, ...prev]);
-      handleCloseDialog();
-      
-      alert(`${newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' : newOrder.order_type === 'driver_dispatch' ? 'Driver Dispatch' : 'Order'} created successfully!`);
+      if (response.data.success) {
+        // Add to local state
+        setOrders(prev => [response.data.data, ...prev]);
+        handleCloseDialog();
+        
+        alert(`${newOrder.order_type === 'store_dispatch' ? 'Store Dispatch' : newOrder.order_type === 'driver_dispatch' ? 'Driver Dispatch' : 'Order'} created successfully!`);
+      } else {
+        alert('Error creating order: ' + response.data.message);
+      }
     } catch (error) {
       console.error('Error creating order:', error);
       alert('Error creating order. Please try again.');

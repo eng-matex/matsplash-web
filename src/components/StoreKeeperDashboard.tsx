@@ -54,7 +54,10 @@ import {
   ShoppingCart,
   TrendingUp,
   TrendingDown,
-  Refresh
+  Refresh,
+  LocalShippingOutlined,
+  Person,
+  Schedule
 } from '@mui/icons-material';
 import axios from 'axios';
 import InventoryManagement from './InventoryManagement';
@@ -131,6 +134,33 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     setDialogOpen(false);
     setDialogType('');
     setSelectedItem(null);
+  };
+
+  const handleConfirmPickup = async () => {
+    if (!selectedItem) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Use the new confirm-pickup endpoint
+      const response = await axios.put(`http://localhost:3001/api/orders/${selectedItem.id}/confirm-pickup`, {
+        userId: 1, // This should come from auth context
+        userEmail: 'storekeeper@matsplash.com' // This should come from auth context
+      }, { headers });
+
+      if (response.data.success) {
+        // Refresh data
+        fetchData();
+        handleCloseDialog();
+        alert('Pickup authorized successfully!');
+      } else {
+        alert('Error authorizing pickup: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error confirming pickup:', error);
+      alert('Error confirming pickup. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -566,6 +596,135 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     </Box>
   );
 
+  const renderPickupConfirmations = () => {
+    const pendingOrders = orders.filter(order => order.status === 'pending');
+    const pickedUpOrders = orders.filter(order => order.status === 'picked_up');
+
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600, mb: 3 }}>
+          Pickup Confirmations
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Pending Pickup Orders */}
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Schedule sx={{ mr: 1, color: '#ff9800' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Pending Pickup</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700 }}>
+                  {pendingOrders.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Orders waiting for pickup authorization
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Picked Up Orders */}
+          <Grid item xs={12} md={6}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Picked Up Today</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
+                  {pickedUpOrders.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Orders authorized for pickup
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Pending Pickup Orders Table */}
+        <Card className="dashboard-card" sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+              Orders Pending Pickup Authorization
+            </Typography>
+            
+            {pendingOrders.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CheckCircle sx={{ fontSize: 48, color: '#4caf50', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary">
+                  No orders pending pickup authorization
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  All orders have been processed
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order ID</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Customer</TableCell>
+                      <TableCell>Driver</TableCell>
+                      <TableCell>Items</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Created</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pendingOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>{order.order_number}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={order.order_type?.replace('_', ' ').toUpperCase()} 
+                            color="primary" 
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{order.customer_name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Person sx={{ mr: 1, fontSize: 16 }} />
+                            {order.assigned_driver_id ? `Driver #${order.assigned_driver_id}` : 'Not Assigned'}
+                          </Box>
+                        </TableCell>
+                        <TableCell>{order.items?.length || 0} items</TableCell>
+                        <TableCell>₦{order.total_amount?.toLocaleString() || '0'}</TableCell>
+                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Tooltip title="View Details">
+                            <IconButton size="small" onClick={() => handleOpenDialog('view-order', order)}>
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Authorize Pickup">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenDialog('confirm-pickup', order)}
+                              sx={{ color: '#4caf50' }}
+                            >
+                              <CheckCircle />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -578,9 +737,13 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     switch (selectedSection) {
       case 'overview':
         return renderOverview();
+      case 'pickup-confirmations':
+        return renderPickupConfirmations();
       case 'inventory-audit':
       case 'inventory-logs':
       case 'stock-adjustment':
+        return <InventoryManagement selectedSection={selectedSection} userRole="storekeeper" />;
+      case 'inventory-management':
         return <InventoryManagement selectedSection={selectedSection} userRole="storekeeper" />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
@@ -604,14 +767,110 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           {dialogType === 'confirm-pickup' && 'Confirm Pickup'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('inventory') && 'Inventory management functionality will be implemented here.'}
-            {dialogType.includes('order') && 'Order details and pickup confirmation will be implemented here.'}
-          </Typography>
+          {dialogType === 'confirm-pickup' && selectedItem && (
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+                Confirm Pickup Authorization
+              </Typography>
+              
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Order ID</Typography>
+                  <Typography variant="body1">{selectedItem.order_number}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Order Type</Typography>
+                  <Typography variant="body1">{selectedItem.order_type?.replace('_', ' ').toUpperCase()}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+                  <Typography variant="body1">{selectedItem.customer_name || 'Unknown'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Driver</Typography>
+                  <Typography variant="body1">
+                    {selectedItem.assigned_driver_id ? `Driver #${selectedItem.assigned_driver_id}` : 'Not Assigned'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Items</Typography>
+                  <Typography variant="body1">{selectedItem.items?.length || 0} items</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                  <Typography variant="body1">₦{selectedItem.total_amount?.toLocaleString() || '0'}</Typography>
+                </Grid>
+              </Grid>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  By confirming this pickup, you authorize the driver to collect the order items from the warehouse. 
+                  This action will change the order status to "Picked Up".
+                </Typography>
+              </Alert>
+
+              {selectedItem.notes && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+                  <Typography variant="body2">{selectedItem.notes}</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+          
+          {dialogType === 'view-order' && selectedItem && (
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+                Order Details
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Order ID</Typography>
+                  <Typography variant="body1">{selectedItem.order_number}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+                  <Chip 
+                    label={selectedItem.status} 
+                    color={getStatusColor(selectedItem.status) as any}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+                  <Typography variant="body1">{selectedItem.customer_name || 'Unknown'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                  <Typography variant="body1">₦{selectedItem.total_amount?.toLocaleString() || '0'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Created</Typography>
+                  <Typography variant="body1">{new Date(selectedItem.created_at).toLocaleString()}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {dialogType.includes('inventory') && (
+            <Typography>
+              Inventory management functionality will be implemented here.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {!dialogType.includes('view') && (
+          {dialogType === 'confirm-pickup' && (
+            <Button 
+              variant="contained" 
+              sx={{ bgcolor: '#4caf50' }}
+              onClick={handleConfirmPickup}
+            >
+              Authorize Pickup
+            </Button>
+          )}
+          {dialogType.includes('inventory') && !dialogType.includes('view') && (
             <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
               {dialogType.includes('add') ? 'Add' : 'Confirm'}
             </Button>

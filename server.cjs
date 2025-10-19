@@ -350,6 +350,7 @@ async function setupDatabase() {
               table.string('order_number').unique().notNullable();
               table.string('customer_name').notNullable();
               table.string('customer_phone');
+              table.string('customer_email');
               table.string('order_type').notNullable();
               table.string('status').defaultTo('pending').notNullable();
               table.decimal('total_amount', 10, 2).notNullable();
@@ -358,6 +359,7 @@ async function setupDatabase() {
               table.integer('created_by').unsigned().references('id').inTable('employees');
               table.json('items').notNullable();
               table.text('notes');
+              table.text('delivery_address');
               table.timestamps(true, true);
             });
             break;
@@ -2633,6 +2635,14 @@ app.use('/api/salary', salaryRoutes(db));
 // Import and mount sales routes
 const salesRoutes = require('./server/routes/sales.cjs');
 app.use('/api/sales', salesRoutes(db));
+
+// Import and mount inventory routes
+const inventoryRoutes = require('./server/routes/inventory.cjs');
+app.use('/api/inventory', inventoryRoutes(db));
+
+// Import and mount orders routes
+const ordersRoutes = require('./server/routes/orders.cjs');
+app.use('/api/orders', ordersRoutes(db));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -54,6 +54,7 @@ import {
 import axios from 'axios';
 import OrderManagement from './OrderManagement';
 import SalesManagement from './SalesManagement';
+import InventoryManagement from './InventoryManagement';
 
 interface ReceptionistDashboardProps {
   selectedSection: string;
@@ -70,6 +71,21 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
+  const [newOrder, setNewOrder] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    order_type: 'general_sales',
+    status: 'pending',
+    total_amount: 0,
+    items: [],
+    payment_method: 'cash',
+    payment_status: 'pending',
+    notes: '',
+    delivery_address: '',
+    assigned_driver_id: null
+  });
+  const [drivers, setDrivers] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -106,6 +122,17 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           setOrders(allOrdersResponse.data.data || []);
           break;
       }
+
+      // Fetch drivers for all sections
+      try {
+        const driversResponse = await axios.get('http://localhost:3001/api/sales/drivers', { headers });
+        if (driversResponse.data.success) {
+          setDrivers(driversResponse.data.data);
+        }
+      } catch (error) {
+        console.log('Drivers API not available');
+        setDrivers([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -128,6 +155,75 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     setDialogType('');
     setSelectedItem(null);
     setActiveStep(0);
+    // Reset new order form
+    setNewOrder({
+      customer_name: '',
+      customer_phone: '',
+      customer_email: '',
+      order_type: 'general_sales',
+      status: 'pending',
+      total_amount: 0,
+      items: [],
+      payment_method: 'cash',
+      payment_status: 'pending',
+      notes: '',
+      delivery_address: '',
+      assigned_driver_id: null
+    });
+  };
+
+  const handleCreateOrder = async () => {
+    if (!newOrder.customer_name || !newOrder.customer_phone) {
+      alert('Please fill in customer name and phone number');
+      return;
+    }
+
+    const getOrderType = () => {
+      if (dialogType === 'create-store-dispatch') return 'store_dispatch';
+      if (dialogType === 'create-driver-dispatch') return 'driver_dispatch';
+      if (dialogType === 'create-distributor-order') return 'distributor_order';
+      return 'general_sales';
+    };
+
+    const orderType = getOrderType();
+
+    if ((orderType === 'store_dispatch' || orderType === 'driver_dispatch') && !newOrder.assigned_driver_id) {
+      alert('Please assign a driver for this order type');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const orderData = {
+        customer_name: newOrder.customer_name,
+        customer_phone: newOrder.customer_phone,
+        customer_email: newOrder.customer_email,
+        order_type: orderType,
+        items: [{ product_name: 'Water Sachets (500ml)', quantity: 1, unit_price: 0 }], // Default item
+        notes: newOrder.notes,
+        delivery_address: newOrder.delivery_address,
+        payment_method: orderType === 'general_sales' ? 'cash' : null,
+        payment_status: orderType === 'general_sales' ? 'pending' : null,
+        created_by: 1, // This should come from auth context
+        assigned_driver_id: newOrder.assigned_driver_id ? parseInt(newOrder.assigned_driver_id) : null
+      };
+
+      const response = await axios.post('http://localhost:3001/api/orders', orderData, { headers });
+
+      if (response.data.success) {
+        // Refresh data
+        fetchData();
+        handleCloseDialog();
+        alert(`${orderType === 'store_dispatch' ? 'Store Dispatch' : orderType === 'driver_dispatch' ? 'Driver Dispatch' : 'Order'} created successfully!`);
+      } else {
+        alert('Error creating order: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert('Error creating order. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -305,6 +401,15 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                   className="dashboard-button"
                 >
                   Create Driver Dispatch
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<LocalShipping />}
+                  onClick={() => handleOpenDialog('create-store-dispatch')}
+                  sx={{ bgcolor: '#9c27b0' }}
+                  className="dashboard-button"
+                >
+                  Create Store Dispatch
                 </Button>
               </Box>
             </CardContent>
@@ -605,6 +710,99 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     </Box>
   );
 
+  const renderOrderCreationForm = () => {
+    const getOrderType = () => {
+      if (dialogType === 'create-store-dispatch') return 'store_dispatch';
+      if (dialogType === 'create-driver-dispatch') return 'driver_dispatch';
+      if (dialogType === 'create-distributor-order') return 'distributor_order';
+      return 'general_sales';
+    };
+
+    const orderType = getOrderType();
+
+    return (
+      <Box sx={{ p: 2 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Customer Name"
+              variant="outlined"
+              required
+              value={newOrder.customer_name || ''}
+              onChange={(e) => setNewOrder({...newOrder, customer_name: e.target.value})}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Customer Phone"
+              variant="outlined"
+              required
+              value={newOrder.customer_phone || ''}
+              onChange={(e) => setNewOrder({...newOrder, customer_phone: e.target.value})}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Customer Email"
+              variant="outlined"
+              value={newOrder.customer_email || ''}
+              onChange={(e) => setNewOrder({...newOrder, customer_email: e.target.value})}
+            />
+          </Grid>
+          {(orderType === 'store_dispatch' || orderType === 'driver_dispatch') && (
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Assign Driver</InputLabel>
+                <Select
+                  value={newOrder.assigned_driver_id || ''}
+                  onChange={(e) => setNewOrder({...newOrder, assigned_driver_id: e.target.value})}
+                  label="Assign Driver"
+                >
+                  {drivers.map((driver) => (
+                    <MenuItem key={driver.id} value={driver.id}>
+                      {driver.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              variant="outlined"
+              multiline
+              rows={3}
+              value={newOrder.notes || ''}
+              onChange={(e) => setNewOrder({...newOrder, notes: e.target.value})}
+              placeholder={orderType === 'store_dispatch' ? 'Mini store stocking details...' : 
+                         orderType === 'driver_dispatch' ? 'Driver dispatch instructions...' : 
+                         'Order notes...'}
+            />
+          </Grid>
+          {orderType === 'store_dispatch' && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Store Dispatch: No pricing - for mini store stocking only
+              </Alert>
+            </Grid>
+          )}
+          {orderType === 'driver_dispatch' && (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Driver Dispatch: Commission-based sales - driver will account for sales
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+      </Box>
+    );
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -617,9 +815,12 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     switch (selectedSection) {
       case 'overview':
         return renderOverview();
+      case 'inventory':
+        return <InventoryManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'general-sales':
       case 'distributor-orders':
       case 'driver-dispatches':
+      case 'store-dispatch':
         return <OrderManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
@@ -640,22 +841,25 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           {dialogType === 'create-general-sales' && 'Create General Sales Order'}
           {dialogType === 'create-distributor-order' && 'Create Distributor Order'}
           {dialogType === 'create-driver-dispatch' && 'Create Driver Dispatch'}
+          {dialogType === 'create-store-dispatch' && 'Create Store Dispatch'}
           {dialogType === 'view-order' && 'Order Details'}
           {dialogType === 'edit-order' && 'Edit Order'}
           {dialogType === 'update-status' && 'Update Order Status'}
         </DialogTitle>
         <DialogContent>
-          <Typography>
-            {dialogType.includes('create') && 'Order creation form will be implemented here.'}
-            {dialogType.includes('view') && 'Order details will be displayed here.'}
-            {dialogType.includes('edit') && 'Order editing form will be implemented here.'}
-            {dialogType.includes('update-status') && 'Status update form will be implemented here.'}
-          </Typography>
+          {dialogType.includes('create') && renderOrderCreationForm()}
+          {dialogType.includes('view') && 'Order details will be displayed here.'}
+          {dialogType.includes('edit') && 'Order editing form will be implemented here.'}
+          {dialogType.includes('update-status') && 'Status update form will be implemented here.'}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
           {!dialogType.includes('view') && (
-            <Button variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            <Button 
+              variant="contained" 
+              sx={{ bgcolor: '#13bbc6' }}
+              onClick={dialogType.includes('create') ? handleCreateOrder : undefined}
+            >
               {dialogType.includes('create') ? 'Create' : 'Save'}
             </Button>
           )}

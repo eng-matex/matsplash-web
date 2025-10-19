@@ -181,7 +181,47 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Mock data for inventory
+      // Try to fetch real inventory data from API
+      try {
+        const [statsResponse, logsResponse] = await Promise.all([
+          axios.get('/api/inventory/stats'),
+          axios.get('/api/inventory/logs?limit=100')
+        ]);
+
+        if (statsResponse.data.success && logsResponse.data.success) {
+          // Process inventory logs to get current stock
+          const logs = logsResponse.data.data;
+          const currentStock = statsResponse.data.data.currentStock;
+          
+          // Create inventory items from logs (simplified for now)
+          const inventoryItems: InventoryItem[] = [
+            {
+              id: 1,
+              product_name: 'Water Sachets (500ml)',
+              product_type: 'Water Sachets',
+              current_stock: currentStock,
+              minimum_stock: 200,
+              maximum_stock: 2000,
+              unit: 'bags',
+              unit_price: 300,
+              total_value: currentStock * 300,
+              last_updated: new Date().toISOString(),
+              supplier: 'AquaPure Ltd',
+              location: 'Warehouse A',
+              status: currentStock > 200 ? 'in_stock' : currentStock > 50 ? 'low_stock' : 'out_of_stock',
+              notes: 'Current stock from inventory logs'
+            }
+          ];
+
+          setInventory(inventoryItems);
+          setInventoryLogs(logs);
+          return;
+        }
+      } catch (error) {
+        console.log('API not available, using mock data');
+      }
+
+      // Fallback to mock data
       const mockInventory: InventoryItem[] = [
         {
           id: 1,
