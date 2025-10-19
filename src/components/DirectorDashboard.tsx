@@ -29,7 +29,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage }) =>
       case 'sales-management':
         return <SalesManagement />;
       case 'reports':
-        return <ReportingAnalytics />;
+        return <ReportingAnalytics selectedSection="reports" userRole="Director" />;
       case 'surveillance':
         return <SurveillanceManagement />;
       case 'overview':
