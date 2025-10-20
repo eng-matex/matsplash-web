@@ -2763,7 +2763,6 @@ app.use('/api/distributors', distributorRoutes(db));
 // Import and mount factory location routes
 const factoryLocationRoutes = require('./server/routes/factory-locations.cjs');
 app.use('/api/factory-locations', factoryLocationRoutes(db));
-app.use('/api/devices', factoryLocationRoutes(db)); // Also mount device factory assignment routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

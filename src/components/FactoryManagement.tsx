@@ -241,43 +241,9 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Use mock data as fallback
-      setFactories([
-        {
-          id: 1,
-          name: 'MatSplash Premium Water Factory',
-          latitude: 7.3964,
-          longitude: 3.9167,
-          radius_meters: 200,
-          address: 'F22W+QG Ibadan, Nigeria',
-          is_active: true,
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-          device_count: 4
-        }
-      ]);
-      setDevices([
-        {
-          id: 1,
-          device_id: 'FACTORY-LAPTOP-001',
-          device_name: 'Factory Laptop 001',
-          device_type: 'laptop',
-          location: 'factory_floor',
-          is_factory_device: true,
-          is_active: true,
-          factory_locations: [1]
-        },
-        {
-          id: 2,
-          device_id: 'FACTORY-DESKTOP-001',
-          device_name: 'Factory Desktop 001',
-          device_type: 'desktop',
-          location: 'office',
-          is_factory_device: true,
-          is_active: true,
-          factory_locations: [1]
-        }
-      ]);
+      // Don't use mock data - show empty state instead
+      setFactories([]);
+      setDevices([]);
     } finally {
       setLoading(false);
     }
