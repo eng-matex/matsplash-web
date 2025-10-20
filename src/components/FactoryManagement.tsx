@@ -666,6 +666,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         device_type: newDevice.device_type,
         location: newDevice.location,
         is_factory_device: isFactoryDevice,
+        is_active: newDevice.is_active,
         created_by: user.id
       };
 
@@ -1224,11 +1225,14 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
             select
             SelectProps={{ native: true }}
           >
-            <option value="office">Office</option>
-            <option value="factory_floor">Factory Floor</option>
-            <option value="warehouse">Warehouse</option>
-            <option value="reception">Reception</option>
-            <option value="security">Security</option>
+            <option value="Director Office">Director Office</option>
+            <option value="Manager Office">Manager Office</option>
+            <option value="Director Personal">Director Personal</option>
+            <option value="Manager Personal">Manager Personal</option>
+            <option value="Reception">Reception</option>
+            <option value="Store Room">Store Room</option>
+            <option value="Security">Security</option>
+            <option value="Factory General">Factory General</option>
           </TextField>
         </Grid>
         
@@ -1277,6 +1281,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         </Grid>
         
         {/* Factory Selection */}
+        {newDevice.is_factory_device && (
         <Grid item xs={12}>
           <Typography variant="h6" sx={{ mb: 2, color: '#2c3e50' }}>
             Authorized Factory Locations
@@ -1342,17 +1347,44 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
             <Alert severity="error" sx={{ mt: 1 }}>{formErrors.factories}</Alert>
           )}
         </Grid>
+        )}
 
         <Grid item xs={12} sm={6}>
           <FormControlLabel
             control={
               <Switch
                 checked={newDevice.is_factory_device}
-                onChange={(e) => setNewDevice({...newDevice, is_factory_device: e.target.checked})}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setNewDevice({...newDevice, is_factory_device: val});
+                  if (!val) {
+                    setSelectedFactories([]);
+                  }
+                }}
               />
             }
             label="Factory Device"
           />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Factory Device (Yes/No)"
+            fullWidth
+            value={newDevice.is_factory_device ? 'yes' : 'no'}
+            onChange={(e) => {
+              const val = e.target.value === 'yes';
+              setNewDevice({ ...newDevice, is_factory_device: val });
+              if (!val) {
+                setSelectedFactories([]);
+              }
+            }}
+            variant="outlined"
+            select
+            SelectProps={{ native: true }}
+          >
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </TextField>
         </Grid>
         <Grid item xs={12} sm={6}>
           <FormControlLabel

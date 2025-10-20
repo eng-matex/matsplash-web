@@ -691,11 +691,17 @@ const DeviceManagement: React.FC = () => {
                 </Select>
               </FormControl>
               <Box mt={2}>
-                <Chip
-                  label={formData.is_active ? 'Active' : 'Inactive'}
-                  color={formData.is_active ? 'success' : 'error'}
-                  variant="outlined"
-                />
+                <FormControl fullWidth>
+                  <InputLabel shrink>Active</InputLabel>
+                  <Select
+                    value={formData.is_active ? 'active' : 'inactive'}
+                    label="Active"
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'active' })}
+                  >
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="inactive">Inactive</MenuItem>
+                  </Select>
+                </FormControl>
               </Box>
             </Grid>
             
