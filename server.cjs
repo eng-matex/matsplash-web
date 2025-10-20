@@ -2270,6 +2270,12 @@ app.delete('/api/devices/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // First, delete all factory assignments for this device
+    await db('device_factory_assignments')
+      .where('device_id', id)
+      .del();
+
+    // Then delete the device itself
     const deleted = await db('authorized_devices')
       .where('id', id)
       .del();
