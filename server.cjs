@@ -1019,6 +1019,7 @@ async function setupDatabase() {
 
               // Check if device is assigned to this factory location
               if (locationCheck.factoryId) {
+                const finalDeviceId = getDeviceFingerprintFromInfo(deviceInfo);
                 const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
                 console.log('Device assigned to factory:', deviceAssigned);
                 
@@ -1884,6 +1885,7 @@ app.get('/api/attendance/status/:employeeId', async (req, res) => {
 
           // Check if device is assigned to this factory location
           if (locationCheck.factoryId) {
+            const finalDeviceId = getDeviceFingerprintFromInfo(deviceInfo);
             const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
             console.log('Device assigned to factory for clock-in:', deviceAssigned);
             
