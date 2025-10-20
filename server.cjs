@@ -2050,6 +2050,52 @@ app.post('/api/attendance/clock-out', async (req, res) => {
           });
         }
 
+        // Get employee info to check remote access permissions
+        const employee = await db('employees').where('id', employeeId).first();
+        if (!employee) {
+          return res.status(404).json({
+            success: false,
+            message: 'Employee not found'
+          });
+        }
+
+        // Check if employee can access remotely
+        const canAccessRemote = employee.can_access_remotely || false;
+
+        // If employee cannot access remotely, enforce location restrictions
+        if (!canAccessRemote) {
+          if (!location || !location.lat || !location.lng) {
+            return res.status(400).json({
+              success: false,
+              message: 'Location information is required to start break'
+            });
+          }
+
+          const locationCheck = await isLocationValid(location.lat, location.lng);
+          console.log('Break start location check:', locationCheck);
+
+          if (!locationCheck.valid) {
+            return res.status(403).json({
+              success: false,
+              message: `Break start denied: ${locationCheck.message}`
+            });
+          }
+
+          // Check if device is assigned to this factory location
+          if (locationCheck.factoryId) {
+            const finalDeviceId = getDeviceFingerprintFromInfo(deviceInfo);
+            const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
+            console.log('Device assigned to factory for break start:', deviceAssigned);
+            
+            if (!deviceAssigned) {
+              return res.status(403).json({
+                success: false,
+                message: 'Break start denied: Device is not authorized for this factory location'
+              });
+            }
+          }
+        }
+
         // Update attendance log
         await db('attendance_logs')
           .where('id', attendanceLog.id)
@@ -2112,6 +2158,52 @@ app.post('/api/attendance/end-break', async (req, res) => {
         success: false,
         message: 'Employee is not currently on break'
       });
+    }
+
+    // Get employee info to check remote access permissions
+    const employee = await db('employees').where('id', employeeId).first();
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    // Check if employee can access remotely
+    const canAccessRemote = employee.can_access_remotely || false;
+
+    // If employee cannot access remotely, enforce location restrictions
+    if (!canAccessRemote) {
+      if (!location || !location.lat || !location.lng) {
+        return res.status(400).json({
+          success: false,
+          message: 'Location information is required to end break'
+        });
+      }
+
+      const locationCheck = await isLocationValid(location.lat, location.lng);
+      console.log('Break end location check:', locationCheck);
+
+      if (!locationCheck.valid) {
+        return res.status(403).json({
+          success: false,
+          message: `Break end denied: ${locationCheck.message}`
+        });
+      }
+
+      // Check if device is assigned to this factory location
+      if (locationCheck.factoryId) {
+        const finalDeviceId = getDeviceFingerprintFromInfo(deviceInfo);
+        const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
+        console.log('Device assigned to factory for break end:', deviceAssigned);
+        
+        if (!deviceAssigned) {
+          return res.status(403).json({
+            success: false,
+            message: 'Break end denied: Device is not authorized for this factory location'
+          });
+        }
+      }
     }
 
     // Calculate break duration

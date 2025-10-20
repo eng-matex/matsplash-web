@@ -72,17 +72,11 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     setIsLocationLoading(true);
     setLocationError(null);
 
-    // In development mode, provide a mock location for testing
-    if (process.env.NODE_ENV === 'development' || !navigator.geolocation) {
-      const mockLocation = {
-        lat: 7.3964, // Ibadan, Nigeria coordinates (MatSplash Premium Water Factory)
-        lng: 3.9167,
-        address: 'MatSplash Premium Water Factory (F22W+QG Ibadan, Nigeria)',
-        accuracy: 10
-      };
-      setCurrentLocation(mockLocation);
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by this browser');
       setIsLocationLoading(false);
-      return mockLocation;
+      return null;
     }
 
     return new Promise<{lat: number, lng: number, address: string, accuracy: number} | null>((resolve) => {
@@ -254,6 +248,12 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     try {
       // Get location and device info
       const location = await getCurrentLocation();
+      if (!location) {
+        setError('Location access is required to clock in. Please enable location services and try again.');
+        setLoading(false);
+        return;
+      }
+      
       const device = getDeviceInfo();
       
       // Check if user can access remotely (only Director and Manager)
@@ -295,6 +295,12 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     
     try {
       const location = await getCurrentLocation();
+      if (!location) {
+        setError('Location access is required to clock out. Please enable location services and try again.');
+        setLoading(false);
+        return;
+      }
+      
       const device = getDeviceInfo();
       
       if (!user?.can_access_remotely && !device.isFactoryDevice) {
@@ -333,6 +339,12 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     
     try {
       const location = await getCurrentLocation();
+      if (!location) {
+        setError('Location access is required to start break. Please enable location services and try again.');
+        setLoading(false);
+        return;
+      }
+      
       const device = getDeviceInfo();
       
       if (!user?.can_access_remotely && !device.isFactoryDevice) {
@@ -371,6 +383,12 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     
     try {
       const location = await getCurrentLocation();
+      if (!location) {
+        setError('Location access is required to end break. Please enable location services and try again.');
+        setLoading(false);
+        return;
+      }
+      
       const device = getDeviceInfo();
       
       if (!user?.can_access_remotely && !device.isFactoryDevice) {
