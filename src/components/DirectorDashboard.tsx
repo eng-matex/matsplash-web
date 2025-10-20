@@ -17,6 +17,7 @@ import {
   Tooltip,
   Divider
 } from '@mui/material';
+import FactoryManagement from './FactoryManagement';
 import {
   TrendingUp,
   TrendingDown,
@@ -619,6 +620,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         return <DeviceManagement />;
       case 'employee-mgmt':
         return <EmployeeManagement />;
+      case 'factory-mgmt':
+        return <FactoryManagement selectedSection={currentPage} />;
       case 'distributor-mgmt':
         return <DistributorManagement />;
       case 'pricing':

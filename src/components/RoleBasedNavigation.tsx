@@ -19,7 +19,8 @@ import {
   Lock,
   Search,
   CheckCircle,
-  Devices
+  Devices,
+  LocationOn
 } from '@mui/icons-material';
 
 // Navigation sections for different roles
@@ -60,6 +61,7 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
         { id: 'device-management', label: 'Device Management', icon: Devices, color: '#13bbc6' },
+        { id: 'factory-mgmt', label: 'Factory Management', icon: LocationOn, color: '#00bcd4' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },

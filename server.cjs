@@ -992,6 +992,19 @@ async function setupDatabase() {
                   message: `Access denied: ${locationCheck.message}`
                 });
               }
+
+              // Check if device is assigned to this factory location
+              if (locationCheck.factoryId) {
+                const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
+                console.log('Device assigned to factory:', deviceAssigned);
+                
+                if (!deviceAssigned) {
+                  return res.status(403).json({
+                    success: false,
+                    message: `Access denied: This device is not authorized for ${locationCheck.location}. Please contact your administrator to assign this device to the factory location.`
+                  });
+                }
+              }
             } else {
               return res.status(400).json({
                 success: false,
@@ -1391,6 +1404,62 @@ app.get('/api/dashboard/stats', async (req, res) => {
       }
     }
 
+    // Function to check if device is assigned to a specific factory location
+    async function isDeviceAssignedToFactory(deviceId, factoryLocationId, deviceInfo = null) {
+      try {
+        // First check by device fingerprint
+        let device = await db('authorized_devices')
+          .where('device_fingerprint', deviceId)
+          .where('is_active', true)
+          .first();
+        
+        if (device) {
+          // Check if device is assigned to this factory location
+          const assignment = await db('device_factory_assignments')
+            .where('device_id', device.id)
+            .where('factory_location_id', factoryLocationId)
+            .first();
+          
+          if (assignment) {
+            return true;
+          }
+        }
+        
+        // If no match by fingerprint and we have device info, check by MAC addresses
+        if (deviceInfo && deviceInfo.networkAdapters) {
+          const currentMacs = deviceInfo.networkAdapters.map(adapter => 
+            adapter.macAddress ? adapter.macAddress.toUpperCase().replace(/[-:]/g, '') : null
+          ).filter(mac => mac);
+          
+          if (currentMacs.length > 0) {
+            // Get all device MAC addresses assigned to this factory
+            const factoryDeviceMacs = await db('device_mac_addresses')
+              .join('authorized_devices', 'device_mac_addresses.device_id', 'authorized_devices.id')
+              .join('device_factory_assignments', 'authorized_devices.id', 'device_factory_assignments.device_id')
+              .where('device_factory_assignments.factory_location_id', factoryLocationId)
+              .where('authorized_devices.is_active', true)
+              .where('device_mac_addresses.is_active', true)
+              .select('device_mac_addresses.mac_address');
+            
+            // Check if any current MAC matches any factory-assigned MAC
+            for (const currentMac of currentMacs) {
+              for (const factoryMac of factoryDeviceMacs) {
+                const normalizedFactoryMac = factoryMac.mac_address.toUpperCase().replace(/[-:]/g, '');
+                if (currentMac === normalizedFactoryMac) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error checking device-factory assignment:', error);
+        return false;
+      }
+    }
+
     // Function to check if employee can access remotely (updated security model)
     async function canAccessRemotely(employeeId) {
       try {
@@ -1546,7 +1615,7 @@ async function isLocationValid(latitude, longitude) {
       );
       
       if (distance <= location.radius_meters) {
-        return { valid: true, location: location.name };
+        return { valid: true, location: location.name, factoryId: location.id };
       }
     }
     
@@ -1732,6 +1801,19 @@ app.get('/api/attendance/status/:employeeId', async (req, res) => {
               success: false,
               message: `Clock-in denied: ${locationCheck.message}`
             });
+          }
+
+          // Check if device is assigned to this factory location
+          if (locationCheck.factoryId) {
+            const deviceAssigned = await isDeviceAssignedToFactory(finalDeviceId, locationCheck.factoryId, deviceInfo);
+            console.log('Device assigned to factory for clock-in:', deviceAssigned);
+            
+            if (!deviceAssigned) {
+              return res.status(403).json({
+                success: false,
+                message: `Clock-in denied: This device is not authorized for ${locationCheck.location}. Please contact your administrator to assign this device to the factory location.`
+              });
+            }
           }
         }
 
@@ -2624,6 +2706,11 @@ app.use('/api/salary/bonuses', bonusRoutes(db));
 // Import and mount distributor routes
 const distributorRoutes = require('./server/routes/distributors.cjs');
 app.use('/api/distributors', distributorRoutes(db));
+
+// Import and mount factory location routes
+const factoryLocationRoutes = require('./server/routes/factory-locations.cjs');
+app.use('/api/factory-locations', factoryLocationRoutes(db));
+app.use('/api/devices', factoryLocationRoutes(db)); // Also mount device factory assignment routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {
