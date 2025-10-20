@@ -96,7 +96,8 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     is_factory_device: true,
     is_active: true,
     device_id: '',
-    employee_id: null
+    employee_id: null,
+    mac_addresses: ['']
   });
   const [selectedFactories, setSelectedFactories] = useState<number[]>([]);
 
@@ -109,6 +110,37 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     const timestamp = Date.now().toString().slice(-4);
     const randomNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
     return `${deviceType}-${timestamp}-${randomNum}`;
+  };
+
+  const addMacAddress = () => {
+    setNewDevice({
+      ...newDevice,
+      mac_addresses: [...newDevice.mac_addresses, '']
+    });
+  };
+
+  const removeMacAddress = (index: number) => {
+    if (newDevice.mac_addresses.length > 1) {
+      const updatedMacs = newDevice.mac_addresses.filter((_, i) => i !== index);
+      setNewDevice({
+        ...newDevice,
+        mac_addresses: updatedMacs
+      });
+    }
+  };
+
+  const updateMacAddress = (index: number, value: string) => {
+    const updatedMacs = [...newDevice.mac_addresses];
+    updatedMacs[index] = value;
+    setNewDevice({
+      ...newDevice,
+      mac_addresses: updatedMacs
+    });
+  };
+
+  const validateMacAddress = (mac: string) => {
+    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+    return macRegex.test(mac) || mac === '';
   };
 
   const getCurrentLocation = async () => {
@@ -286,7 +318,8 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       is_factory_device: true,
       is_active: true,
       device_id: '',
-      employee_id: null
+      employee_id: null,
+      mac_addresses: ['']
     });
     setSelectedFactories([]);
   };
@@ -475,6 +508,20 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       return;
     }
 
+    // Validate MAC addresses
+    const validMacs = newDevice.mac_addresses.filter(mac => mac.trim() !== '');
+    if (validMacs.length === 0) {
+      setFormErrors({ mac_addresses: 'At least one MAC address is required' });
+      return;
+    }
+
+    for (const mac of validMacs) {
+      if (!validateMacAddress(mac)) {
+        setFormErrors({ mac_addresses: `Invalid MAC address format: ${mac}. Use format like AA:BB:CC:DD:EE:FF` });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -496,6 +543,17 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
 
       if (response.data.success) {
         const deviceId = response.data.data.id;
+        
+        // Add MAC addresses to the device
+        try {
+          await axios.put(`http://localhost:3001/api/devices/${deviceId}/mac-addresses`, {
+            macAddresses: validMacs
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (macError) {
+          console.error('Error adding MAC addresses:', macError);
+        }
         
         // Assign device to selected factories
         for (const factoryId of selectedFactories) {
@@ -521,10 +579,11 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           is_factory_device: true,
           is_active: true,
           device_id: '',
-          employee_id: null
+          employee_id: null,
+          mac_addresses: ['']
         });
         setSelectedFactories([]);
-        alert('Device created and assigned to selected factories successfully!');
+        alert('Device created with MAC addresses and assigned to selected factories successfully!');
       } else {
         setFormErrors({ submit: response.data.message || 'Failed to create device' });
       }
@@ -967,6 +1026,50 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
             <option value="reception">Reception</option>
             <option value="security">Security</option>
           </TextField>
+        </Grid>
+        
+        {/* MAC Addresses */}
+        <Grid item xs={12}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#2c3e50' }}>
+            MAC Addresses
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Add the MAC addresses for this device. At least one is required for device validation.
+          </Typography>
+          {newDevice.mac_addresses.map((mac, index) => (
+            <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <TextField
+                label={`MAC Address ${index + 1}`}
+                value={mac}
+                onChange={(e) => updateMacAddress(index, e.target.value)}
+                variant="outlined"
+                placeholder="AA:BB:CC:DD:EE:FF"
+                error={!!formErrors.mac_addresses && !validateMacAddress(mac) && mac !== ''}
+                helperText={!validateMacAddress(mac) && mac !== '' ? 'Invalid MAC format' : ''}
+                sx={{ flexGrow: 1 }}
+              />
+              {newDevice.mac_addresses.length > 1 && (
+                <IconButton
+                  onClick={() => removeMacAddress(index)}
+                  color="error"
+                  sx={{ mt: 1 }}
+                >
+                  <Delete />
+                </IconButton>
+              )}
+            </Box>
+          ))}
+          <Button
+            variant="outlined"
+            startIcon={<Add />}
+            onClick={addMacAddress}
+            sx={{ mb: 2 }}
+          >
+            Add MAC Address
+          </Button>
+          {formErrors.mac_addresses && (
+            <Alert severity="error" sx={{ mt: 1 }}>{formErrors.mac_addresses}</Alert>
+          )}
         </Grid>
         
         {/* Factory Selection */}

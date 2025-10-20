@@ -37,7 +37,8 @@ import {
   Tablet,
   Laptop,
   DesktopWindows,
-  Security
+  Security,
+  CheckCircle
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -75,9 +76,21 @@ interface Employee {
   role: string;
 }
 
+interface Factory {
+  id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  is_active: boolean;
+}
+
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [factories, setFactories] = useState<Factory[]>([]);
+  const [selectedFactories, setSelectedFactories] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -115,6 +128,7 @@ const DeviceManagement: React.FC = () => {
   useEffect(() => {
     fetchDevices();
     fetchEmployees();
+    fetchFactories();
   }, []);
 
   const fetchDevices = async () => {
@@ -128,6 +142,18 @@ const DeviceManagement: React.FC = () => {
       setError('Failed to fetch devices');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFactories = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/api/factory-locations');
+      if (response.data.success) {
+        setFactories(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching factories:', error);
+      setError('Failed to fetch factory locations');
     }
   };
 
@@ -183,23 +209,43 @@ const DeviceManagement: React.FC = () => {
         created_by: 1 // Director
       };
 
+      let deviceId: number;
+
       if (editingDevice) {
         // Update existing device
         const response = await axios.put(`http://localhost:3001/api/devices/${editingDevice.id}`, deviceData);
         if (response.data.success) {
+          deviceId = editingDevice.id;
           setSuccess('Device updated successfully');
-          fetchDevices();
         }
       } else {
         // Add new device
         const response = await axios.post('http://localhost:3001/api/devices', deviceData);
         if (response.data.success) {
+          deviceId = response.data.data.id;
           setSuccess('Device added successfully');
-          fetchDevices();
         }
       }
 
+      // Assign device to selected factories
+      if (selectedFactories.length > 0) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        for (const factoryId of selectedFactories) {
+          try {
+            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+              device_id: deviceId,
+              userId: user.id,
+              userEmail: user.email
+            });
+          } catch (assignmentError) {
+            console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+          }
+        }
+      }
+
+      fetchDevices();
       setOpenDialog(false);
+      setSelectedFactories([]);
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to save device');
     } finally {
@@ -553,6 +599,70 @@ const DeviceManagement: React.FC = () => {
                   variant="outlined"
                 />
               </Box>
+            </Grid>
+            
+            {/* Factory Selection */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#2c3e50' }}>
+                Authorized Factory Locations
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select which factory locations this device can be used at:
+              </Typography>
+              {factories.length === 0 ? (
+                <Alert severity="info">
+                  No factory locations available. Please create a factory location first.
+                </Alert>
+              ) : (
+                <Grid container spacing={1}>
+                  {factories.map((factory) => (
+                    <Grid item xs={12} sm={6} key={factory.id}>
+                      <Card 
+                        variant="outlined" 
+                        sx={{ 
+                          cursor: 'pointer',
+                          border: selectedFactories.includes(factory.id) ? '2px solid #4caf50' : '1px solid #e0e0e0',
+                          bgcolor: selectedFactories.includes(factory.id) ? '#f1f8e9' : 'white',
+                          '&:hover': {
+                            border: '2px solid #2196f3',
+                            bgcolor: selectedFactories.includes(factory.id) ? '#f1f8e9' : '#f5f5f5'
+                          }
+                        }}
+                        onClick={() => {
+                          if (selectedFactories.includes(factory.id)) {
+                            setSelectedFactories(selectedFactories.filter(id => id !== factory.id));
+                          } else {
+                            setSelectedFactories([...selectedFactories, factory.id]);
+                          }
+                        }}
+                      >
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                {factory.name}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {factory.address}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Radius: {factory.radius_meters}m
+                              </Typography>
+                            </Box>
+                            <Box>
+                              {selectedFactories.includes(factory.id) ? (
+                                <CheckCircle color="success" />
+                              ) : (
+                                <Box sx={{ width: 24, height: 24, border: '2px solid #ccc', borderRadius: '50%' }} />
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </Grid>
           </Grid>
         </DialogContent>
