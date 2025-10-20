@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from './context/AuthContext';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { 
   CssBaseline, 
@@ -49,8 +50,8 @@ import SecurityDashboard from './components/SecurityDashboard';
 import LoginPage from './components/LoginPage';
 
 const App: React.FC = () => {
+  const { user, isAuthenticated, login, logout } = useAuth();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<any>(null);
       const [loginData, setLoginData] = useState({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
       const [error, setError] = useState('');
       const [loading, setLoading] = useState(false);
@@ -60,14 +61,13 @@ const App: React.FC = () => {
       const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
+    if (isAuthenticated && user) {
       setIsLoggedIn(true);
-      setUser(parsedUser);
-      setCurrentPage(getDefaultView(parsedUser.role));
+      setCurrentPage(getDefaultView(user.role));
+    } else {
+      setIsLoggedIn(false);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,59 +75,17 @@ const App: React.FC = () => {
     setLoading(true);
     
     try {
-          // Get enhanced device information including network adapters
-          const { getEnhancedDeviceInfo } = await import('./utils/networkUtils');
-          const deviceInfo = await getEnhancedDeviceInfo();
-
-      // Get actual user location
-      let location;
-      try {
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          });
-        });
-        
-        location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          address: `Lat: ${position.coords.latitude.toFixed(6)}, Lng: ${position.coords.longitude.toFixed(6)}`,
-          accuracy: position.coords.accuracy
-        };
-        console.log('Real location detected:', location);
-      } catch (geoError) {
-        console.log('Geolocation failed, using fallback location:', geoError);
-        // Fallback to a location that should be denied (Lagos)
-        location = {
-          lat: 6.5244, // Lagos, Nigeria (should be denied)
-          lng: 3.3792,
-          address: 'Lagos, Nigeria (Fallback - Should be denied)',
-          accuracy: 100
-        };
-      }
-
-      const response = await axios.post('http://localhost:3001/api/auth/login', {
-        ...loginData,
-        location,
-        deviceInfo
+      const result = await login({
+        emailOrPhone: loginData.emailOrPhone,
+        pin: loginData.pin
       });
       
-      if (response.data.success) {
-        const loggedInUser = response.data.user;
-        setUser(loggedInUser);
-        localStorage.setItem('user', JSON.stringify(loggedInUser));
-        setIsLoggedIn(true);
-        setCurrentPage(getDefaultView(loggedInUser.role));
+      if (result.success) {
         setRequiresTwoFactor(false);
         setShowEmergencyAccess(false);
         setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
-      } else if (response.data.requiresTwoFactor) {
-        setRequiresTwoFactor(true);
-        setError('');
       } else {
-        setError(response.data.message || 'Login failed');
+        setError(result.message || 'Login failed');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred during login.');
@@ -137,9 +95,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsLoggedIn(false);
+    logout();
     setCurrentPage('overview');
   };
 

@@ -5,6 +5,9 @@ const knex = require('knex');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// JWT Secret - should be in environment variable in production
+const JWT_SECRET = process.env.JWT_SECRET || 'matsplash-secret-key-2024';
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -1064,7 +1067,6 @@ async function setupDatabase() {
         }
 
         // Generate JWT token
-        const JWT_SECRET = process.env.JWT_SECRET || 'matsplash-secret-key-2024';
         const deviceId = getDeviceFingerprint(req);
         const token = jwt.sign(
           { 
@@ -1075,7 +1077,7 @@ async function setupDatabase() {
             emergencyAccess: !!emergencyCode
           },
           JWT_SECRET,
-          { expiresIn: '24h' }
+          { expiresIn: '5m' } // 5 minutes
         );
 
         // Update last login
@@ -1130,6 +1132,68 @@ async function setupDatabase() {
           message: 'Internal server error'
     });
   }
+});
+
+// Token refresh endpoint
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided'
+      });
+    }
+
+    // Verify current token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Get fresh user data
+    const user = await db('employees')
+      .where('id', decoded.userId)
+      .andWhere('status', 'active')
+      .andWhere('deletion_status', 'Active')
+      .first();
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or inactive'
+      });
+    }
+
+    // Generate new token
+    const newToken = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role,
+        deviceId: decoded.deviceId,
+        emergencyAccess: decoded.emergencyAccess
+      },
+      JWT_SECRET,
+      { expiresIn: '10s' } // 10 seconds for testing
+    );
+
+    res.json({
+      success: true,
+      token: newToken,
+      message: 'Token refreshed successfully'
+    });
+
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token'
+    });
+  }
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // Mock dashboard stats
