@@ -992,15 +992,30 @@ async function setupDatabase() {
           if (!canAccessRemote) {
             // Check location if provided
             if (location && location.lat && location.lng) {
-              const locationCheck = await isLocationValid(location.lat, location.lng);
-              console.log('Location check:', locationCheck);
+          const locationCheck = await isLocationValid(location.lat, location.lng);
+          console.log('Location check:', locationCheck);
 
-              if (!locationCheck.valid) {
-                return res.status(403).json({
-                  success: false,
-                  message: `Access denied: ${locationCheck.message}`
-                });
-              }
+          // Enhanced security logging
+          if (locationCheck.valid && locationCheck.isNearBoundary) {
+            console.log('⚠️  SECURITY WARNING: User near factory boundary -', {
+              user: emailOrPhone,
+              distance: locationCheck.distance + 'm',
+              factory: locationCheck.location,
+              warning: locationCheck.securityWarning
+            });
+          }
+
+          if (!locationCheck.valid) {
+            console.log('🚫 Location access denied:', {
+              user: emailOrPhone,
+              location: `${location.lat}, ${location.lng}`,
+              reason: locationCheck.message
+            });
+            return res.status(403).json({
+              success: false,
+              message: `Access denied: ${locationCheck.message}`
+            });
+          }
 
               // Check if device is assigned to this factory location
               if (locationCheck.factoryId) {
@@ -1657,8 +1672,19 @@ async function isLocationValid(latitude, longitude) {
         location.latitude, location.longitude
       );
       
+      // Additional security: Check if distance is suspiciously close to radius boundary
+      const proximityToBoundary = location.radius_meters - distance;
+      const isNearBoundary = proximityToBoundary < 50; // Within 50m of boundary
+      
       if (distance <= location.radius_meters) {
-        return { valid: true, location: location.name, factoryId: location.id };
+        return { 
+          valid: true, 
+          location: location.name, 
+          factoryId: location.id,
+          distance: Math.round(distance),
+          isNearBoundary: isNearBoundary,
+          securityWarning: isNearBoundary ? 'Location near boundary - verify physical presence' : null
+        };
       }
     }
     
