@@ -92,7 +92,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
   const [newDevice, setNewDevice] = useState({
     device_name: '',
     device_type: 'laptop',
-    location: 'office',
+    location: 'Factory General',
     is_factory_device: true,
     is_active: true,
     device_id: '',
@@ -130,17 +130,27 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
   };
 
   const updateMacAddress = (index: number, value: string) => {
+    // Allow only hex characters and common separators while typing; force uppercase
+    const sanitized = (value || '')
+      .toUpperCase()
+      .replace(/[^0-9A-F:\-]/g, '');
+
     const updatedMacs = [...newDevice.mac_addresses];
-    updatedMacs[index] = value;
-    setNewDevice({
-      ...newDevice,
-      mac_addresses: updatedMacs
-    });
+    updatedMacs[index] = sanitized;
+    setNewDevice({ ...newDevice, mac_addresses: updatedMacs });
+  };
+
+  const normalizeMac = (mac: string): string => {
+    const cleaned = (mac || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+    if (cleaned.length !== 12) return mac.toUpperCase();
+    return cleaned.match(/.{1,2}/g)!.join(':');
   };
 
   const validateMacAddress = (mac: string) => {
-    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-    return macRegex.test(mac) || mac === '';
+    if (!mac) return true;
+    const cleaned = mac.replace(/[^0-9A-Fa-f]/g, '');
+    if (cleaned.length !== 12) return false;
+    return /^[0-9A-Fa-f]{12}$/.test(cleaned);
   };
 
   const getCurrentLocation = async () => {
@@ -213,7 +223,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       const devicesWithAssignments = await Promise.all(
         devicesData.map(async (device: Device) => {
           try {
-            const assignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${device.id}/factory-assignments`, { headers });
+            const assignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${device.id}/factory-assignments`, { headers });
             return {
               ...device,
               factory_locations: assignmentsResponse.data.data?.map((assignment: any) => assignment.factory_location_id) || []
@@ -287,21 +297,56 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           is_active: item.is_active
         });
       }
-    } else if (item && 'device_id' in item) {
-      setSelectedDevice(item as Device);
-      
-      // If editing device, load existing factory assignments
+  } else if (item && 'device_id' in item) {
+      const deviceItem = item as Device;
+      setSelectedDevice(deviceItem);
+
+      // Prefill edit form
       if (type === 'edit-device') {
-        try {
-          const response = await axios.get(`http://localhost:3001/api/devices/${(item as Device).id}/factory-assignments`);
-          if (response.data.success) {
-            const assignedFactories = response.data.data.map((assignment: any) => assignment.factory_location_id);
-            setSelectedFactories(assignedFactories);
-          }
-        } catch (error) {
-          console.error('Error fetching factory assignments:', error);
+        setNewDevice({
+          device_name: deviceItem.device_name || '',
+          device_type: (deviceItem.device_type as any) || 'laptop',
+          location: (deviceItem.location as any) || 'Factory General',
+          is_factory_device: !!deviceItem.is_factory_device,
+          is_active: !!deviceItem.is_active,
+          device_id: deviceItem.device_id || '',
+          employee_id: (deviceItem as any).employee_id || null,
+          mac_addresses: ['']
+        });
+      }
+
+      // Load existing factory assignments
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceItem.id}/factory-assignments`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+        if (response.data.success) {
+          const assignedFactories = response.data.data.map((assignment: any) => assignment.factory_location_id);
+          setSelectedFactories(assignedFactories);
+        } else {
           setSelectedFactories([]);
         }
+      } catch (error) {
+        console.error('Error fetching factory assignments:', error);
+        setSelectedFactories([]);
+      }
+
+      // Load existing MAC addresses for edit
+      try {
+        const token = localStorage.getItem('token');
+        const macsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceItem.id}/mac-addresses`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+        if (macsResponse.data?.success) {
+          const macs = (macsResponse.data.data || [])
+            .filter((m: any) => m.is_active !== false)
+            .map((m: any) => m.mac_address || '')
+            .filter((m: string) => m);
+          setNewDevice((prev) => ({ ...prev, mac_addresses: macs.length > 0 ? macs : [''] }));
+        }
+      } catch (macErr) {
+        console.error('Error fetching device MAC addresses:', macErr);
       }
     } else {
       setSelectedFactory(null);
@@ -328,7 +373,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     setNewDevice({
       device_name: '',
       device_type: 'laptop',
-      location: 'office',
+      location: 'Factory General',
       is_factory_device: true,
       is_active: true,
       device_id: '',
@@ -471,8 +516,15 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         alert('Failed to assign device to factory');
       }
     } catch (error: any) {
-      console.error('Error assigning device to factory:', error);
-      alert('Failed to assign device to factory');
+      // Treat duplicate assignment as success (idempotent UX)
+      if (error?.response?.status === 400 &&
+          (error?.response?.data?.message || '').toLowerCase().includes('already assigned')) {
+        fetchData();
+        alert('Device already assigned to this factory');
+      } else {
+        console.error('Error assigning device to factory:', error);
+        alert('Failed to assign device to factory');
+      }
     } finally {
       setLoading(false);
     }
@@ -499,8 +551,14 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         alert('Failed to remove device from factory');
       }
     } catch (error: any) {
-      console.error('Error removing device from factory:', error);
-      alert('Failed to remove device from factory');
+      // Treat missing assignment as success (idempotent UX)
+      if (error?.response?.status === 404) {
+        fetchData();
+        alert('Device was not assigned to this factory');
+      } else {
+        console.error('Error removing device from factory:', error);
+        alert('Failed to remove device from factory');
+      }
     } finally {
       setLoading(false);
     }
@@ -516,7 +574,10 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       
       // First remove all factory assignments
       try {
-        const assignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${selectedDevice.id}/factory-assignments`);
+        const token = localStorage.getItem('token');
+        const assignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${selectedDevice.id}/factory-assignments`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
         if (assignmentsResponse.data.success) {
           const assignments = assignmentsResponse.data.data;
           for (const assignment of assignments) {
@@ -568,13 +629,19 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       return;
     }
 
-    if (selectedFactories.length === 0) {
+    // If no employee is assigned, automatically mark as factory device
+    const hasEmployee = !!newDevice.employee_id;
+    const isFactoryDevice = hasEmployee ? newDevice.is_factory_device : true;
+    if (isFactoryDevice && selectedFactories.length === 0) {
       setFormErrors({ factories: 'Please select at least one factory location' });
       return;
     }
 
     // Validate MAC addresses
-    const validMacs = newDevice.mac_addresses.filter(mac => mac.trim() !== '');
+    // Normalize MACs and validate
+    const validMacs = newDevice.mac_addresses
+      .map(mac => normalizeMac(mac || ''))
+      .filter(mac => mac.trim() !== '');
     if (validMacs.length === 0) {
       setFormErrors({ mac_addresses: 'At least one MAC address is required' });
       return;
@@ -598,7 +665,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         device_name: newDevice.device_name,
         device_type: newDevice.device_type,
         location: newDevice.location,
-        is_factory_device: newDevice.is_factory_device,
+        is_factory_device: isFactoryDevice,
         created_by: user.id
       };
 
@@ -621,22 +688,31 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
 
       if (response.data.success) {
         
-        // Add MAC addresses to the device
+        // Replace MAC addresses to keep consistency (upsert behavior)
         try {
           await axios.put(`http://localhost:3001/api/devices/${deviceId}/mac-addresses`, {
-            macAddresses: validMacs
+            macAddresses: validMacs.map(mac => ({
+              macAddress: mac,
+              adapterType: 'wifi',
+              adapterName: 'Unknown',
+              isActive: true
+            }))
           }, {
             headers: { Authorization: `Bearer ${token}` }
           });
         } catch (macError) {
-          console.error('Error adding MAC addresses:', macError);
+          console.error('Error updating MAC addresses:', macError);
+          alert('Failed to update MAC addresses. Please check formats and try again.');
+          return;
         }
         
         // Handle factory assignments
         if (dialogType === 'edit-device' && selectedDevice) {
           // For editing: first remove all existing assignments, then add new ones
           try {
-            const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+            const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
             if (currentAssignmentsResponse.data.success) {
               const currentAssignments = currentAssignmentsResponse.data.data;
               
@@ -660,19 +736,42 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           }
         }
         
-        // Add new factory assignments
-        for (const factoryId of selectedFactories) {
-          try {
-            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
-              device_id: deviceId,
-              userId: user.id,
-              userEmail: user.email
-            }, {
+        // Add new factory assignments only if factory device
+        if (isFactoryDevice) {
+          for (const factoryId of selectedFactories) {
+            try {
+              await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+                device_id: deviceId,
+                userId: user.id,
+                userEmail: user.email
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+            } catch (assignmentError: any) {
+              // Ignore duplicate assignment errors to keep UX smooth
+              if (!(assignmentError?.response?.status === 400 &&
+                    (assignmentError?.response?.data?.message || '').toLowerCase().includes('already assigned'))) {
+                console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+              }
+            }
+          }
+        }
+
+        // Explicitly refresh current device assignments so chips stay selected
+        try {
+          if (isFactoryDevice) {
+            const refreshAssignments = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
               headers: { Authorization: `Bearer ${token}` }
             });
-          } catch (assignmentError) {
-            console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+            if (refreshAssignments.data.success) {
+              const assigned = refreshAssignments.data.data.map((a: any) => a.factory_location_id);
+              setSelectedFactories(assigned);
+            }
+          } else {
+            setSelectedFactories([]);
           }
+        } catch (refreshErr) {
+          console.error('Error refreshing device assignments after save:', refreshErr);
         }
 
         fetchData();

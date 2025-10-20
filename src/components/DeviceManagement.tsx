@@ -118,11 +118,14 @@ const DeviceManagement: React.FC = () => {
   ];
 
   const locations = [
-    { value: 'factory_floor', label: 'Factory Floor' },
-    { value: 'office', label: 'Office' },
-    { value: 'gate', label: 'Gate' },
-    { value: 'warehouse', label: 'Warehouse' },
-    { value: 'personal', label: 'Personal' }
+    { value: 'Director Office', label: 'Director Office' },
+    { value: 'Manager Office', label: 'Manager Office' },
+    { value: 'Director Personal', label: 'Director Personal' },
+    { value: 'Manager Personal', label: 'Manager Personal' },
+    { value: 'Reception', label: 'Reception' },
+    { value: 'Store Room', label: 'Store Room' },
+    { value: 'Security', label: 'Security' },
+    { value: 'Factory General', label: 'Factory General' }
   ];
 
   useEffect(() => {
@@ -174,7 +177,7 @@ const DeviceManagement: React.FC = () => {
       device_id: '',
       device_name: '',
       device_type: 'laptop',
-      location: 'factory_floor',
+      location: 'Factory General',
       employee_id: '',
       is_factory_device: true,
       is_active: true
@@ -196,7 +199,10 @@ const DeviceManagement: React.FC = () => {
     
     // Load existing factory assignments for this device
     try {
-      const response = await axios.get(`http://localhost:3001/api/devices/${device.id}/factory-assignments`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:3001/api/factory-locations/devices/${device.id}/factory-assignments`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
       if (response.data.success) {
         const assignedFactories = response.data.data.map((assignment: any) => assignment.factory_location_id);
         setSelectedFactories(assignedFactories);
@@ -215,9 +221,14 @@ const DeviceManagement: React.FC = () => {
       setError('');
       setSuccess('');
 
+      // Auto-mark as factory device when no employee is assigned
+      const assignedEmployeeId = formData.employee_id ? parseInt(formData.employee_id) : null;
+      const isFactoryDevice = assignedEmployeeId ? formData.is_factory_device : true;
+
       const deviceData = {
         ...formData,
-        employee_id: formData.employee_id ? parseInt(formData.employee_id) : null,
+        employee_id: assignedEmployeeId,
+        is_factory_device: isFactoryDevice,
         device_fingerprint: editingDevice?.device_fingerprint || '',
         created_by: 1 // Director
       };
@@ -240,21 +251,30 @@ const DeviceManagement: React.FC = () => {
         }
       }
 
-      // Handle factory assignments
+      // Handle factory assignments (only when factory device)
       const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = localStorage.getItem('token');
       
       if (editingDevice) {
         // For editing: first remove all existing assignments, then add new ones
         try {
           // Get current assignments
-          const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+          const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined
+          });
           if (currentAssignmentsResponse.data.success) {
             const currentAssignments = currentAssignmentsResponse.data.data;
             
             // Remove all current assignments
             for (const assignment of currentAssignments) {
               try {
-                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`);
+                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
+                  headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                  data: {
+                    userId: user.id,
+                    userEmail: user.email
+                  }
+                });
               } catch (removeError) {
                 console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
               }
@@ -265,16 +285,20 @@ const DeviceManagement: React.FC = () => {
         }
       }
       
-      // Add new factory assignments
-      for (const factoryId of selectedFactories) {
-        try {
-          await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
-            device_id: deviceId,
-            userId: user.id,
-            userEmail: user.email
-          });
-        } catch (assignmentError) {
-          console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+      // Add new factory assignments only if factory device
+      if (isFactoryDevice) {
+        for (const factoryId of selectedFactories) {
+          try {
+            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+              device_id: deviceId,
+              userId: user.id,
+              userEmail: user.email
+            }, {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined
+            });
+          } catch (assignmentError) {
+            console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+          }
         }
       }
 
@@ -649,12 +673,24 @@ const DeviceManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Box display="flex" alignItems="center" gap={2}>
-                <Chip
-                  label={formData.is_factory_device ? 'Factory Device' : 'Personal Device'}
-                  color={formData.is_factory_device ? 'primary' : 'secondary'}
-                  variant="outlined"
-                />
+              <FormControl fullWidth>
+                <InputLabel>Factory Device</InputLabel>
+                <Select
+                  value={formData.is_factory_device ? 'yes' : 'no'}
+                  label="Factory Device"
+                  onChange={(e) => {
+                    const val = e.target.value === 'yes';
+                    setFormData({ ...formData, is_factory_device: val });
+                    if (!val) {
+                      setSelectedFactories([]);
+                    }
+                  }}
+                >
+                  <MenuItem value="yes">Yes</MenuItem>
+                  <MenuItem value="no">No</MenuItem>
+                </Select>
+              </FormControl>
+              <Box mt={2}>
                 <Chip
                   label={formData.is_active ? 'Active' : 'Inactive'}
                   color={formData.is_active ? 'success' : 'error'}
@@ -664,6 +700,7 @@ const DeviceManagement: React.FC = () => {
             </Grid>
             
             {/* Factory Selection */}
+            {formData.is_factory_device && (
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, color: '#2c3e50' }}>
                 Authorized Factory Locations
@@ -726,6 +763,7 @@ const DeviceManagement: React.FC = () => {
                 </Grid>
               )}
             </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
