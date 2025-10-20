@@ -89,10 +89,27 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string>('');
+  const [newDevice, setNewDevice] = useState({
+    device_name: '',
+    device_type: 'laptop',
+    location: 'office',
+    is_factory_device: true,
+    is_active: true,
+    device_id: '',
+    employee_id: null
+  });
+  const [selectedFactories, setSelectedFactories] = useState<number[]>([]);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const generateDeviceId = () => {
+    const deviceType = newDevice.device_type.toUpperCase();
+    const timestamp = Date.now().toString().slice(-4);
+    const randomNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    return `${deviceType}-${timestamp}-${randomNum}`;
+  };
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
@@ -262,6 +279,16 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     setSelectedFactory(null);
     setSelectedDevice(null);
     setFormErrors({});
+    setNewDevice({
+      device_name: '',
+      device_type: 'laptop',
+      location: 'office',
+      is_factory_device: true,
+      is_active: true,
+      device_id: '',
+      employee_id: null
+    });
+    setSelectedFactories([]);
   };
 
   const validateForm = () => {
@@ -427,6 +454,83 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     } catch (error: any) {
       console.error('Error removing device from factory:', error);
       alert('Failed to remove device from factory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitDevice = async () => {
+    if (!newDevice.device_name.trim()) {
+      setFormErrors({ device_name: 'Device name is required' });
+      return;
+    }
+
+    if (!newDevice.device_id.trim()) {
+      setFormErrors({ device_id: 'Device ID is required' });
+      return;
+    }
+
+    if (selectedFactories.length === 0) {
+      setFormErrors({ factories: 'Please select at least one factory location' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      // Create device using the main device API
+      const deviceData = {
+        device_id: newDevice.device_id,
+        device_name: newDevice.device_name,
+        device_type: newDevice.device_type,
+        location: newDevice.location,
+        is_factory_device: newDevice.is_factory_device,
+        created_by: user.id
+      };
+
+      const response = await axios.post('http://localhost:3001/api/devices', deviceData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        const deviceId = response.data.data.id;
+        
+        // Assign device to selected factories
+        for (const factoryId of selectedFactories) {
+          try {
+            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+              device_id: deviceId,
+              userId: user.id,
+              userEmail: user.email
+            }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          } catch (assignmentError) {
+            console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+          }
+        }
+
+        fetchData();
+        handleCloseDialog();
+        setNewDevice({
+          device_name: '',
+          device_type: 'laptop',
+          location: 'office',
+          is_factory_device: true,
+          is_active: true,
+          device_id: '',
+          employee_id: null
+        });
+        setSelectedFactories([]);
+        alert('Device created and assigned to selected factories successfully!');
+      } else {
+        setFormErrors({ submit: response.data.message || 'Failed to create device' });
+      }
+    } catch (error: any) {
+      console.error('Error creating device:', error);
+      setFormErrors({ submit: error.response?.data?.message || 'Failed to create device' });
     } finally {
       setLoading(false);
     }
@@ -790,6 +894,175 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     );
   };
 
+  const renderDeviceForm = () => (
+    <Box component="form" sx={{ mt: 2 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <TextField
+            label="Device Name"
+            name="device_name"
+            fullWidth
+            value={newDevice.device_name}
+            onChange={(e) => setNewDevice({...newDevice, device_name: e.target.value})}
+            variant="outlined"
+            error={!!formErrors.device_name}
+            helperText={formErrors.device_name}
+            required
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <TextField
+              label="Device ID"
+              name="device_id"
+              fullWidth
+              value={newDevice.device_id}
+              onChange={(e) => setNewDevice({...newDevice, device_id: e.target.value})}
+              variant="outlined"
+              error={!!formErrors.device_id}
+              helperText={formErrors.device_id || "Unique identifier for the device (e.g., LAPTOP-001, DESKTOP-002)"}
+              required
+            />
+            <Button
+              variant="outlined"
+              onClick={() => setNewDevice({...newDevice, device_id: generateDeviceId()})}
+              sx={{ minWidth: 120, mt: 1 }}
+            >
+              Generate ID
+            </Button>
+          </Box>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Device Type"
+            name="device_type"
+            fullWidth
+            value={newDevice.device_type}
+            onChange={(e) => setNewDevice({...newDevice, device_type: e.target.value})}
+            variant="outlined"
+            select
+            SelectProps={{ native: true }}
+          >
+            <option value="laptop">Laptop</option>
+            <option value="desktop">Desktop</option>
+            <option value="tablet">Tablet</option>
+            <option value="mobile">Mobile</option>
+            <option value="kiosk">Kiosk</option>
+          </TextField>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Location"
+            name="location"
+            fullWidth
+            value={newDevice.location}
+            onChange={(e) => setNewDevice({...newDevice, location: e.target.value})}
+            variant="outlined"
+            select
+            SelectProps={{ native: true }}
+          >
+            <option value="office">Office</option>
+            <option value="factory_floor">Factory Floor</option>
+            <option value="warehouse">Warehouse</option>
+            <option value="reception">Reception</option>
+            <option value="security">Security</option>
+          </TextField>
+        </Grid>
+        
+        {/* Factory Selection */}
+        <Grid item xs={12}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#2c3e50' }}>
+            Authorized Factory Locations
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select which factory locations this device can be used at:
+          </Typography>
+          {factories.length === 0 ? (
+            <Alert severity="info">
+              No factory locations available. Please create a factory location first.
+            </Alert>
+          ) : (
+            <Grid container spacing={1}>
+              {factories.map((factory) => (
+                <Grid item xs={12} sm={6} key={factory.id}>
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      cursor: 'pointer',
+                      border: selectedFactories.includes(factory.id) ? '2px solid #4caf50' : '1px solid #e0e0e0',
+                      bgcolor: selectedFactories.includes(factory.id) ? '#f1f8e9' : 'white',
+                      '&:hover': {
+                        border: '2px solid #2196f3',
+                        bgcolor: selectedFactories.includes(factory.id) ? '#f1f8e9' : '#f5f5f5'
+                      }
+                    }}
+                    onClick={() => {
+                      if (selectedFactories.includes(factory.id)) {
+                        setSelectedFactories(selectedFactories.filter(id => id !== factory.id));
+                      } else {
+                        setSelectedFactories([...selectedFactories, factory.id]);
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {factory.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {factory.address}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Radius: {factory.radius_meters}m
+                          </Typography>
+                        </Box>
+                        <Box>
+                          {selectedFactories.includes(factory.id) ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Box sx={{ width: 24, height: 24, border: '2px solid #ccc', borderRadius: '50%' }} />
+                          )}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+          {formErrors.factories && (
+            <Alert severity="error" sx={{ mt: 1 }}>{formErrors.factories}</Alert>
+          )}
+        </Grid>
+
+        <Grid item xs={12} sm={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={newDevice.is_factory_device}
+                onChange={(e) => setNewDevice({...newDevice, is_factory_device: e.target.checked})}
+              />
+            }
+            label="Factory Device"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={newDevice.is_active}
+                onChange={(e) => setNewDevice({...newDevice, is_active: e.target.checked})}
+              />
+            }
+            label="Active"
+          />
+        </Grid>
+      </Grid>
+      {formErrors.submit && <Alert severity="error" sx={{ mt: 2 }}>{formErrors.submit}</Alert>}
+    </Box>
+  );
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
@@ -832,6 +1105,9 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           {dialogType === 'edit-factory' && 'Edit Factory Location'}
           {dialogType === 'view-factory' && 'Factory Details'}
           {dialogType === 'delete-factory' && 'Delete Factory Location'}
+          {dialogType === 'new-device' && 'Add New Device'}
+          {dialogType === 'edit-device' && 'Edit Device'}
+          {dialogType === 'delete-device' && 'Delete Device'}
           {dialogType === 'assign-device' && 'Assign Device to Factories'}
         </DialogTitle>
         <DialogContent>
@@ -840,6 +1116,13 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           {dialogType === 'delete-factory' && (
             <Alert severity="warning">
               Are you sure you want to delete "{selectedFactory?.name}"? This action cannot be undone and will affect all associated devices and access controls.
+            </Alert>
+          )}
+          {dialogType === 'new-device' && renderDeviceForm()}
+          {dialogType === 'edit-device' && renderDeviceForm()}
+          {dialogType === 'delete-device' && (
+            <Alert severity="warning">
+              Are you sure you want to delete "{selectedDevice?.device_name}"? This action cannot be undone and will affect all factory assignments.
             </Alert>
           )}
           {dialogType === 'assign-device' && selectedDevice && (
@@ -933,6 +1216,36 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
               color="error"
             >
               {loading ? <CircularProgress size={24} /> : 'Delete Factory'}
+            </Button>
+          )}
+          {dialogType === 'new-device' && (
+            <Button 
+              variant="contained" 
+              onClick={handleSubmitDevice}
+              disabled={loading}
+              sx={{ bgcolor: '#13bbc6' }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Add Device'}
+            </Button>
+          )}
+          {dialogType === 'edit-device' && (
+            <Button 
+              variant="contained" 
+              onClick={handleSubmitDevice}
+              disabled={loading}
+              sx={{ bgcolor: '#13bbc6' }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Update Device'}
+            </Button>
+          )}
+          {dialogType === 'delete-device' && (
+            <Button 
+              variant="contained" 
+              onClick={() => {/* TODO: Implement delete device */}}
+              disabled={loading}
+              color="error"
+            >
+              {loading ? <CircularProgress size={24} /> : 'Delete Device'}
             </Button>
           )}
         </DialogActions>
