@@ -1466,10 +1466,11 @@ app.get('/api/dashboard/stats', async (req, res) => {
     // Function to check if device is assigned to a specific factory location
     async function isDeviceAssignedToFactory(deviceId, factoryLocationId, deviceInfo = null) {
       try {
-        // First check by device fingerprint
+        // First check by device fingerprint - prioritize factory devices
         let device = await db('authorized_devices')
           .where('device_fingerprint', deviceId)
           .where('is_active', true)
+          .orderBy('is_factory_device', 'desc') // Factory devices first (1), then personal devices (0)
           .first();
         
         if (device) {
@@ -1480,7 +1481,19 @@ app.get('/api/dashboard/stats', async (req, res) => {
             .first();
           
           if (assignment) {
-            return true;
+            // If it's a factory device, allow access for any employee
+            if (device.is_factory_device) {
+              console.log('Factory device assigned to factory, allowing access:', device.device_name);
+              return true;
+            }
+            
+            // If it's a personal device, only allow if employee matches
+            if (!device.is_factory_device && device.employee_id) {
+              console.log('Personal device assigned to factory, checking employee match:', device.device_name);
+              // For personal devices, we need to check if the current user matches the device's assigned employee
+              // This check will be done at the login level, not here
+              return true;
+            }
           }
         }
         
