@@ -182,7 +182,7 @@ const DeviceManagement: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const handleEditDevice = (device: Device) => {
+  const handleEditDevice = async (device: Device) => {
     setEditingDevice(device);
     setFormData({
       device_id: device.device_id,
@@ -193,6 +193,19 @@ const DeviceManagement: React.FC = () => {
       is_factory_device: device.is_factory_device,
       is_active: device.is_active
     });
+    
+    // Load existing factory assignments for this device
+    try {
+      const response = await axios.get(`http://localhost:3001/api/devices/${device.id}/factory-assignments`);
+      if (response.data.success) {
+        const assignedFactories = response.data.data.map((assignment: any) => assignment.factory_location_id);
+        setSelectedFactories(assignedFactories);
+      }
+    } catch (error) {
+      console.error('Error fetching factory assignments:', error);
+      setSelectedFactories([]);
+    }
+    
     setOpenDialog(true);
   };
 
@@ -227,19 +240,41 @@ const DeviceManagement: React.FC = () => {
         }
       }
 
-      // Assign device to selected factories
-      if (selectedFactories.length > 0) {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        for (const factoryId of selectedFactories) {
-          try {
-            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
-              device_id: deviceId,
-              userId: user.id,
-              userEmail: user.email
-            });
-          } catch (assignmentError) {
-            console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
+      // Handle factory assignments
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      if (editingDevice) {
+        // For editing: first remove all existing assignments, then add new ones
+        try {
+          // Get current assignments
+          const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+          if (currentAssignmentsResponse.data.success) {
+            const currentAssignments = currentAssignmentsResponse.data.data;
+            
+            // Remove all current assignments
+            for (const assignment of currentAssignments) {
+              try {
+                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`);
+              } catch (removeError) {
+                console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
+              }
+            }
           }
+        } catch (error) {
+          console.error('Error fetching current factory assignments:', error);
+        }
+      }
+      
+      // Add new factory assignments
+      for (const factoryId of selectedFactories) {
+        try {
+          await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+            device_id: deviceId,
+            userId: user.id,
+            userEmail: user.email
+          });
+        } catch (assignmentError) {
+          console.error(`Error assigning device to factory ${factoryId}:`, assignmentError);
         }
       }
 
@@ -254,15 +289,42 @@ const DeviceManagement: React.FC = () => {
   };
 
   const handleDeleteDevice = async (deviceId: number) => {
-    if (window.confirm('Are you sure you want to delete this device?')) {
+    const device = devices.find(d => d.id === deviceId);
+    const deviceName = device?.device_name || 'this device';
+    
+    if (window.confirm(`Are you sure you want to delete "${deviceName}"? This action cannot be undone and will affect all factory assignments.`)) {
       try {
         setLoading(true);
+        setError('');
+        setSuccess('');
+        
+        // First remove all factory assignments
+        try {
+          const assignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+          if (assignmentsResponse.data.success) {
+            const assignments = assignmentsResponse.data.data;
+            for (const assignment of assignments) {
+              try {
+                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`);
+              } catch (removeError) {
+                console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error removing factory assignments:', error);
+        }
+        
+        // Then delete the device
         const response = await axios.delete(`http://localhost:3001/api/devices/${deviceId}`);
         if (response.data.success) {
-          setSuccess('Device deleted successfully');
+          setSuccess(`Device "${deviceName}" deleted successfully`);
           fetchDevices();
+        } else {
+          setError(response.data.message || 'Failed to delete device');
         }
       } catch (error: any) {
+        console.error('Delete device error:', error);
         setError(error.response?.data?.message || 'Failed to delete device');
       } finally {
         setLoading(false);

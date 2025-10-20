@@ -273,7 +273,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     }
   };
 
-  const handleOpenDialog = (type: string, item?: FactoryLocation | Device) => {
+  const handleOpenDialog = async (type: string, item?: FactoryLocation | Device) => {
     setDialogType(type);
     if (item && 'latitude' in item) {
       setSelectedFactory(item as FactoryLocation);
@@ -289,6 +289,20 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       }
     } else if (item && 'device_id' in item) {
       setSelectedDevice(item as Device);
+      
+      // If editing device, load existing factory assignments
+      if (type === 'edit-device') {
+        try {
+          const response = await axios.get(`http://localhost:3001/api/devices/${(item as Device).id}/factory-assignments`);
+          if (response.data.success) {
+            const assignedFactories = response.data.data.map((assignment: any) => assignment.factory_location_id);
+            setSelectedFactories(assignedFactories);
+          }
+        } catch (error) {
+          console.error('Error fetching factory assignments:', error);
+          setSelectedFactories([]);
+        }
+      }
     } else {
       setSelectedFactory(null);
       setSelectedDevice(null);
@@ -492,6 +506,57 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     }
   };
 
+  const handleDeleteDevice = async () => {
+    if (!selectedDevice) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      // First remove all factory assignments
+      try {
+        const assignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${selectedDevice.id}/factory-assignments`);
+        if (assignmentsResponse.data.success) {
+          const assignments = assignmentsResponse.data.data;
+          for (const assignment of assignments) {
+            try {
+              await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${selectedDevice.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                data: {
+                  userId: user.id,
+                  userEmail: user.email
+                }
+              });
+            } catch (removeError) {
+              console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error removing factory assignments:', error);
+      }
+      
+      // Then delete the device
+      const response = await axios.delete(`http://localhost:3001/api/devices/${selectedDevice.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        alert(`Device "${selectedDevice.device_name}" deleted successfully!`);
+        fetchData();
+        handleCloseDialog();
+      } else {
+        alert(`Failed to delete device: ${response.data.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting device:', error);
+      alert(`Failed to delete device: ${error.response?.data?.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitDevice = async () => {
     if (!newDevice.device_name.trim()) {
       setFormErrors({ device_name: 'Device name is required' });
@@ -537,12 +602,24 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         created_by: user.id
       };
 
-      const response = await axios.post('http://localhost:3001/api/devices', deviceData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let response;
+      let deviceId;
+
+      if (dialogType === 'edit-device' && selectedDevice) {
+        // Update existing device
+        response = await axios.put(`http://localhost:3001/api/devices/${selectedDevice.id}`, deviceData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        deviceId = selectedDevice.id;
+      } else {
+        // Create new device
+        response = await axios.post('http://localhost:3001/api/devices', deviceData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        deviceId = response.data.data.id;
+      }
 
       if (response.data.success) {
-        const deviceId = response.data.data.id;
         
         // Add MAC addresses to the device
         try {
@@ -555,7 +632,35 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           console.error('Error adding MAC addresses:', macError);
         }
         
-        // Assign device to selected factories
+        // Handle factory assignments
+        if (dialogType === 'edit-device' && selectedDevice) {
+          // For editing: first remove all existing assignments, then add new ones
+          try {
+            const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+            if (currentAssignmentsResponse.data.success) {
+              const currentAssignments = currentAssignmentsResponse.data.data;
+              
+              // Remove all current assignments
+              for (const assignment of currentAssignments) {
+                try {
+                  await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    data: {
+                      userId: user.id,
+                      userEmail: user.email
+                    }
+                  });
+                } catch (removeError) {
+                  console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching current factory assignments:', error);
+          }
+        }
+        
+        // Add new factory assignments
         for (const factoryId of selectedFactories) {
           try {
             await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
@@ -1344,7 +1449,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
           {dialogType === 'delete-device' && (
             <Button 
               variant="contained" 
-              onClick={() => {/* TODO: Implement delete device */}}
+              onClick={handleDeleteDevice}
               disabled={loading}
               color="error"
             >
