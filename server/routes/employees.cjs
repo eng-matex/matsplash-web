@@ -7,13 +7,18 @@ module.exports = (db) => {
 // Get all employees
 router.get('/', async (req, res) => {
   try {
-    const { role, status, limit = 100 } = req.query;
+    const { role, status, limit = 100, userRole } = req.query;
     
     let query = db('employees')
       .where('deletion_status', 'Active')
       .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'commission_type', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
       .orderBy('name')
       .limit(parseInt(limit));
+
+    // Role-based filtering - Manager cannot see Admin/Director
+    if (userRole === 'Manager') {
+      query = query.whereNotIn('role', ['Admin', 'Director']);
+    }
 
     if (role) {
       query = query.where('role', role);
@@ -68,7 +73,7 @@ router.get('/:id', async (req, res) => {
     const employee = await db('employees')
       .where('id', id)
       .andWhere('deletion_status', 'Active')
-      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
+      .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary', 'commission_rate', 'has_commission', 'commission_type', 'department', 'address', 'emergency_contact', 'emergency_phone', 'notes')
       .first();
 
     if (!employee) {
@@ -89,6 +94,7 @@ router.get('/:id', async (req, res) => {
       salary: employee.salary || 0,
       commission_rate: employee.commission_rate || 0,
       has_commission: employee.has_commission || false,
+      commission_type: employee.commission_type || 'none',
       address: employee.address,
       emergency_contact: employee.emergency_contact,
       emergency_phone: employee.emergency_phone,
@@ -240,6 +246,8 @@ router.put('/:id', async (req, res) => {
     delete updateData.id;
     delete updateData.pin_hash;
     delete updateData.created_at;
+    delete updateData.userId;
+    delete updateData.userEmail;
 
     updateData.updated_at = new Date().toISOString();
 
@@ -247,9 +255,9 @@ router.put('/:id', async (req, res) => {
 
     // Log system activity
     try {
-      if (updateData.userId) {
+      if (req.body.userId) {
         await db('system_activity').insert({
-          user_id: updateData.userId,
+          user_id: req.body.userId,
           user_email: req.body.userEmail || 'unknown',
           action: 'EMPLOYEE_UPDATED',
           details: `Updated employee ${id}`,
@@ -388,6 +396,136 @@ router.post('/:id/reset-pin', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to reset employee PIN'
+    });
+  }
+});
+
+// Admin override login - Admin/Director can login as any employee
+router.post('/:id/admin-login', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminUserId, adminUserRole } = req.body;
+
+    // Check if admin user has permission
+    if (!['Admin', 'Director'].includes(adminUserRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Admin and Director can perform admin login'
+      });
+    }
+
+    // Get the target employee
+    const targetEmployee = await db('employees')
+      .where('id', id)
+      .andWhere('deletion_status', 'Active')
+      .first();
+
+    if (!targetEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    // Check if admin is trying to login as Admin/Director (restrictions)
+    if (adminUserRole === 'Manager' && ['Admin', 'Director'].includes(targetEmployee.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Manager cannot login as Admin or Director'
+      });
+    }
+
+    // Generate JWT token for the target employee
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        userId: targetEmployee.id, 
+        email: targetEmployee.email, 
+        role: targetEmployee.role,
+        isAdminOverride: true,
+        adminUserId: adminUserId
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    // Update last login
+    await db('employees')
+      .where('id', id)
+      .update({
+        last_login: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    // Log system activity
+    try {
+      await db('system_activity').insert({
+        user_id: adminUserId,
+        user_email: req.body.adminUserEmail || 'unknown',
+        action: 'ADMIN_LOGIN_AS_EMPLOYEE',
+        details: `Admin login as employee ${targetEmployee.name} (${targetEmployee.email})`,
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: req.get('User-Agent') || 'Unknown',
+        activity_type: 'ADMIN_OVERRIDE',
+        created_at: new Date().toISOString()
+      });
+    } catch (logError) {
+      console.error('Error logging system activity:', logError);
+    }
+
+    res.json({
+      success: true,
+      token: token,
+      user: {
+        id: targetEmployee.id,
+        name: targetEmployee.name,
+        email: targetEmployee.email,
+        role: targetEmployee.role,
+        isAdminOverride: true
+      },
+      message: `Successfully logged in as ${targetEmployee.name}`
+    });
+
+  } catch (error) {
+    console.error('Error in admin login:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to perform admin login'
+    });
+  }
+});
+
+// Admin logout - End admin override session
+router.post('/admin-logout', async (req, res) => {
+  try {
+    const { adminUserId, adminUserEmail } = req.body;
+
+    // Log system activity
+    try {
+      await db('system_activity').insert({
+        user_id: adminUserId,
+        user_email: adminUserEmail || 'unknown',
+        action: 'ADMIN_LOGOUT_OVERRIDE',
+        details: 'Admin ended override session',
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: req.get('User-Agent') || 'Unknown',
+        activity_type: 'ADMIN_OVERRIDE',
+        created_at: new Date().toISOString()
+      });
+    } catch (logError) {
+      console.error('Error logging system activity:', logError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin override session ended'
+    });
+
+  } catch (error) {
+    console.error('Error in admin logout:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to perform admin logout'
     });
   }
 });

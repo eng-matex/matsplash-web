@@ -640,6 +640,19 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     setDialogType(type);
     if (item && 'category' in item) {
       setSelectedProduct(item as Product);
+      // Populate form with selected product data for editing
+      if (type === 'edit-product') {
+        setNewProduct({
+          name: (item as Product).name,
+          description: (item as Product).description,
+          category: (item as Product).category,
+          unit: (item as Product).unit,
+          base_cost: (item as Product).base_cost,
+          current_price: (item as Product).current_price,
+          markup_percentage: (item as Product).markup_percentage,
+          status: (item as Product).status
+        });
+      }
     } else if (item && 'rule_type' in item) {
       setSelectedRule(item as PricingRule);
     } else if (item && 'customer_type' in item) {
@@ -1456,6 +1469,130 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
                     onChange={handleProductChange}
                     variant="outlined"
                     InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+              </Grid>
+              {formErrors.submit && <Alert severity="error" sx={{ mt: 2 }}>{formErrors.submit}</Alert>}
+            </Box>
+          )}
+          {dialogType === 'edit-product' && selectedProduct && (
+            <Box component="form" sx={{ mt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Product Name"
+                    name="name"
+                    fullWidth
+                    value={selectedProduct.name}
+                    onChange={handleProductChange}
+                    variant="outlined"
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined" error={!!formErrors.category}>
+                    <InputLabel>Category</InputLabel>
+                    <Select
+                      name="category"
+                      value={selectedProduct.category}
+                      onChange={handleProductChange}
+                      label="Category"
+                    >
+                      {productCategories.map((category) => (
+                        <MenuItem key={category} value={category}>{category}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Description"
+                    name="description"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={selectedProduct.description}
+                    onChange={handleProductChange}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Unit</InputLabel>
+                    <Select
+                      name="unit"
+                      value={selectedProduct.unit}
+                      onChange={handleProductChange}
+                      label="Unit"
+                    >
+                      {units.map((unit) => (
+                        <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      name="status"
+                      value={selectedProduct.status}
+                      onChange={handleProductChange}
+                      label="Status"
+                    >
+                      <MenuItem value="active">Active</MenuItem>
+                      <MenuItem value="inactive">Inactive</MenuItem>
+                      <MenuItem value="discontinued">Discontinued</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Base Cost (₦)"
+                    name="base_cost"
+                    type="number"
+                    fullWidth
+                    value={selectedProduct.base_cost}
+                    onChange={handleProductChange}
+                    variant="outlined"
+                    error={!!formErrors.base_cost}
+                    helperText={formErrors.base_cost}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Current Price (₦)"
+                    name="current_price"
+                    type="number"
+                    fullWidth
+                    value={selectedProduct.current_price}
+                    onChange={handleProductChange}
+                    variant="outlined"
+                    error={!!formErrors.current_price}
+                    helperText={formErrors.current_price}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Minimum Stock"
+                    name="min_stock"
+                    type="number"
+                    fullWidth
+                    value={selectedProduct.min_stock}
+                    onChange={handleProductChange}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Maximum Stock"
+                    name="max_stock"
+                    type="number"
+                    fullWidth
+                    value={selectedProduct.max_stock}
+                    onChange={handleProductChange}
+                    variant="outlined"
                   />
                 </Grid>
               </Grid>

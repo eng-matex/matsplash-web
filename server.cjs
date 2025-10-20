@@ -651,11 +651,11 @@ async function setupDatabase() {
       });
       console.log('✅ Created factory_locations table');
       
-      // Insert default factory location (Lagos, Nigeria)
+      // Insert default factory location (Ibadan, Nigeria)
       await db('factory_locations').insert({
-        name: 'MatSplash Main Factory',
-        latitude: 6.5244,
-        longitude: 3.3792,
+        name: 'MatSplash Premium Water Factory',
+        latitude: 7.3964,
+        longitude: 3.9167,
         radius_meters: 200,
         is_active: true
       });
@@ -2620,6 +2620,10 @@ app.use('/api/employees', employeesRoutes(db));
 // Import and mount bonus routes
 const bonusRoutes = require('./server/routes/bonuses.cjs');
 app.use('/api/salary/bonuses', bonusRoutes(db));
+
+// Import and mount distributor routes
+const distributorRoutes = require('./server/routes/distributors.cjs');
+app.use('/api/distributors', distributorRoutes(db));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

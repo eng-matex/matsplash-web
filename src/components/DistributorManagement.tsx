@@ -265,102 +265,20 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Mock data for distributors
-      const mockDistributors: Distributor[] = [
-        {
-          id: 1,
-          name: 'AquaPlus Distributors Ltd',
-          contact_person: 'John Adebayo',
-          email: 'john@aquaplus.com',
-          phone: '+234-801-234-5678',
-          address: '123 Water Street, Victoria Island',
-          city: 'Lagos',
-          state: 'Lagos',
-          zip_code: '101241',
-          business_type: 'wholesale',
-          credit_limit: 500000,
-          current_balance: 125000,
-          payment_terms: 'credit_15',
-          status: 'active',
-          registration_date: '2024-01-15',
-          last_order_date: '2024-10-15',
-          total_orders: 45,
-          total_sales: 2500000,
-          notes: 'Reliable wholesale partner with good payment history',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-10-15T00:00:00Z'
-        },
-        {
-          id: 2,
-          name: 'Fresh Water Solutions',
-          contact_person: 'Mary Okonkwo',
-          email: 'mary@freshwater.com',
-          phone: '+234-802-345-6789',
-          address: '456 Market Road, Onitsha',
-          city: 'Onitsha',
-          state: 'Anambra',
-          zip_code: '430001',
-          business_type: 'retail',
-          credit_limit: 100000,
-          current_balance: 25000,
-          payment_terms: 'cash',
-          status: 'active',
-          registration_date: '2024-02-20',
-          last_order_date: '2024-10-14',
-          total_orders: 28,
-          total_sales: 850000,
-          notes: 'Small retail outlet with consistent orders',
-          created_at: '2024-02-20T00:00:00Z',
-          updated_at: '2024-10-14T00:00:00Z'
-        },
-        {
-          id: 3,
-          name: 'Pure Water Ventures',
-          contact_person: 'Ahmed Ibrahim',
-          email: 'ahmed@purewater.com',
-          phone: '+234-803-456-7890',
-          address: '789 Business District, Kano',
-          city: 'Kano',
-          state: 'Kano',
-          zip_code: '700001',
-          business_type: 'both',
-          credit_limit: 750000,
-          current_balance: 0,
-          payment_terms: 'credit_30',
-          status: 'active',
-          registration_date: '2024-03-10',
-          last_order_date: '2024-10-12',
-          total_orders: 62,
-          total_sales: 3200000,
-          notes: 'Large distributor covering northern region',
-          created_at: '2024-03-10T00:00:00Z',
-          updated_at: '2024-10-12T00:00:00Z'
-        },
-        {
-          id: 4,
-          name: 'Crystal Clear Distributors',
-          contact_person: 'Grace Okafor',
-          email: 'grace@crystalclear.com',
-          phone: '+234-804-567-8901',
-          address: '321 Industrial Area, Port Harcourt',
-          city: 'Port Harcourt',
-          state: 'Rivers',
-          zip_code: '500001',
-          business_type: 'wholesale',
-          credit_limit: 300000,
-          current_balance: 75000,
-          payment_terms: 'credit_7',
-          status: 'suspended',
-          registration_date: '2024-04-05',
-          last_order_date: '2024-09-20',
-          total_orders: 18,
-          total_sales: 650000,
-          notes: 'Suspended due to payment issues',
-          created_at: '2024-04-05T00:00:00Z',
-          updated_at: '2024-09-20T00:00:00Z'
-        }
-      ];
-
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch distributors from API
+      const distributorsResponse = await fetch('http://localhost:3001/api/distributors', { headers });
+      if (distributorsResponse.ok) {
+        const distributorsData = await distributorsResponse.json();
+        setDistributors(distributorsData.data || []);
+      } else {
+        console.error('Failed to fetch distributors');
+        setDistributors([]);
+      }
+      
+      // For now, use mock data for orders and payments until we create those APIs
       const mockOrders: DistributorOrder[] = [
         {
           id: 1,
@@ -447,11 +365,14 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
         }
       ];
 
-      setDistributors(mockDistributors);
       setDistributorOrders(mockOrders);
       setDistributorPayments(mockPayments);
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Fallback to empty arrays
+      setDistributors([]);
+      setDistributorOrders([]);
+      setDistributorPayments([]);
     } finally {
       setLoading(false);
     }
@@ -465,6 +386,24 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
     setDialogType(type);
     if (item && 'contact_person' in item) {
       setSelectedDistributor(item as Distributor);
+      // Populate form with selected distributor data for editing
+      if (type === 'edit-distributor') {
+        setNewDistributor({
+          name: (item as Distributor).name,
+          contact_person: (item as Distributor).contact_person,
+          email: (item as Distributor).email,
+          phone: (item as Distributor).phone,
+          address: (item as Distributor).address,
+          city: (item as Distributor).city,
+          state: (item as Distributor).state,
+          zip_code: (item as Distributor).zip_code,
+          business_type: (item as Distributor).business_type,
+          credit_limit: (item as Distributor).credit_limit,
+          payment_terms: (item as Distributor).payment_terms,
+          status: (item as Distributor).status,
+          notes: (item as Distributor).notes || ''
+        });
+      }
     } else if (item && 'order_number' in item) {
       setSelectedOrder(item as DistributorOrder);
     } else {
@@ -523,10 +462,39 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
 
     setLoading(true);
     try {
-      // Here you would make API call to save distributor
-      console.log('Saving distributor:', newDistributor);
-      fetchData();
-      handleCloseDialog();
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      const distributorData = {
+        ...newDistributor,
+        userId: user.id,
+        userEmail: user.email
+      };
+
+      const url = dialogType === 'new-distributor' 
+        ? 'http://localhost:3001/api/distributors'
+        : `http://localhost:3001/api/distributors/${selectedDistributor?.id}`;
+      
+      const method = dialogType === 'new-distributor' ? 'POST' : 'PUT';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(distributorData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Distributor saved successfully:', result);
+        fetchData(); // Refresh the data
+        handleCloseDialog();
+      } else {
+        const error = await response.json();
+        setFormErrors({ submit: error.message || 'Failed to save distributor. Please try again.' });
+      }
     } catch (error) {
       console.error('Error saving distributor:', error);
       setFormErrors({ submit: 'Failed to save distributor. Please try again.' });
@@ -641,7 +609,7 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ color: '#2c3e50', fontWeight: 600 }}>
-                    ₦{distributors.reduce((sum, d) => sum + d.total_sales, 0).toLocaleString()}
+                    ₦{distributors.reduce((sum, d) => sum + (d.total_sales || 0), 0).toLocaleString()}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Total Sales
@@ -796,22 +764,22 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        ₦{distributor.credit_limit.toLocaleString()}
+                        ₦{(distributor.credit_limit || 0).toLocaleString()}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: distributor.current_balance > distributor.credit_limit * 0.8 ? '#f44336' : '#2c3e50' 
+                          color: (distributor.current_balance || 0) > (distributor.credit_limit || 0) * 0.8 ? '#f44336' : '#2c3e50' 
                         }}
                       >
-                        ₦{distributor.current_balance.toLocaleString()}
+                        ₦{(distributor.current_balance || 0).toLocaleString()}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {distributor.total_orders}
+                        {distributor.total_orders || 0}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -1045,6 +1013,180 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
               {formErrors.submit && <Alert severity="error" sx={{ mt: 2 }}>{formErrors.submit}</Alert>}
             </Box>
           )}
+          {dialogType === 'edit-distributor' && selectedDistributor && (
+            <Box component="form" sx={{ mt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Distributor Name"
+                    name="name"
+                    fullWidth
+                    value={selectedDistributor.name}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Contact Person"
+                    name="contact_person"
+                    fullWidth
+                    value={selectedDistributor.contact_person}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.contact_person}
+                    helperText={formErrors.contact_person}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Email"
+                    name="email"
+                    type="email"
+                    fullWidth
+                    value={selectedDistributor.email}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.email}
+                    helperText={formErrors.email}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Phone"
+                    name="phone"
+                    fullWidth
+                    value={selectedDistributor.phone}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.phone}
+                    helperText={formErrors.phone}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Address"
+                    name="address"
+                    fullWidth
+                    value={selectedDistributor.address}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.address}
+                    helperText={formErrors.address}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="City"
+                    name="city"
+                    fullWidth
+                    value={selectedDistributor.city}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                    error={!!formErrors.city}
+                    helperText={formErrors.city}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth variant="outlined" error={!!formErrors.state}>
+                    <InputLabel>State</InputLabel>
+                    <Select
+                      name="state"
+                      value={selectedDistributor.state}
+                      onChange={handleDistributorChange}
+                      label="State"
+                    >
+                      {states.map((state) => (
+                        <MenuItem key={state} value={state}>{state}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="ZIP Code"
+                    name="zip_code"
+                    fullWidth
+                    value={selectedDistributor.zip_code}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Business Type</InputLabel>
+                    <Select
+                      name="business_type"
+                      value={selectedDistributor.business_type}
+                      onChange={handleDistributorChange}
+                      label="Business Type"
+                    >
+                      {businessTypes.map((type) => (
+                        <MenuItem key={type.value} value={type.value}>{type.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Payment Terms</InputLabel>
+                    <Select
+                      name="payment_terms"
+                      value={selectedDistributor.payment_terms}
+                      onChange={handleDistributorChange}
+                      label="Payment Terms"
+                    >
+                      {paymentTerms.map((term) => (
+                        <MenuItem key={term.value} value={term.value}>{term.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Credit Limit"
+                    name="credit_limit"
+                    type="number"
+                    fullWidth
+                    value={selectedDistributor.credit_limit}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      name="status"
+                      value={selectedDistributor.status}
+                      onChange={handleDistributorChange}
+                      label="Status"
+                    >
+                      <MenuItem value="pending">Pending</MenuItem>
+                      <MenuItem value="active">Active</MenuItem>
+                      <MenuItem value="inactive">Inactive</MenuItem>
+                      <MenuItem value="suspended">Suspended</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Notes"
+                    name="notes"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={selectedDistributor.notes || ''}
+                    onChange={handleDistributorChange}
+                    variant="outlined"
+                  />
+                </Grid>
+              </Grid>
+              {formErrors.submit && <Alert severity="error" sx={{ mt: 2 }}>{formErrors.submit}</Alert>}
+            </Box>
+          )}
           {dialogType === 'view-distributor' && selectedDistributor && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6" gutterBottom>Distributor Information</Typography>
@@ -1058,8 +1200,8 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
                 <Grid item xs={12} md={6}>
                   <Typography variant="body2"><strong>Business Type:</strong> {selectedDistributor.business_type}</Typography>
                   <Typography variant="body2"><strong>Status:</strong> {selectedDistributor.status}</Typography>
-                  <Typography variant="body2"><strong>Credit Limit:</strong> ₦{selectedDistributor.credit_limit.toLocaleString()}</Typography>
-                  <Typography variant="body2"><strong>Current Balance:</strong> ₦{selectedDistributor.current_balance.toLocaleString()}</Typography>
+                  <Typography variant="body2"><strong>Credit Limit:</strong> ₦{(selectedDistributor.credit_limit || 0).toLocaleString()}</Typography>
+                  <Typography variant="body2"><strong>Current Balance:</strong> ₦{(selectedDistributor.current_balance || 0).toLocaleString()}</Typography>
                 </Grid>
               </Grid>
             </Box>
@@ -1070,6 +1212,11 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
           {dialogType === 'new-distributor' && (
             <Button variant="contained" onClick={handleSubmitDistributor} disabled={loading}>
               {loading ? <CircularProgress size={24} /> : 'Add Distributor'}
+            </Button>
+          )}
+          {dialogType === 'edit-distributor' && (
+            <Button variant="contained" onClick={handleSubmitDistributor} disabled={loading}>
+              {loading ? <CircularProgress size={24} /> : 'Update Distributor'}
             </Button>
           )}
         </DialogActions>

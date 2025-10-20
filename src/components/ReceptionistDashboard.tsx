@@ -59,9 +59,10 @@ import InventoryManagement from './InventoryManagement';
 
 interface ReceptionistDashboardProps {
   selectedSection: string;
+  onPageChange?: (page: string) => void;
 }
 
-const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedSection }) => {
+const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedSection, onPageChange }) => {
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
   const [generalSales, setGeneralSales] = useState<any[]>([]);
@@ -578,7 +579,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                 <Button
                   variant="contained"
                   startIcon={<ShoppingCart />}
-                  onClick={() => handleOpenDialog('create-general-sales')}
+                  onClick={() => onPageChange?.('general-sales')}
                   sx={{ bgcolor: '#13bbc6' }}
                   className="dashboard-button"
                 >
@@ -587,7 +588,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                 <Button
                   variant="contained"
                   startIcon={<Store />}
-                  onClick={() => handleOpenDialog('create-distributor-order')}
+                  onClick={() => onPageChange?.('distributor-orders')}
                   sx={{ bgcolor: '#FFD700', color: '#000' }}
                   className="dashboard-button"
                 >
@@ -596,7 +597,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                 <Button
                   variant="contained"
                   startIcon={<DeliveryDining />}
-                  onClick={() => handleOpenDialog('create-driver-dispatch')}
+                  onClick={() => onPageChange?.('driver-dispatches')}
                   sx={{ bgcolor: '#4caf50' }}
                   className="dashboard-button"
                 >
@@ -605,7 +606,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
                 <Button
                   variant="contained"
                   startIcon={<LocalShipping />}
-                  onClick={() => handleOpenDialog('create-store-dispatch')}
+                  onClick={() => onPageChange?.('store-dispatch')}
                   sx={{ bgcolor: '#9c27b0' }}
                   className="dashboard-button"
                 >

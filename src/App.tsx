@@ -79,13 +79,34 @@ const App: React.FC = () => {
           const { getEnhancedDeviceInfo } = await import('./utils/networkUtils');
           const deviceInfo = await getEnhancedDeviceInfo();
 
-      // Get location (mock for development)
-      const location = {
-        lat: 6.5244, // Lagos, Nigeria coordinates (factory location)
-        lng: 3.3792,
-        address: 'Mock Factory Location (Development Mode)',
-        accuracy: 10
-      };
+      // Get actual user location
+      let location;
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          });
+        });
+        
+        location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          address: `Lat: ${position.coords.latitude.toFixed(6)}, Lng: ${position.coords.longitude.toFixed(6)}`,
+          accuracy: position.coords.accuracy
+        };
+        console.log('Real location detected:', location);
+      } catch (geoError) {
+        console.log('Geolocation failed, using fallback location:', geoError);
+        // Fallback to a location that should be denied (Lagos)
+        location = {
+          lat: 6.5244, // Lagos, Nigeria (should be denied)
+          lng: 3.3792,
+          address: 'Lagos, Nigeria (Fallback - Should be denied)',
+          accuracy: 100
+        };
+      }
 
       const response = await axios.post('http://localhost:3001/api/auth/login', {
         ...loginData,
@@ -141,7 +162,7 @@ const App: React.FC = () => {
           case 'manager':
             return <ManagerDashboard selectedSection={currentPage} />;
           case 'receptionist':
-            return <ReceptionistDashboard selectedSection={currentPage} />;
+            return <ReceptionistDashboard selectedSection={currentPage} onPageChange={setCurrentPage} />;
           case 'storekeeper':
             return <StoreKeeperDashboard selectedSection={currentPage} />;
           case 'driver':

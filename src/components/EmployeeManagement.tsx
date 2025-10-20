@@ -72,6 +72,7 @@ import {
   Assessment,
   Lock,
   LockOpen,
+  Login,
   PersonAdd,
   Group,
   TrendingUp,
@@ -260,118 +261,29 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Mock data for employees
-      const mockEmployees: Employee[] = [
-        {
-          id: 1,
-          name: 'System Administrator',
-          email: 'admin@matsplash.com',
-          phone: '08012345678',
-          role: 'admin',
-          department: 'Administration',
-          status: 'active',
-          hire_date: '2024-01-01',
-          salary: 150000,
-          address: 'Lagos, Nigeria',
-          emergency_contact: 'Emergency Contact',
-          emergency_phone: '08087654321',
-          is_first_login: false,
-          last_login: new Date().toISOString(),
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: new Date().toISOString(),
-          created_by: 'System',
-          notes: 'System administrator account',
-          permissions: ['all']
-        },
-        {
-          id: 2,
-          name: 'Director',
-          email: 'director@matsplash.com',
-          phone: '08023456789',
-          role: 'director',
-          department: 'Administration',
-          status: 'active',
-          hire_date: '2024-01-15',
-          salary: 200000,
-          address: 'Lagos, Nigeria',
-          emergency_contact: 'Emergency Contact',
-          emergency_phone: '08076543210',
-          is_first_login: false,
-          last_login: new Date(Date.now() - 3600000).toISOString(),
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: new Date().toISOString(),
-          created_by: 'System',
-          notes: 'Executive director',
-          permissions: ['view_all', 'manage_employees', 'view_reports', 'manage_pricing']
-        },
-        {
-          id: 3,
-          name: 'Manager',
-          email: 'manager@matsplash.com',
-          phone: '08034567890',
-          role: 'manager',
-          department: 'Operations',
-          status: 'active',
-          hire_date: '2024-02-01',
-          salary: 120000,
-          address: 'Lagos, Nigeria',
-          emergency_contact: 'Emergency Contact',
-          emergency_phone: '08065432109',
-          is_first_login: false,
-          last_login: new Date(Date.now() - 7200000).toISOString(),
-          created_at: '2024-02-01T00:00:00Z',
-          updated_at: new Date().toISOString(),
-          created_by: 'Director',
-          notes: 'Operations manager',
-          permissions: ['view_all', 'manage_employees', 'view_reports', 'manage_attendance']
-        },
-        {
-          id: 4,
-          name: 'Receptionist',
-          email: 'receptionist@matsplash.com',
-          phone: '08045678901',
-          role: 'receptionist',
-          department: 'Customer Service',
-          status: 'active',
-          hire_date: '2024-02-15',
-          salary: 80000,
-          address: 'Lagos, Nigeria',
-          emergency_contact: 'Emergency Contact',
-          emergency_phone: '08054321098',
-          is_first_login: false,
-          last_login: new Date(Date.now() - 1800000).toISOString(),
-          created_at: '2024-02-15T00:00:00Z',
-          updated_at: new Date().toISOString(),
-          created_by: 'Manager',
-          notes: 'Front desk receptionist',
-          permissions: ['manage_orders', 'view_customers', 'process_payments']
-        },
-        {
-          id: 5,
-          name: 'Storekeeper',
-          email: 'storekeeper@matsplash.com',
-          phone: '08056789012',
-          role: 'storekeeper',
-          department: 'Operations',
-          status: 'active',
-          hire_date: '2024-03-01',
-          salary: 90000,
-          address: 'Lagos, Nigeria',
-          emergency_contact: 'Emergency Contact',
-          emergency_phone: '08043210987',
-          is_first_login: false,
-          last_login: new Date(Date.now() - 5400000).toISOString(),
-          created_at: '2024-03-01T00:00:00Z',
-          updated_at: new Date().toISOString(),
-          created_by: 'Manager',
-          notes: 'Warehouse storekeeper',
-          permissions: ['manage_inventory', 'view_orders', 'manage_stock']
-        }
-      ];
-
-      setEmployees(mockEmployees);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Add userRole to query params for role-based filtering
+      const params = new URLSearchParams();
+      if (userRole) {
+        params.append('userRole', userRole);
+      }
+      
+      const response = await fetch(`http://localhost:3001/api/employees?${params.toString()}`, { headers });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.data || []);
+      } else {
+        console.error('Failed to fetch employees');
+        // Fallback to empty array
+        setEmployees([]);
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching employees:', error);
+      // Fallback to empty array
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
@@ -535,6 +447,84 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     } catch (error) {
       console.error('Error deleting employee:', error);
       alert('Failed to delete employee. Please try again.');
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    if (!selectedEmployee) return;
+
+    // Check if current user has permission to login as this employee
+    if (userRole === 'Manager' && ['Admin', 'Director', 'Sales'].includes(selectedEmployee.role)) {
+      alert('Manager cannot login as Admin, Director, or Sales employees.');
+      return;
+    }
+
+    if (!['Admin', 'Director'].includes(userRole || '')) {
+      alert('Only Admin and Director can perform admin login.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}/admin-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          adminUserId: 1, // This should come from auth context
+          adminUserRole: userRole,
+          adminUserEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Store the new token and user info
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        alert(`Successfully logged in as ${selectedEmployee.name}`);
+        // Redirect to dashboard or refresh page
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(`Failed to login as employee: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error in admin login:', error);
+      alert('Failed to perform admin login. Please try again.');
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/employees/admin-logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          adminUserId: 1, // This should come from auth context
+          adminUserEmail: 'admin@matsplash.com'
+        })
+      });
+
+      if (response.ok) {
+        alert('Admin override session ended. Please login again.');
+        // Clear tokens and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      } else {
+        const error = await response.json();
+        alert(`Failed to logout: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error in admin logout:', error);
+      alert('Failed to perform admin logout. Please try again.');
     }
   };
 
@@ -1053,6 +1043,23 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                             </IconButton>
                           </span>
                         </Tooltip>
+                        {/* Admin Login/Logout buttons - only show for Admin/Director users */}
+                        {['Admin', 'Director'].includes(userRole || '') && (
+                          <>
+                            <Tooltip title="Login as this employee">
+                              <IconButton 
+                                size="small" 
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  handleAdminLogin();
+                                }}
+                                sx={{ color: 'primary.main' }}
+                              >
+                                <Login />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

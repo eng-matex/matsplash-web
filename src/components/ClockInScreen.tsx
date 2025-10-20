@@ -75,9 +75,9 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     // In development mode, provide a mock location for testing
     if (process.env.NODE_ENV === 'development' || !navigator.geolocation) {
       const mockLocation = {
-        lat: 6.5244, // Lagos, Nigeria coordinates (factory location)
-        lng: 3.3792,
-        address: 'Mock Factory Location (Development Mode)',
+        lat: 7.3964, // Ibadan, Nigeria coordinates (MatSplash Premium Water Factory)
+        lng: 3.9167,
+        address: 'MatSplash Premium Water Factory (F22W+QG Ibadan, Nigeria)',
         accuracy: 10
       };
       setCurrentLocation(mockLocation);
@@ -113,9 +113,9 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
         (error) => {
           // In development, provide a mock location if GPS fails
           const mockLocation = {
-            lat: 6.5244, // Lagos, Nigeria coordinates
-            lng: 3.3792,
-            address: 'Mock Location (GPS Failed)',
+            lat: 7.3964, // Ibadan, Nigeria coordinates (MatSplash Premium Water Factory)
+            lng: 3.9167,
+            address: 'MatSplash Premium Water Factory (GPS Failed)',
             accuracy: 100
           };
           setCurrentLocation(mockLocation);
