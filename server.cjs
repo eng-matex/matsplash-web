@@ -934,7 +934,16 @@ async function setupDatabase() {
           
           console.log('Device fingerprint from request:', deviceId);
           console.log('Device fingerprint from info:', deviceInfoFingerprint);
-          console.log('Final device ID:', finalDeviceId);
+        console.log('Final device ID:', finalDeviceId);
+
+        // Block inactive devices regardless of role
+        const inactiveDevice = await isDeviceInactive(finalDeviceId, deviceInfo);
+        if (inactiveDevice) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: This device is inactive. Please contact your administrator.'
+          });
+        }
           
           // Check if user needs device whitelist (Manager, Sales, Admin)
           const needsWhitelist = await needsDeviceWhitelist(user.id);
@@ -1329,6 +1338,40 @@ app.get('/api/dashboard/stats', async (req, res) => {
       } catch (error) {
         console.error('Error getting device MAC addresses:', error);
         return [];
+      }
+    }
+
+    // Function to check if device is explicitly inactive (by fingerprint or MAC)
+    async function isDeviceInactive(deviceId, deviceInfo = null) {
+      try {
+        // Check by device fingerprint
+        const inactiveByFingerprint = await db('authorized_devices')
+          .where('device_fingerprint', deviceId)
+          .where('is_active', false)
+          .first();
+        if (inactiveByFingerprint) return true;
+
+        // Check by MAC addresses when available
+        if (deviceInfo && deviceInfo.networkAdapters && deviceInfo.networkAdapters.length > 0) {
+          const currentMacs = deviceInfo.networkAdapters
+            .map(adapter => adapter.macAddress ? adapter.macAddress.toUpperCase().replace(/[-:]/g, '') : null)
+            .filter(Boolean);
+
+          if (currentMacs.length > 0) {
+            const matches = await db('device_mac_addresses')
+              .join('authorized_devices', 'device_mac_addresses.device_id', 'authorized_devices.id')
+              .whereIn(db.raw("upper(replace(device_mac_addresses.mac_address, '-', ''))"), currentMacs)
+              .where('device_mac_addresses.is_active', true)
+              .where('authorized_devices.is_active', false)
+              .first();
+            if (matches) return true;
+          }
+        }
+
+        return false;
+      } catch (error) {
+        console.error('Error checking inactive device state:', error);
+        return false;
       }
     }
 
@@ -1777,6 +1820,16 @@ app.get('/api/attendance/status/:employeeId', async (req, res) => {
           return res.status(401).json({
             success: false,
             message: 'Invalid PIN'
+          });
+        }
+
+        // Block inactive devices for clock-in
+        const clockInDeviceFingerprint = getDeviceFingerprintFromInfo(deviceInfo);
+        const isInactiveForClockIn = await isDeviceInactive(clockInDeviceFingerprint, deviceInfo);
+        if (isInactiveForClockIn) {
+          return res.status(403).json({
+            success: false,
+            message: 'Clock-in denied: This device is inactive. Please contact your administrator.'
           });
         }
 
