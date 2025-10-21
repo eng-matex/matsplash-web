@@ -81,6 +81,17 @@ interface Camera {
   recordingPath?: string;
   motionDetection: boolean;
   nightVision: boolean;
+  credential_set_id?: number;
+}
+
+interface CameraCredentialSet {
+  id: number;
+  name: string;
+  username: string;
+  password: string;
+  default_port: number;
+  description?: string;
+  created_at: string;
   ptz: boolean;
   audio: boolean;
   location?: string;
@@ -111,96 +122,153 @@ function TabPanel(props: TabPanelProps) {
 
 const CameraManager: React.FC = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [credentialSets, setCredentialSets] = useState<CameraCredentialSet[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCredentialDialog, setShowCredentialDialog] = useState(false);
+  const [credentialForm, setCredentialForm] = useState({
+    name: '',
+    username: '',
+    password: '',
+    default_port: 80,
+    description: ''
+  });
   const [tabValue, setTabValue] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'error'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock camera data
+  // Fetch real camera data and credential sets
   useEffect(() => {
-    const mockCameras: Camera[] = [
-      {
-        id: '1',
-        name: 'Front Door Camera',
-        ip: '192.168.1.100',
-        port: 554,
-        protocol: 'RTSP',
-        username: 'admin',
-        password: 'password',
-        status: 'online',
-        lastSeen: new Date().toISOString(),
-        resolution: '1080p',
-        brand: 'Hikvision',
-        model: 'DS-2CD2143G0-I',
-        capabilities: ['PTZ', 'Night Vision', 'Motion Detection', 'Audio'],
-        streamUrl: 'rtsp://192.168.1.100:554/stream1',
-        thumbnailUrl: '/api/cameras/1/thumbnail',
-        isRecording: true,
-        recordingPath: '/recordings/camera1/',
-        motionDetection: true,
-        nightVision: true,
-        ptz: true,
-        audio: true,
-        location: 'Front Entrance',
-        group: 'Security',
-        tags: ['entrance', 'security', 'main']
-      },
-      {
-        id: '2',
-        name: 'Backyard Camera',
-        ip: '192.168.1.101',
-        port: 8080,
-        protocol: 'HTTP',
-        username: 'admin',
-        password: 'password',
-        status: 'online',
-        lastSeen: new Date().toISOString(),
-        resolution: '4K',
-        brand: 'Dahua',
-        model: 'IPC-HFW4431R-Z',
-        capabilities: ['Night Vision', 'Motion Detection', 'Audio'],
-        streamUrl: 'http://192.168.1.101:8080/video.mjpg',
-        thumbnailUrl: '/api/cameras/2/thumbnail',
-        isRecording: false,
-        motionDetection: true,
-        nightVision: true,
-        ptz: false,
-        audio: true,
-        location: 'Backyard',
-        group: 'Security',
-        tags: ['backyard', 'security']
-      },
-      {
-        id: '3',
-        name: 'Parking Lot Camera',
-        ip: '192.168.1.102',
-        port: 554,
-        protocol: 'RTSP',
-        username: 'admin',
-        password: 'password',
-        status: 'offline',
-        lastSeen: new Date(Date.now() - 3600000).toISOString(),
-        resolution: '1080p',
-        brand: 'Axis',
-        model: 'M3045-V',
-        capabilities: ['PTZ', 'Night Vision', 'Motion Detection'],
-        streamUrl: 'rtsp://192.168.1.102:554/stream1',
-        thumbnailUrl: '/api/cameras/3/thumbnail',
-        isRecording: false,
-        motionDetection: true,
-        nightVision: true,
-        ptz: true,
-        audio: false,
-        location: 'Parking Lot',
-        group: 'Security',
-        tags: ['parking', 'security']
-      }
-    ];
-    setCameras(mockCameras);
+    fetchCameras();
+    fetchCredentialSets();
   }, []);
+
+  const fetchCameras = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/cameras', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success && data.cameras) {
+        // Transform the API data to match the Camera interface
+        const transformedCameras: Camera[] = data.cameras.map((cam: any) => ({
+          id: cam.id.toString(),
+          name: cam.name,
+          ip: cam.ip_address,
+          port: cam.port || 80,
+          protocol: cam.stream_url?.includes('rtsp') ? 'RTSP' : 'HTTP',
+          username: cam.username || '',
+          password: cam.password ? '***' : '',
+          status: cam.status === 'online' ? 'online' : cam.status === 'recording' ? 'online' : 'offline',
+          lastSeen: cam.updated_at || new Date().toISOString(),
+          resolution: cam.resolution || '1080p',
+          brand: cam.brand || 'Unknown',
+          model: cam.model || 'Unknown',
+          capabilities: cam.capabilities || ['Motion Detection'],
+          streamUrl: cam.stream_url,
+          thumbnailUrl: `/api/surveillance/cameras/${cam.id}/thumbnail`,
+          isRecording: cam.status === 'recording',
+          recordingPath: `/recordings/camera${cam.id}/`,
+          motionDetection: true,
+          nightVision: true,
+          ptz: cam.ptz || false,
+          audio: cam.audio || false,
+          location: cam.location || 'Unknown',
+          group: cam.group || 'Default',
+          tags: cam.tags || []
+        }));
+        setCameras(transformedCameras);
+      }
+    } catch (error) {
+      console.error('Failed to fetch cameras:', error);
+      setCameras([]);
+    }
+  };
+
+  const deleteCamera = async (cameraId: string) => {
+    if (!window.confirm('Are you sure you want to delete this camera?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${cameraId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Camera deleted successfully!');
+        fetchCameras(); // Refresh the camera list
+      } else {
+        alert('Failed to delete camera: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting camera:', error);
+      alert('Failed to delete camera: ' + error.message);
+    }
+  };
+
+  const fetchCredentialSets = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/credentials', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success && data.credentials) {
+        setCredentialSets(data.credentials);
+      }
+    } catch (error) {
+      console.error('Error fetching credential sets:', error);
+    }
+  };
+
+  const saveCredentialSet = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/credentials', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentialForm)
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Credential set saved successfully!');
+        setShowCredentialDialog(false);
+        setCredentialForm({
+          name: '',
+          username: '',
+          password: '',
+          default_port: 80,
+          description: ''
+        });
+        fetchCredentialSets(); // Refresh the list
+      } else {
+        alert('Failed to save credential set: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error saving credential set:', error);
+      alert('Failed to save credential set: ' + error.message);
+    }
+  };
 
   const filteredCameras = cameras.filter(camera => {
     const matchesStatus = filterStatus === 'all' || camera.status === filterStatus;
@@ -245,7 +313,7 @@ const CameraManager: React.FC = () => {
   };
 
   const handleDeleteCamera = (camera: Camera) => {
-    setCameras(prev => prev.filter(c => c.id !== camera.id));
+    deleteCamera(camera.id);
     handleMenuClose();
   };
 
@@ -268,10 +336,21 @@ const CameraManager: React.FC = () => {
         Camera Management
       </Typography>
 
-      {/* Controls */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2} alignItems="center">
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+          <Tab label="Cameras" />
+          <Tab label="Credential Sets" />
+        </Tabs>
+      </Box>
+
+      {/* Cameras Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <Box>
+          {/* Controls */}
+          <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={3}>
               <TextField
                 label="Search cameras..."
@@ -635,6 +714,126 @@ const CameraManager: React.FC = () => {
           <Button variant="contained">Save Changes</Button>
         </DialogActions>
       </Dialog>
+        </Box>
+      </TabPanel>
+
+      {/* Credential Sets Tab */}
+      <TabPanel value={tabValue} index={1}>
+        <Box>
+          <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Camera Credential Sets</Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setShowCredentialDialog(true)}
+              >
+                Add Credential Set
+              </Button>
+            </Box>
+            
+            <Grid container spacing={2}>
+              {credentialSets.map((credSet) => (
+                <Grid item xs={12} md={6} lg={4} key={credSet.id}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {credSet.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Username: {credSet.username}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Default Port: {credSet.default_port}
+                      </Typography>
+                      {credSet.description && (
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          {credSet.description}
+                        </Typography>
+                      )}
+                      <Typography variant="caption" color="text.secondary">
+                        Created: {new Date(credSet.created_at).toLocaleDateString()}
+                      </Typography>
+                      <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                        <Button size="small" startIcon={<EditIcon />}>
+                          Edit
+                        </Button>
+                        <Button size="small" color="error" startIcon={<DeleteIcon />}>
+                          Delete
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Add Credential Set Dialog */}
+        <Dialog open={showCredentialDialog} onClose={() => setShowCredentialDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Add Credential Set</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                label="Credential Set Name"
+                fullWidth
+                required
+                value={credentialForm.name}
+                onChange={(e) => setCredentialForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Default Cameras, Factory Cameras"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Username"
+                fullWidth
+                required
+                value={credentialForm.username}
+                onChange={(e) => setCredentialForm(prev => ({ ...prev, username: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Password"
+                type="password"
+                fullWidth
+                required
+                value={credentialForm.password}
+                onChange={(e) => setCredentialForm(prev => ({ ...prev, password: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Default Port"
+                type="number"
+                fullWidth
+                value={credentialForm.default_port}
+                onChange={(e) => setCredentialForm(prev => ({ ...prev, default_port: parseInt(e.target.value) || 80 }))}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Description"
+                fullWidth
+                multiline
+                rows={2}
+                value={credentialForm.description}
+                onChange={(e) => setCredentialForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Optional description for this credential set"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCredentialDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={saveCredentialSet}>Save Credential Set</Button>
+        </DialogActions>
+      </Dialog>
+        </Box>
+      </TabPanel>
     </Box>
   );
 };

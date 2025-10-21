@@ -33,6 +33,7 @@ import {
   CardContent,
   Alert,
   AlertTitle,
+  CircularProgress,
 } from '@mui/material';
 import {
   Warning,
@@ -82,103 +83,85 @@ interface AlertRule {
 
 export default function AlertsNotifications() {
   const [tabValue, setTabValue] = useState(0);
-  const [alerts, setAlerts] = useState<AlertItem[]>([
-    {
-      id: 1,
-      type: 'critical',
-      title: 'Unauthorized Access Detected',
-      message: 'Person detected in restricted area after hours',
-      timestamp: '2 mins ago',
-      cameraId: 5,
-      cameraName: 'Server Room',
-      read: false,
-      icon: <Security />,
-      category: 'Security',
-    },
-    {
-      id: 2,
-      type: 'warning',
-      title: 'Motion Detected',
-      message: 'Unusual activity detected in parking lot',
-      timestamp: '15 mins ago',
-      cameraId: 2,
-      cameraName: 'Parking Lot',
-      read: false,
-      icon: <MotionPhotosAuto />,
-      category: 'Motion',
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'Face Recognition Alert',
-      message: 'Unknown person detected at main entrance',
-      timestamp: '1 hour ago',
-      cameraId: 1,
-      cameraName: 'Main Entrance',
-      read: true,
-      icon: <Face />,
-      category: 'Recognition',
-    },
-    {
-      id: 4,
-      type: 'warning',
-      title: 'Vehicle Detected',
-      message: 'Unauthorized vehicle in loading bay',
-      timestamp: '2 hours ago',
-      cameraId: 3,
-      cameraName: 'Loading Bay',
-      read: true,
-      icon: <DirectionsCar />,
-      category: 'Vehicle',
-    },
-    {
-      id: 5,
-      type: 'success',
-      title: 'Camera Online',
-      message: 'Camera #7 connection restored',
-      timestamp: '3 hours ago',
-      cameraId: 7,
-      cameraName: 'Warehouse',
-      read: true,
-      icon: <Videocam />,
-      category: 'System',
-    },
-  ]);
-
-  const [alertRules, setAlertRules] = useState<AlertRule[]>([
-    {
-      id: 1,
-      name: 'After Hours Access',
-      enabled: true,
-      type: 'Person Detection',
-      conditions: 'Time: 6 PM - 6 AM, Zone: Restricted',
-      actions: ['Push Notification', 'Email', 'Sound Alert'],
-    },
-    {
-      id: 2,
-      name: 'Unknown Face',
-      enabled: true,
-      type: 'Face Recognition',
-      conditions: 'Confidence < 80%, Zone: All',
-      actions: ['Push Notification', 'Record'],
-    },
-    {
-      id: 3,
-      name: 'Vehicle Alert',
-      enabled: false,
-      type: 'License Plate',
-      conditions: 'Unauthorized plate, Zone: All',
-      actions: ['Email', 'SMS', 'Record'],
-    },
-  ]);
-
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const unreadCount = alerts.filter(a => !a.read).length;
+  useEffect(() => {
+    fetchAlertsData();
+  }, []);
+
+  const fetchAlertsData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Fetch alerts
+      const alertsResponse = await fetch('http://localhost:3002/api/surveillance/alerts', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const alertsData = await alertsResponse.json();
+      
+      if (alertsData.success) {
+        const alertsWithIcons = alertsData.alerts.map((alert: any) => ({
+          ...alert,
+          icon: getAlertIcon(alert.type, alert.category),
+          timestamp: formatTimestamp(alert.timestamp)
+        }));
+        setAlerts(alertsWithIcons);
+      }
+
+      // Fetch alert rules
+      const rulesResponse = await fetch('http://localhost:3002/api/surveillance/alerts/rules', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const rulesData = await rulesResponse.json();
+      
+      if (rulesData.success) {
+        setAlertRules(rulesData.rules);
+      }
+    } catch (error) {
+      console.error('Failed to fetch alerts data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAlertIcon = (type: string, category: string) => {
+    switch (category) {
+      case 'Security': return <Security />;
+      case 'Motion': return <MotionPhotosAuto />;
+      case 'Recognition': return <Face />;
+      case 'Vehicle': return <DirectionsCar />;
+      case 'System': return <Videocam />;
+      default: return <Warning />;
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now.getTime() - time.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
+  };
 
   const handleAlertClick = (alert: AlertItem) => {
     setSelectedAlert(alert);
@@ -188,20 +171,46 @@ export default function AlertsNotifications() {
     }
   };
 
-  const markAsRead = (alertId: number) => {
-    setAlerts(prev =>
-      prev.map(alert =>
-        alert.id === alertId ? { ...alert, read: true } : alert
-      )
-    );
+  const markAsRead = async (alertId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:3002/api/surveillance/alerts/${alertId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      setAlerts(prev =>
+        prev.map(alert =>
+          alert.id === alertId ? { ...alert, read: true } : alert
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark alert as read:', error);
+    }
   };
 
   const markAllAsRead = () => {
     setAlerts(prev => prev.map(alert => ({ ...alert, read: true })));
   };
 
-  const deleteAlert = (alertId: number) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+  const deleteAlert = async (alertId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:3002/api/surveillance/alerts/${alertId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      setAlerts(prev => prev.filter(alert => alert.id !== alertId));
+    } catch (error) {
+      console.error('Failed to delete alert:', error);
+    }
   };
 
   const toggleRule = (ruleId: number) => {
@@ -232,6 +241,16 @@ export default function AlertsNotifications() {
     : filter === 'unread'
     ? alerts.filter(a => !a.read)
     : alerts.filter(a => a.type === filter);
+
+  const unreadCount = alerts.filter(a => !a.read).length;
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -636,4 +655,3 @@ export default function AlertsNotifications() {
     </Box>
   );
 }
-

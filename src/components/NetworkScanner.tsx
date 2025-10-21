@@ -77,6 +77,7 @@ interface NetworkRange {
 const NetworkScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatus, setScanStatus] = useState('');
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [scanRange, setScanRange] = useState<NetworkRange>({
@@ -86,6 +87,9 @@ const NetworkScanner: React.FC = () => {
   });
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<NetworkDevice | null>(null);
+  const [credentialSets, setCredentialSets] = useState<any[]>([]);
+  const [selectedCredentialSet, setSelectedCredentialSet] = useState<number | null>(null);
+  const [existingCameras, setExistingCameras] = useState<any[]>([]);
   const [cameraCredentials, setCameraCredentials] = useState({
     username: '',
     password: '',
@@ -97,22 +101,89 @@ const NetworkScanner: React.FC = () => {
   const cameraPorts = [80, 443, 554, 8080, 8554, 1935, 8000, 8001, 8002];
   const cameraServices = ['rtsp', 'http', 'https', 'onvif', 'mjpeg'];
 
-  // Real network scanning
+  // Fetch credential sets on component mount
+  useEffect(() => {
+    fetchCredentialSets();
+    fetchExistingCameras();
+  }, []);
+
+  // Fetch existing cameras to filter them out from scan results
+  const fetchExistingCameras = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/cameras', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success && data.cameras) {
+        setExistingCameras(data.cameras);
+      }
+    } catch (error) {
+      console.error('Error fetching existing cameras:', error);
+    }
+  };
+
+  const fetchCredentialSets = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/credentials', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success && data.credentials) {
+        setCredentialSets(data.credentials);
+      }
+    } catch (error) {
+      console.error('Error fetching credential sets:', error);
+    }
+  };
+
+  // Real network scanning with progress simulation
   const scanNetwork = async () => {
     setIsScanning(true);
     setScanProgress(0);
+    setScanStatus('Initializing scan...');
     setDevices([]);
 
+    // Simulate progress updates (slower)
+    const progressInterval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev < 90) {
+          const newProgress = prev + Math.random() * 5; // Reduced from 15 to 5
+          if (newProgress < 30) {
+            setScanStatus('Scanning network range...');
+          } else if (newProgress < 60) {
+            setScanStatus('Checking device ports...');
+          } else if (newProgress < 90) {
+            setScanStatus('Identifying device types...');
+          }
+          return Math.min(newProgress, 90);
+        }
+        return prev;
+      });
+    }, 500); // Increased from 200ms to 500ms
+
     try {
-      const response = await fetch('/api/surveillance/scan-network', {
+      const token = localStorage.getItem('token');
+      setScanStatus('Connecting to scan service...');
+      
+      const response = await fetch('http://localhost:3002/api/network/scan-network', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           startIP: scanRange.start,
           endIP: scanRange.end,
-          subnet: scanRange.subnet
+          subnet: scanRange.subnet,
+          networkRange: `${scanRange.start}-${scanRange.end}`
         })
       });
 
@@ -121,88 +192,88 @@ const NetworkScanner: React.FC = () => {
       }
 
       const data = await response.json();
-      setDevices(data.devices || []);
+      if (data.success) {
+        const discoveredDevices = data.devices || [];
+        
+        // Filter out devices that are already added as cameras
+        const existingCameraIPs = existingCameras.map(camera => camera.ip_address);
+        const filteredDevices = discoveredDevices.filter(device => 
+          !existingCameraIPs.includes(device.ip)
+        );
+        
+        setDevices(filteredDevices);
+        setScanProgress(100);
+        setScanStatus('Scan completed successfully!');
+        
+        // Show scan summary
+        const cameraCount = filteredDevices.filter(d => d.deviceType === 'camera').length;
+        const filteredCount = discoveredDevices.length - filteredDevices.length;
+        console.log(`🔍 Network scan complete: Found ${discoveredDevices.length} devices, ${cameraCount} new cameras (${filteredCount} already added)`);
+      } else {
+        throw new Error(data.message || 'Network scan failed');
+      }
     } catch (error) {
       console.error('Network scan error:', error);
-      // Fallback to mock data for demonstration
-      const mockDevices = await generateMockDevices();
-      setDevices(mockDevices);
+      // Show error instead of fallback to mock data
+      alert('Network scan failed: ' + error.message);
+      setDevices([]);
+      setScanStatus('Scan failed');
     }
 
+    clearInterval(progressInterval);
     setIsScanning(false);
-    setScanProgress(100);
+    
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      setScanStatus('');
+    }, 3000);
   };
 
-  // Generate mock devices for demonstration
-  const generateMockDevices = async (): Promise<NetworkDevice[]> => {
-    const startIP = scanRange.start.split('.').map(Number);
-    const endIP = scanRange.end.split('.').map(Number);
-    const totalIPs = (endIP[3] - startIP[3]) + 1;
-    const devices: NetworkDevice[] = [];
+  // Remove mock data functions - now using real API calls
 
-    for (let i = 0; i < totalIPs; i++) {
-      const currentIP = `${startIP[0]}.${startIP[1]}.${startIP[2]}.${startIP[3] + i}`;
-      setScanProgress((i / totalIPs) * 100);
+  // Add camera from network scan
+  const addCameraFromScan = async (device: NetworkDevice) => {
+    if (device.deviceType !== 'camera') {
+      alert('This device is not detected as a camera');
+      return;
+    }
 
-      // Simulate device discovery with more realistic data
-      const device = await discoverDevice(currentIP);
-      if (device) {
-        devices.push(device);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/cameras', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: device.hostname || `Camera-${device.ip.split('.').pop()}`,
+          ip_address: device.ip,
+          port: cameraCredentials.port,
+          username: cameraCredentials.username,
+          password: cameraCredentials.password,
+          stream_url: `rtsp://${cameraCredentials.username}:${cameraCredentials.password}@${device.ip}:${cameraCredentials.port}/live`,
+          location: 'Network Scanned',
+          status: 'offline',
+          credential_set_id: selectedCredentialSet
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Camera added successfully!');
+        setShowAddDialog(false);
+        setSelectedDevice(null);
+        // Remove the added camera from the devices list
+        setDevices(prev => prev.filter(d => d.ip !== device.ip));
+        // Refresh the devices list to update status
+        scanNetwork();
+      } else {
+        alert('Failed to add camera: ' + data.message);
       }
-
-      await new Promise(resolve => setTimeout(resolve, 50));
+    } catch (error) {
+      alert('Failed to add camera: ' + error.message);
     }
-
-    return devices;
-  };
-
-  // Simulate device discovery
-  const discoverDevice = async (ip: string): Promise<NetworkDevice | null> => {
-    // Simulate network response
-    const isOnline = Math.random() > 0.7; // 30% chance device is online
-    if (!isOnline) return null;
-
-    const deviceTypes: NetworkDevice['deviceType'][] = ['camera', 'router', 'computer', 'phone', 'unknown'];
-    const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
-
-    const ports = cameraPorts.filter(() => Math.random() > 0.8);
-    const services = cameraServices.filter(() => Math.random() > 0.7);
-
-    const device: NetworkDevice = {
-      ip,
-      hostname: `device-${ip.split('.').pop()}`,
-      mac: generateMAC(),
-      vendor: getVendorByMAC(generateMAC()),
-      deviceType,
-      ports,
-      services,
-      isOnline: true,
-      responseTime: Math.floor(Math.random() * 100) + 10
-    };
-
-    // Add camera-specific info if it's a camera
-    if (deviceType === 'camera') {
-      device.cameraInfo = {
-        brand: ['Hikvision', 'Dahua', 'Axis', 'Bosch', 'Sony', 'Panasonic'][Math.floor(Math.random() * 6)],
-        model: `Model-${Math.floor(Math.random() * 1000)}`,
-        firmware: `v${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 10)}`,
-        resolution: ['1080p', '4K', '720p', '5MP'][Math.floor(Math.random() * 4)],
-        capabilities: ['PTZ', 'Night Vision', 'Motion Detection', 'Audio'][Math.floor(Math.random() * 4)]
-      };
-    }
-
-    return device;
-  };
-
-  const generateMAC = () => {
-    return Array.from({ length: 6 }, () => 
-      Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-    ).join(':');
-  };
-
-  const getVendorByMAC = (mac: string) => {
-    const vendors = ['Cisco', 'Hikvision', 'Dahua', 'Axis', 'Bosch', 'Sony', 'Panasonic', 'TP-Link', 'Netgear'];
-    return vendors[Math.floor(Math.random() * vendors.length)];
   };
 
   const getDeviceIcon = (deviceType: NetworkDevice['deviceType']) => {
@@ -306,7 +377,7 @@ const NetworkScanner: React.FC = () => {
             <Box sx={{ mt: 2 }}>
               <LinearProgress variant="determinate" value={scanProgress} />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Scanning {scanRange.start} - {scanRange.end} ({Math.round(scanProgress)}%)
+                {scanStatus || `Scanning ${scanRange.start} - ${scanRange.end}`} ({Math.round(scanProgress)}%)
               </Typography>
             </Box>
           )}
@@ -429,6 +500,36 @@ const NetworkScanner: React.FC = () => {
           {selectedDevice && (
             <Box sx={{ mt: 2 }}>
               <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Credential Set</InputLabel>
+                    <Select
+                      value={selectedCredentialSet || ''}
+                      onChange={(e) => {
+                        const credentialSetId = e.target.value as number;
+                        setSelectedCredentialSet(credentialSetId);
+                        const credSet = credentialSets.find(cs => cs.id === credentialSetId);
+                        if (credSet) {
+                          setCameraCredentials(prev => ({
+                            ...prev,
+                            username: credSet.username,
+                            password: credSet.password,
+                            port: credSet.default_port
+                          }));
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>Manual Entry</em>
+                      </MenuItem>
+                      {credentialSets.map((credSet) => (
+                        <MenuItem key={credSet.id} value={credSet.id}>
+                          {credSet.name} ({credSet.username})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Username"

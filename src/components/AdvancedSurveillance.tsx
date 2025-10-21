@@ -171,26 +171,113 @@ export default function AdvancedSurveillance() {
 
   const fetchCameras = async () => {
     try {
-      const response = await fetch('/api/surveillance/cameras');
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/cameras', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       if (data.success) {
-        setCameras(data.cameras || []);
-        updateAnalytics(data.cameras || []);
+        const cameraList = data.data || [];
+        setCameras(cameraList);
+        updateAnalytics(cameraList);
+        
+        // Test camera connections in background
+        testCameraConnections(cameraList);
+        
+        setError('');
+      } else {
+        setError(data.message || 'Failed to load cameras');
       }
     } catch (err: any) {
-      setError('Failed to load cameras');
+      setError('Failed to load cameras: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateAnalytics = (cams: Camera[]) => {
+  const testCameraConnections = async (cams: Camera[]) => {
+    // Test camera connections in background without blocking UI
+    const testPromises = cams.map(async (camera) => {
+      if (camera.status === 'offline') {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:3002/api/surveillance/test-camera', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ip_address: camera.ip_address,
+              port: camera.port,
+              username: camera.username,
+              password: camera.password
+            })
+          });
+          
+          const result = await response.json();
+          if (result.success && result.data.status === 'online') {
+            console.log(`✅ Camera ${camera.name} is now online`);
+            // Update camera status in local state
+            setCameras(prev => prev.map(c => 
+              c.id === camera.id ? { ...c, status: 'online' } : c
+            ));
+          }
+        } catch (error) {
+          console.log(`Failed to test camera ${camera.name}:`, error);
+        }
+      }
+    });
+    
+    await Promise.allSettled(testPromises);
+  };
+
+  const updateAnalytics = async (cams: Camera[]) => {
     const online = cams.filter(c => c.status === 'online').length;
     const rec = cams.filter(c => c.status === 'recording').length;
+    
+    // Fetch real storage and system data
+    let storageUsed = 0;
+    let uptime = 99.8;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const [storageResponse, systemResponse] = await Promise.allSettled([
+        fetch('http://localhost:3002/api/surveillance/storage', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:3002/api/surveillance/system-status', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+      
+      if (storageResponse.status === 'fulfilled' && storageResponse.value.ok) {
+        const storageData = await storageResponse.value.json();
+        if (storageData.success) {
+          storageUsed = storageData.storageUsed || 0;
+        }
+      }
+      
+      if (systemResponse.status === 'fulfilled' && systemResponse.value.ok) {
+        const systemData = await systemResponse.value.json();
+        if (systemData.success) {
+          uptime = systemData.uptime || 99.8;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch analytics data:', error);
+    }
+    
     setAnalytics({
       totalCameras: cams.length,
       onlineCameras: online,
       recordingCameras: rec,
-      storageUsed: Math.random() * 100, // Mock data
-      uptime: 99.8,
+      storageUsed,
+      uptime,
     });
   };
 
@@ -211,8 +298,28 @@ export default function AdvancedSurveillance() {
   };
 
   const handleRecording = async (cameraId: number) => {
-    setRecording(prev => ({ ...prev, [cameraId]: !prev[cameraId] }));
-    // Add API call to start/stop recording
+    try {
+      const token = localStorage.getItem('token');
+      const isCurrentlyRecording = recording[cameraId];
+      
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${cameraId}/recording`, {
+        method: isCurrentlyRecording ? 'DELETE' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setRecording(prev => ({ ...prev, [cameraId]: !prev[cameraId] }));
+        setError('');
+      } else {
+        setError(data.message || `Failed to ${isCurrentlyRecording ? 'stop' : 'start'} recording`);
+      }
+    } catch (err: any) {
+      setError(`Failed to ${recording[cameraId] ? 'stop' : 'start'} recording: ${err.message}`);
+    }
   };
 
   const handleContextMenu = (event: React.MouseEvent, camera: Camera) => {
@@ -229,8 +336,32 @@ export default function AdvancedSurveillance() {
   };
 
   const handleSnapshot = async (camera: Camera) => {
-    // Implement snapshot functionality
-    alert(`Taking snapshot of ${camera.name}`);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${camera.id}/snapshot`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Create download link for the snapshot
+        const link = document.createElement('a');
+        link.href = `data:image/jpeg;base64,${data.snapshot}`;
+        link.download = `snapshot_${camera.name}_${new Date().toISOString()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setError('');
+      } else {
+        setError(data.message || 'Failed to take snapshot');
+      }
+    } catch (err: any) {
+      setError(`Failed to take snapshot: ${err.message}`);
+    }
     handleCloseContextMenu();
   };
 
@@ -507,7 +638,7 @@ export default function AdvancedSurveillance() {
 
             {!isMobile && (
               <Typography variant="subtitle2" color="text.secondary">
-                Cameras:
+                Select Cameras:
               </Typography>
             )}
             <Stack direction="row" spacing={1} sx={{ flex: 1, overflowX: 'auto', pb: isMobile ? 1 : 0 }}>
@@ -517,9 +648,22 @@ export default function AdvancedSurveillance() {
                   label={camera.name}
                   onClick={() => handleCameraSelect(camera.id)}
                   color={selectedCameras.includes(camera.id) ? 'primary' : 'default'}
-                  icon={<Videocam />}
+                  icon={
+                    camera.status === 'online' ? (
+                      <CheckCircle sx={{ color: 'green', fontSize: 16 }} />
+                    ) : camera.status === 'offline' ? (
+                      <ErrorIcon sx={{ color: 'red', fontSize: 16 }} />
+                    ) : (
+                      <Videocam sx={{ color: 'orange', fontSize: 16 }} />
+                    )
+                  }
                   variant={selectedCameras.includes(camera.id) ? 'filled' : 'outlined'}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiChip-icon': {
+                      marginRight: '4px'
+                    }
+                  }}
                 />
               ))}
             </Stack>

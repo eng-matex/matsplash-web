@@ -333,10 +333,10 @@ async function setupDatabase() {
     }
 
     // Create other tables
-    const tables = [
-      'orders', 'inventory_logs', 'attendance_logs', 'packing_logs', 
-      'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'system_activity'
-    ];
+const tables = [
+  'orders', 'inventory_logs', 'attendance_logs', 'packing_logs',
+  'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts'
+];
 
     for (const tableName of tables) {
       const hasTable = await db.schema.hasTable(tableName);
@@ -440,6 +440,11 @@ async function setupDatabase() {
               table.string('location').notNullable();
               table.string('ip_address').unique().notNullable();
               table.string('status').defaultTo('offline').notNullable();
+              table.integer('port').defaultTo(80);
+              table.string('username').nullable();
+              table.string('password').nullable();
+              table.string('stream_url').nullable();
+              table.integer('credential_set_id').unsigned().nullable().references('id').inTable('camera_credentials');
               table.text('notes');
               table.timestamps(true, true);
             });
@@ -447,9 +452,25 @@ async function setupDatabase() {
           case 'camera_credentials':
             await db.schema.createTable('camera_credentials', (table) => {
               table.increments('id').primary();
-              table.integer('camera_id').unsigned().references('id').inTable('cameras');
+              table.integer('camera_id').unsigned().nullable().references('id').inTable('cameras');
+              table.string('name').notNullable(); // Credential set name
               table.string('username').notNullable();
               table.string('password').notNullable();
+              table.integer('default_port').defaultTo(80);
+              table.text('description').nullable();
+              table.timestamps(true, true);
+            });
+            break;
+          case 'recording_sessions':
+            await db.schema.createTable('recording_sessions', (table) => {
+              table.increments('id').primary();
+              table.integer('camera_id').unsigned().references('id').inTable('cameras');
+              table.timestamp('start_time').defaultTo(db.fn.now());
+              table.timestamp('end_time').nullable();
+              table.string('status').defaultTo('recording');
+              table.string('file_path').nullable();
+              table.integer('file_size_mb').nullable();
+              table.text('notes').nullable();
               table.timestamps(true, true);
             });
             break;
@@ -460,6 +481,30 @@ async function setupDatabase() {
               table.string('activity_type').notNullable();
               table.text('description');
               table.timestamp('timestamp').defaultTo(db.fn.now());
+            });
+            break;
+          case 'ai_detections':
+            await db.schema.createTable('ai_detections', (table) => {
+              table.increments('id').primary();
+              table.integer('camera_id').unsigned().references('id').inTable('cameras');
+              table.string('detection_type').notNullable();
+              table.decimal('confidence', 5, 2).notNullable();
+              table.text('bounding_box').nullable();
+              table.timestamp('timestamp').defaultTo(db.fn.now());
+              table.boolean('processed').defaultTo(false);
+              table.timestamps(true, true);
+            });
+            break;
+          case 'system_alerts':
+            await db.schema.createTable('system_alerts', (table) => {
+              table.increments('id').primary();
+              table.integer('camera_id').unsigned().references('id').inTable('cameras');
+              table.string('alert_type').notNullable();
+              table.string('severity').notNullable();
+              table.text('message').notNullable();
+              table.timestamp('timestamp').defaultTo(db.fn.now());
+              table.boolean('is_read').defaultTo(false);
+              table.timestamps(true, true);
             });
             break;
           default:
@@ -2956,9 +3001,9 @@ app.get('/api/locations', async (req, res) => {
 const surveillanceRoutes = require('./server/routes/surveillance-minimal.cjs');
 app.use('/api/surveillance', surveillanceRoutes(db));
 
-// Network Scanner Routes - Temporarily disabled due to errors
-// const networkScannerRoutes = require('./server/routes/network-scanner.cjs');
-// app.use('/api/surveillance', networkScannerRoutes);
+// Network Scanner Routes
+const networkScannerRoutes = require('./server/routes/network-scanner-realtime.cjs');
+app.use('/api/network', networkScannerRoutes);
 
 // Import and mount streaming routes
 const streamingRoutes = require('./server/routes/streaming-server.cjs');

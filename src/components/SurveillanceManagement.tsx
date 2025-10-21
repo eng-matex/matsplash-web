@@ -324,9 +324,14 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
     setLoading(true);
     try {
       // Fetch real data from API
+      const token = localStorage.getItem('token');
       const [camerasResponse, credentialsResponse] = await Promise.all([
-        fetch('/api/surveillance/cameras'),
-        fetch('/api/surveillance/credentials')
+        fetch('http://localhost:3002/api/surveillance/cameras', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:3002/api/surveillance/credentials', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
       ]);
 
       if (camerasResponse.ok) {
@@ -362,10 +367,12 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
   const testCameraConnectivity = async (camerasList: Camera[]) => {
     for (const camera of camerasList) {
       try {
-        const response = await fetch('/api/surveillance/test-camera', {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:3002/api/surveillance/test-camera', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             ip_address: camera.ip_address,
@@ -465,10 +472,12 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
       
       setLoading(true);
       
-      const response = await fetch('/api/surveillance/cameras', {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/cameras', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newCamera)
       });
@@ -616,10 +625,12 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
     setNetworkDevices([]);
     
     try {
-      const response = await fetch('/api/surveillance/scan-network', {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/network/scan-network', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           networkRange: '192.168.1.1-254',
@@ -648,10 +659,12 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
     setTestResult(null);
     
     try {
-      const response = await fetch('/api/surveillance/test-camera', {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/test-camera', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ip_address: ip,

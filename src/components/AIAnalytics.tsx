@@ -22,6 +22,7 @@ import {
   Badge,
   ToggleButtonGroup,
   ToggleButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Face,
@@ -62,39 +63,131 @@ interface Detection {
 }
 
 export default function AIAnalytics() {
-  const [aiFeatures, setAiFeatures] = useState<AIFeature[]>([
-    { id: 'face', name: 'Face Recognition', enabled: true, accuracy: 94.5, detections: 1247, icon: <Face /> },
-    { id: 'person', name: 'Person Detection', enabled: true, accuracy: 96.2, detections: 3891, icon: <Person /> },
-    { id: 'vehicle', name: 'Vehicle Detection', enabled: true, accuracy: 92.8, detections: 856, icon: <DirectionsCar /> },
-    { id: 'license', name: 'License Plate Recognition', enabled: false, accuracy: 88.3, detections: 234, icon: <DirectionsCar /> },
-    { id: 'object', name: 'Object Detection', enabled: true, accuracy: 90.1, detections: 5642, icon: <ShoppingCart /> },
-    { id: 'motion', name: 'Motion Detection', enabled: true, accuracy: 98.7, detections: 15234, icon: <MotionPhotosAuto /> },
-    { id: 'behavior', name: 'Behavior Analysis', enabled: false, accuracy: 85.4, detections: 67, icon: <Psychology /> },
-    { id: 'crowd', name: 'Crowd Detection', enabled: true, accuracy: 91.2, detections: 342, icon: <Person /> },
-  ]);
-
-  const [recentDetections, setRecentDetections] = useState<Detection[]>([
-    { id: 1, type: 'Face', confidence: 95, timestamp: '2 mins ago', cameraId: 1, cameraName: 'Entrance' },
-    { id: 2, type: 'Vehicle', confidence: 92, timestamp: '5 mins ago', cameraId: 2, cameraName: 'Parking' },
-    { id: 3, type: 'Person', confidence: 98, timestamp: '8 mins ago', cameraId: 3, cameraName: 'Lobby' },
-    { id: 4, type: 'Motion', confidence: 99, timestamp: '10 mins ago', cameraId: 4, cameraName: 'Warehouse' },
-    { id: 5, type: 'Object', confidence: 87, timestamp: '15 mins ago', cameraId: 1, cameraName: 'Entrance' },
-  ]);
-
+  const [aiFeatures, setAiFeatures] = useState<AIFeature[]>([]);
+  const [recentDetections, setRecentDetections] = useState<Detection[]>([]);
   const [timeRange, setTimeRange] = useState('today');
   const [analytics, setAnalytics] = useState({
-    totalDetections: 27456,
-    averageConfidence: 93.4,
-    falsePositives: 234,
-    alerts: 67,
+    totalDetections: 0,
+    averageConfidence: 0,
+    falsePositives: 0,
+    alerts: 0,
   });
+  const [loading, setLoading] = useState(true);
 
-  const handleFeatureToggle = (featureId: string) => {
+  useEffect(() => {
+    fetchAIData();
+  }, [timeRange]);
+
+  const fetchAIData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Fetch AI features
+      const featuresResponse = await fetch('http://localhost:3002/api/surveillance/ai/features', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const featuresData = await featuresResponse.json();
+      
+      if (featuresData.success) {
+        const featuresWithIcons = featuresData.features.map((feature: any) => ({
+          ...feature,
+          icon: getFeatureIcon(feature.id)
+        }));
+        setAiFeatures(featuresWithIcons);
+      }
+
+      // Fetch recent detections
+      const detectionsResponse = await fetch('http://localhost:3002/api/surveillance/ai/detections', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const detectionsData = await detectionsResponse.json();
+      
+      if (detectionsData.success) {
+        const formattedDetections = detectionsData.detections.map((detection: any) => ({
+          ...detection,
+          timestamp: formatTimestamp(detection.timestamp)
+        }));
+        setRecentDetections(formattedDetections);
+      }
+
+      // Fetch analytics
+      const analyticsResponse = await fetch('http://localhost:3002/api/surveillance/ai/analytics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const analyticsData = await analyticsResponse.json();
+      
+      if (analyticsData.success) {
+        setAnalytics(analyticsData.analytics);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFeatureIcon = (featureId: string) => {
+    switch (featureId) {
+      case 'face': return <Face />;
+      case 'person': return <Person />;
+      case 'vehicle': return <DirectionsCar />;
+      case 'license': return <DirectionsCar />;
+      case 'object': return <ShoppingCart />;
+      case 'motion': return <MotionPhotosAuto />;
+      case 'behavior': return <Psychology />;
+      case 'crowd': return <Person />;
+      default: return <Visibility />;
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now.getTime() - time.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
+  };
+
+  const handleFeatureToggle = async (featureId: string) => {
     setAiFeatures(prev =>
       prev.map(feature =>
         feature.id === featureId ? { ...feature, enabled: !feature.enabled } : feature
       )
     );
+    
+    // TODO: Implement API call to update feature status
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:3002/api/surveillance/ai/features', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          featureId,
+          enabled: !aiFeatures.find(f => f.id === featureId)?.enabled
+        })
+      });
+    } catch (error) {
+      console.error('Failed to update feature status:', error);
+    }
   };
 
   const getConfidenceColor = (confidence: number) => {
@@ -102,6 +195,14 @@ export default function AIAnalytics() {
     if (confidence >= 75) return 'warning';
     return 'error';
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -359,4 +460,3 @@ export default function AIAnalytics() {
     </Box>
   );
 }
-

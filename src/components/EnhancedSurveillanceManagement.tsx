@@ -236,7 +236,10 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
     setLoading(true);
     try {
       // Fetch real cameras from API
-      const camerasResponse = await fetch('/api/surveillance/cameras');
+      const token = localStorage.getItem('token');
+      const camerasResponse = await fetch('http://localhost:3002/api/surveillance/cameras', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (camerasResponse.ok) {
         const camerasData = await camerasResponse.json();
         if (camerasData.success) {
@@ -255,7 +258,10 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
       const activeRecordingsMap = new Map<number, RecordingSession>();
       
       for (const camera of cameras) {
-        const response = await fetch(`/api/surveillance/cameras/${camera.id}/recording-status`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${camera.id}/recording-status`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data.is_recording) {
@@ -272,10 +278,12 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
 
   const handleStartRecording = async (cameraId: number, recordingType: 'manual' | 'continuous' = 'manual') => {
     try {
-      const response = await fetch(`/api/surveillance/cameras/${cameraId}/start-recording`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${cameraId}/start-recording`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           recording_type: recordingType,
@@ -299,10 +307,12 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
 
   const handleStopRecording = async (cameraId: number) => {
     try {
-      const response = await fetch(`/api/surveillance/cameras/${cameraId}/stop-recording`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${cameraId}/stop-recording`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId: user?.id,
@@ -329,10 +339,12 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
 
   const handleConfigure247 = async (cameraId: number, enabled: boolean) => {
     try {
-      const response = await fetch(`/api/surveillance/cameras/${cameraId}/configure-247`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/cameras/${cameraId}/configure-247`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           enabled,
@@ -365,10 +377,12 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
     setNetworkDevices([]);
     
     try {
-      const response = await fetch('/api/surveillance/scan-network', {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/network/scan-network', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           networkRange: '192.168.1.1-254',
@@ -397,10 +411,12 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
     setTestResult(null);
     
     try {
-      const response = await fetch('/api/surveillance/test-camera', {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/test-camera', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ip_address: ip,

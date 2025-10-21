@@ -76,7 +76,13 @@ export default function RecordingManager() {
   const fetchRecordings = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/surveillance/recordings');
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/recordings', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       if (data.success) {
         setRecordings(data.recordings || []);
@@ -90,10 +96,20 @@ export default function RecordingManager() {
 
   const fetchStorageInfo = async () => {
     try {
-      const response = await fetch('/api/surveillance/storage');
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3002/api/surveillance/storage', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       if (data.success) {
-        setStorageInfo(data.storage);
+        setStorageInfo({
+          used: data.storageUsedGB || 0,
+          total: data.totalCapacityGB || 500,
+          free: data.freeSpaceGB || 500
+        });
       }
     } catch (error) {
       console.error('Failed to fetch storage info:', error);
@@ -102,17 +118,35 @@ export default function RecordingManager() {
 
   const handleDownload = async (recording: Recording) => {
     try {
-      window.open(`/api/surveillance/recordings/${recording.id}/download`, '_blank');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/surveillance/recordings/${recording.id}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // For now, show download info since we don't have actual video files
+        alert(`Download initiated for ${data.fileName}\nCamera: ${data.cameraName}\nDuration: ${recording.duration} minutes`);
+      }
     } catch (error) {
       console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
     }
   };
 
   const handleDelete = async (recordingId: number) => {
     if (confirm('Are you sure you want to delete this recording?')) {
       try {
-        await fetch(`/api/surveillance/recordings/${recordingId}`, {
+        const token = localStorage.getItem('token');
+        await fetch(`http://localhost:3002/api/surveillance/recordings/${recordingId}`, {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
         fetchRecordings();
         fetchStorageInfo();
@@ -161,11 +195,11 @@ export default function RecordingManager() {
                     Storage Used
                   </Typography>
                   <Typography variant="h5" fontWeight="bold">
-                    {storageInfo.used.toFixed(1)} GB / {storageInfo.total} GB
+                    {storageInfo?.used?.toFixed(1) || '0.0'} GB / {storageInfo?.total || '500'} GB
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={(storageInfo.used / storageInfo.total) * 100}
+                    value={storageInfo ? (storageInfo.used / storageInfo.total) * 100 : 0}
                     sx={{ mt: 1 }}
                   />
                 </Box>
@@ -360,7 +394,7 @@ export default function RecordingManager() {
                 controls
                 autoPlay
                 style={{ maxWidth: '100%', maxHeight: '100%' }}
-                src={`/api/surveillance/recordings/${selectedRecording.id}/stream`}
+                src={`http://localhost:3002/api/surveillance/recordings/${selectedRecording.id}/stream`}
               >
                 Your browser does not support video playback.
               </video>

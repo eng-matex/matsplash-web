@@ -160,17 +160,69 @@ const CameraSetupWizard: React.FC = () => {
     setIsTesting(true);
     setTestResults(null);
 
-    // Simulate testing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Test camera connection
+      const testResults = {
+        connection: false,
+        stream: false,
+        credentials: false,
+        error: undefined as string | undefined
+      };
 
-    const results = {
-      connection: Math.random() > 0.3,
-      stream: Math.random() > 0.3,
-      credentials: Math.random() > 0.3,
-      error: Math.random() > 0.7 ? 'Connection timeout' : undefined
-    };
+      // Test 1: Check if camera is reachable
+      try {
+        const pingResponse = await fetch(`http://${cameraConfig.ip}:${cameraConfig.port || 80}`, {
+          method: 'HEAD',
+          timeout: 5000
+        });
+        testResults.connection = pingResponse.ok;
+      } catch (error) {
+        testResults.connection = false;
+        testResults.error = 'Camera not reachable';
+      }
 
-    setTestResults(results);
+      // Test 2: Check credentials (if provided)
+      if (cameraConfig.username && cameraConfig.password) {
+        try {
+          const authResponse = await fetch(`http://${cameraConfig.username}:${cameraConfig.password}@${cameraConfig.ip}:${cameraConfig.port || 80}`, {
+            method: 'HEAD',
+            timeout: 5000
+          });
+          testResults.credentials = authResponse.ok;
+        } catch (error) {
+          testResults.credentials = false;
+          testResults.error = 'Invalid credentials';
+        }
+      } else {
+        testResults.credentials = true; // No credentials to test
+      }
+
+      // Test 3: Check stream URL
+      if (cameraConfig.streamUrl) {
+        try {
+          const streamResponse = await fetch(cameraConfig.streamUrl, {
+            method: 'HEAD',
+            timeout: 5000
+          });
+          testResults.stream = streamResponse.ok;
+        } catch (error) {
+          testResults.stream = false;
+          testResults.error = 'Stream not accessible';
+        }
+      } else {
+        testResults.stream = true; // No stream URL to test
+      }
+
+      setTestResults(testResults);
+    } catch (error) {
+      setTestResults({
+        connection: false,
+        stream: false,
+        credentials: false,
+        error: 'Connection timeout'
+      });
+    }
+
     setIsTesting(false);
   };
 
