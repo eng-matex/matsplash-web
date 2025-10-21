@@ -103,7 +103,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'active-dispatches':
           // Fetch driver dispatches from API
           try {
-            const response = await axios.get('http://localhost:3001/api/orders?order_type=driver_dispatch&status=picked_up,in_transit', { headers });
+            const response = await axios.get('http://localhost:3002/api/orders?order_type=driver_dispatch&status=picked_up,in_transit', { headers });
             if (response.data.success) {
               setActiveDispatches(response.data.data || []);
             } else {
@@ -118,7 +118,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'dispatch-log':
           // Fetch completed dispatches
           try {
-            const response = await axios.get('http://localhost:3001/api/orders?order_type=driver_dispatch&status=delivered,returned', { headers });
+            const response = await axios.get('http://localhost:3002/api/orders?order_type=driver_dispatch&status=delivered,returned', { headers });
             if (response.data.success) {
               setDispatchLogs(response.data.data || []);
             } else {
@@ -133,8 +133,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           // Fetch sales logs and commission data
           try {
             const [salesResponse, commissionResponse] = await Promise.all([
-              axios.get('http://localhost:3001/api/sales/driver-sales', { headers }),
-              axios.get('http://localhost:3001/api/salary/commission', { headers })
+              axios.get('http://localhost:3002/api/sales/driver-sales', { headers }),
+              axios.get('http://localhost:3002/api/salary/commission', { headers })
             ]);
             if (salesResponse.data.success) {
               setSalesLogs(salesResponse.data.data || []);
@@ -240,7 +240,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.put(`http://localhost:3001/api/orders/${dispatchId}/status`, {
+      const response = await axios.put(`http://localhost:3002/api/orders/${dispatchId}/status`, {
         status: newStatus,
         userId: 1, // This should come from auth context
         notes: `Status updated to ${newStatus} by driver`

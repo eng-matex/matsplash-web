@@ -156,7 +156,7 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
     if (!employeeId) return;
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:3001/api/attendance/status/${employeeId}`);
+      const response = await axios.get(`http://localhost:3002/api/attendance/status/${employeeId}`);
       
       if (response.data.success) {
         const status = response.data.data;
@@ -263,7 +263,7 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
         return;
       }
       
-      const response = await axios.post('http://localhost:3001/api/attendance/clock-in', {
+      const response = await axios.post('http://localhost:3002/api/attendance/clock-in', {
         employeeId,
         pin,
         location,
@@ -309,7 +309,7 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
         return;
       }
       
-      const response = await axios.post('http://localhost:3001/api/attendance/clock-out', {
+      const response = await axios.post('http://localhost:3002/api/attendance/clock-out', {
         employeeId,
         location,
         deviceInfo: device
@@ -353,7 +353,7 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
         return;
       }
       
-      const response = await axios.post('http://localhost:3001/api/attendance/start-break', {
+      const response = await axios.post('http://localhost:3002/api/attendance/start-break', {
         employeeId,
         location,
         deviceInfo: device
@@ -397,7 +397,7 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
         return;
       }
       
-      const response = await axios.post('http://localhost:3001/api/attendance/end-break', {
+      const response = await axios.post('http://localhost:3002/api/attendance/end-break', {
         employeeId,
         location,
         deviceInfo: device

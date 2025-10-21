@@ -91,7 +91,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
 
       switch (selectedSection) {
         case 'overview':
-          const ordersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
+          const ordersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(ordersResponse.data.data || []);
           
           // Mock inventory data
@@ -100,13 +100,13 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           ]);
           break;
         case 'inventory-audit':
-          const inventoryResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
+          const inventoryResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
           setInventoryLogs(inventoryResponse.data.data || []);
           break;
         case 'inventory-management':
           // Fetch inventory data for management
           try {
-            const inventoryMgmtResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
+            const inventoryMgmtResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
             setInventory(inventoryMgmtResponse.data.data || []);
           } catch (error) {
             console.error('Error fetching inventory data:', error);
@@ -117,12 +117,12 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           }
           break;
         case 'order-status-logs':
-          const allOrdersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
+          const allOrdersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
           break;
         case 'my-attendance':
           try {
-            const attendanceResponse = await axios.get(`http://localhost:3001/api/attendance/status/${user?.id}`, { headers });
+            const attendanceResponse = await axios.get(`http://localhost:3002/api/attendance/status/${user?.id}`, { headers });
             setAttendanceStatus(attendanceResponse.data.data || null);
           } catch (error) {
             console.error('Error fetching attendance:', error);
@@ -172,7 +172,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
       const headers = { Authorization: `Bearer ${token}` };
 
       // Use the new confirm-pickup endpoint
-      const response = await axios.put(`http://localhost:3001/api/orders/${selectedItem.id}/confirm-pickup`, {
+      const response = await axios.put(`http://localhost:3002/api/orders/${selectedItem.id}/confirm-pickup`, {
         userId: 1, // This should come from auth context
         userEmail: 'storekeeper@matsplash.com' // This should come from auth context
       }, { headers });
@@ -195,7 +195,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const inventoryMgmtResponse = await axios.get('http://localhost:3001/api/inventory', { headers });
+      const inventoryMgmtResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
       setInventory(inventoryMgmtResponse.data.data || []);
     } catch (error) {
       console.error('Error fetching inventory data:', error);
@@ -214,7 +214,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/inventory/add-water', {
+      const response = await fetch('http://localhost:3002/api/inventory/add-water', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

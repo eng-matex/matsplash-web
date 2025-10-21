@@ -248,7 +248,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ selectedSection, user
       try {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
-        const response = await fetch('http://localhost:3001/api/price-models', { headers });
+        const response = await fetch('http://localhost:3002/api/price-models', { headers });
         if (response.ok) {
           const data = await response.json();
           setPriceModels(data.data || []);

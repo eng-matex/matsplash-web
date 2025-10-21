@@ -269,7 +269,7 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
       const headers = { Authorization: `Bearer ${token}` };
       
       // Fetch distributors from API
-      const distributorsResponse = await fetch('http://localhost:3001/api/distributors', { headers });
+      const distributorsResponse = await fetch('http://localhost:3002/api/distributors', { headers });
       if (distributorsResponse.ok) {
         const distributorsData = await distributorsResponse.json();
         setDistributors(distributorsData.data || []);
@@ -472,8 +472,8 @@ const DistributorManagement: React.FC<DistributorManagementProps> = ({ selectedS
       };
 
       const url = dialogType === 'new-distributor' 
-        ? 'http://localhost:3001/api/distributors'
-        : `http://localhost:3001/api/distributors/${selectedDistributor?.id}`;
+        ? 'http://localhost:3002/api/distributors'
+        : `http://localhost:3002/api/distributors/${selectedDistributor?.id}`;
       
       const method = dialogType === 'new-distributor' ? 'POST' : 'PUT';
       

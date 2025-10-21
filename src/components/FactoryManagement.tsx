@@ -212,18 +212,18 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fetch factory locations
-      const factoriesResponse = await axios.get('http://localhost:3001/api/factory-locations', { headers });
+      const factoriesResponse = await axios.get('http://localhost:3002/api/factory-locations', { headers });
       setFactories(factoriesResponse.data.data || []);
 
       // Fetch devices
-      const devicesResponse = await axios.get('http://localhost:3001/api/devices', { headers });
+      const devicesResponse = await axios.get('http://localhost:3002/api/devices', { headers });
       const devicesData = devicesResponse.data.data || [];
       
       // For each device, get its factory assignments
       const devicesWithAssignments = await Promise.all(
         devicesData.map(async (device: Device) => {
           try {
-            const assignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${device.id}/factory-assignments`, { headers });
+            const assignmentsResponse = await axios.get(`http://localhost:3002/api/factory-locations/devices/${device.id}/factory-assignments`, { headers });
             return {
               ...device,
               factory_locations: assignmentsResponse.data.data?.map((assignment: any) => assignment.factory_location_id) || []
@@ -284,7 +284,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       // Load existing factory assignments
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceItem.id}/factory-assignments`, {
+        const response = await axios.get(`http://localhost:3002/api/factory-locations/devices/${deviceItem.id}/factory-assignments`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
         if (response.data.success) {
@@ -301,7 +301,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       // Load existing MAC addresses for edit
       try {
         const token = localStorage.getItem('token');
-        const macsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceItem.id}/mac-addresses`, {
+        const macsResponse = await axios.get(`http://localhost:3002/api/devices/${deviceItem.id}/mac-addresses`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
         if (macsResponse.data?.success) {
@@ -384,8 +384,8 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       };
 
       const url = dialogType === 'new-factory' 
-        ? 'http://localhost:3001/api/factory-locations'
-        : `http://localhost:3001/api/factory-locations/${selectedFactory?.id}`;
+        ? 'http://localhost:3002/api/factory-locations'
+        : `http://localhost:3002/api/factory-locations/${selectedFactory?.id}`;
       
       const method = dialogType === 'new-factory' ? 'POST' : 'PUT';
       
@@ -420,7 +420,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`http://localhost:3001/api/factory-locations/${selectedFactory.id}`, {
+      const response = await axios.delete(`http://localhost:3002/api/factory-locations/${selectedFactory.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -442,7 +442,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`http://localhost:3001/api/factory-locations/${factory.id}`, {
+      const response = await axios.put(`http://localhost:3002/api/factory-locations/${factory.id}`, {
         is_active: !factory.is_active
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -467,7 +467,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
-      const response = await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+      const response = await axios.post(`http://localhost:3002/api/factory-locations/${factoryId}/devices`, {
         device_id: deviceId,
         userId: user.id,
         userEmail: user.email
@@ -502,7 +502,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       
-      const response = await axios.delete(`http://localhost:3001/api/factory-locations/${factoryId}/devices/${deviceId}`, {
+      const response = await axios.delete(`http://localhost:3002/api/factory-locations/${factoryId}/devices/${deviceId}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: {
           userId: user.id,
@@ -541,14 +541,14 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       // First remove all factory assignments
       try {
         const token = localStorage.getItem('token');
-        const assignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${selectedDevice.id}/factory-assignments`, {
+        const assignmentsResponse = await axios.get(`http://localhost:3002/api/factory-locations/devices/${selectedDevice.id}/factory-assignments`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
         if (assignmentsResponse.data.success) {
           const assignments = assignmentsResponse.data.data;
           for (const assignment of assignments) {
             try {
-              await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${selectedDevice.id}`, {
+              await axios.delete(`http://localhost:3002/api/factory-locations/${assignment.factory_location_id}/devices/${selectedDevice.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 data: {
                   userId: user.id,
@@ -565,7 +565,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
       }
       
       // Then delete the device
-      const response = await axios.delete(`http://localhost:3001/api/devices/${selectedDevice.id}`, {
+      const response = await axios.delete(`http://localhost:3002/api/devices/${selectedDevice.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -641,13 +641,13 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
 
       if (dialogType === 'edit-device' && selectedDevice) {
         // Update existing device
-        response = await axios.put(`http://localhost:3001/api/devices/${selectedDevice.id}`, deviceData, {
+        response = await axios.put(`http://localhost:3002/api/devices/${selectedDevice.id}`, deviceData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         deviceId = selectedDevice.id;
       } else {
         // Create new device
-        response = await axios.post('http://localhost:3001/api/devices', deviceData, {
+        response = await axios.post('http://localhost:3002/api/devices', deviceData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         deviceId = response.data.data.id;
@@ -657,7 +657,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         
         // Replace MAC addresses to keep consistency (upsert behavior)
         try {
-          await axios.put(`http://localhost:3001/api/devices/${deviceId}/mac-addresses`, {
+          await axios.put(`http://localhost:3002/api/devices/${deviceId}/mac-addresses`, {
             macAddresses: validMacs.map(mac => ({
               macAddress: mac,
               adapterType: 'wifi',
@@ -677,7 +677,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         if (dialogType === 'edit-device' && selectedDevice) {
           // For editing: first remove all existing assignments, then add new ones
           try {
-            const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
+            const currentAssignmentsResponse = await axios.get(`http://localhost:3002/api/factory-locations/devices/${deviceId}/factory-assignments`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             if (currentAssignmentsResponse.data.success) {
@@ -686,7 +686,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
               // Remove all current assignments
               for (const assignment of currentAssignments) {
                 try {
-                  await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
+                  await axios.delete(`http://localhost:3002/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                     data: {
                       userId: user.id,
@@ -707,7 +707,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         if (isFactoryDevice) {
           for (const factoryId of selectedFactories) {
             try {
-              await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+              await axios.post(`http://localhost:3002/api/factory-locations/${factoryId}/devices`, {
                 device_id: deviceId,
                 userId: user.id,
                 userEmail: user.email
@@ -727,7 +727,7 @@ const FactoryManagement: React.FC<FactoryManagementProps> = () => {
         // Explicitly refresh current device assignments so chips stay selected
         try {
           if (isFactoryDevice) {
-            const refreshAssignments = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
+            const refreshAssignments = await axios.get(`http://localhost:3002/api/factory-locations/devices/${deviceId}/factory-assignments`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             if (refreshAssignments.data.success) {

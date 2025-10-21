@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getApiUrl, API_ENDPOINTS } from '../utils/api';
 import { 
   Box, 
   Typography, 
@@ -80,11 +81,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       
       // Fetch multiple data sources in parallel
       const [salesResponse, ordersResponse, employeesResponse, inventoryResponse, systemResponse] = await Promise.allSettled([
-        fetch('http://localhost:3001/api/sales/orders', { headers }),
-        fetch('http://localhost:3001/api/orders', { headers }),
-        fetch('http://localhost:3001/api/employees', { headers }),
-        fetch('http://localhost:3001/api/inventory/stats', { headers }),
-        fetch('http://localhost:3001/api/health', { headers })
+        fetch(getApiUrl(API_ENDPOINTS.SALES_ORDERS), { headers }),
+        fetch(getApiUrl(API_ENDPOINTS.ORDERS), { headers }),
+        fetch(getApiUrl(API_ENDPOINTS.EMPLOYEES), { headers }),
+        fetch(getApiUrl(API_ENDPOINTS.INVENTORY_STATS), { headers }),
+        fetch(getApiUrl(API_ENDPOINTS.HEALTH), { headers })
       ]);
 
       // Process sales data
@@ -477,9 +478,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh Data">
-            <IconButton onClick={fetchDashboardData} disabled={loading}>
-              <Refresh />
-            </IconButton>
+            <span>
+              <IconButton onClick={fetchDashboardData} disabled={loading}>
+                <Refresh />
+              </IconButton>
+            </span>
           </Tooltip>
           <IconButton>
             <MoreVert />

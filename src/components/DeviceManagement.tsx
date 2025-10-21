@@ -136,7 +136,7 @@ const DeviceManagement: React.FC = () => {
 
   const fetchDevices = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/devices');
+      const response = await axios.get('http://localhost:3002/api/devices');
       if (response.data.success) {
         setDevices(response.data.data);
       }
@@ -150,7 +150,7 @@ const DeviceManagement: React.FC = () => {
 
   const fetchFactories = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/factory-locations');
+      const response = await axios.get('http://localhost:3002/api/factory-locations');
       if (response.data.success) {
         setFactories(response.data.data);
       }
@@ -162,7 +162,7 @@ const DeviceManagement: React.FC = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/employees');
+      const response = await axios.get('http://localhost:3002/api/employees');
       if (response.data.success) {
         setEmployees(response.data.data);
       }
@@ -200,7 +200,7 @@ const DeviceManagement: React.FC = () => {
     // Load existing factory assignments for this device
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:3001/api/factory-locations/devices/${device.id}/factory-assignments`, {
+      const response = await axios.get(`http://localhost:3002/api/factory-locations/devices/${device.id}/factory-assignments`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined
       });
       if (response.data.success) {
@@ -237,14 +237,14 @@ const DeviceManagement: React.FC = () => {
 
       if (editingDevice) {
         // Update existing device
-        const response = await axios.put(`http://localhost:3001/api/devices/${editingDevice.id}`, deviceData);
+        const response = await axios.put(`http://localhost:3002/api/devices/${editingDevice.id}`, deviceData);
         if (response.data.success) {
           deviceId = editingDevice.id;
           setSuccess('Device updated successfully');
         }
       } else {
         // Add new device
-        const response = await axios.post('http://localhost:3001/api/devices', deviceData);
+        const response = await axios.post('http://localhost:3002/api/devices', deviceData);
         if (response.data.success) {
           deviceId = response.data.data.id;
           setSuccess('Device added successfully');
@@ -259,7 +259,7 @@ const DeviceManagement: React.FC = () => {
         // For editing: first remove all existing assignments, then add new ones
         try {
           // Get current assignments
-          const currentAssignmentsResponse = await axios.get(`http://localhost:3001/api/factory-locations/devices/${deviceId}/factory-assignments`, {
+          const currentAssignmentsResponse = await axios.get(`http://localhost:3002/api/factory-locations/devices/${deviceId}/factory-assignments`, {
             headers: token ? { Authorization: `Bearer ${token}` } : undefined
           });
           if (currentAssignmentsResponse.data.success) {
@@ -268,7 +268,7 @@ const DeviceManagement: React.FC = () => {
             // Remove all current assignments
             for (const assignment of currentAssignments) {
               try {
-                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
+                await axios.delete(`http://localhost:3002/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`, {
                   headers: token ? { Authorization: `Bearer ${token}` } : undefined,
                   data: {
                     userId: user.id,
@@ -289,7 +289,7 @@ const DeviceManagement: React.FC = () => {
       if (isFactoryDevice) {
         for (const factoryId of selectedFactories) {
           try {
-            await axios.post(`http://localhost:3001/api/factory-locations/${factoryId}/devices`, {
+            await axios.post(`http://localhost:3002/api/factory-locations/${factoryId}/devices`, {
               device_id: deviceId,
               userId: user.id,
               userEmail: user.email
@@ -324,12 +324,12 @@ const DeviceManagement: React.FC = () => {
         
         // First remove all factory assignments
         try {
-          const assignmentsResponse = await axios.get(`http://localhost:3001/api/devices/${deviceId}/factory-assignments`);
+          const assignmentsResponse = await axios.get(`http://localhost:3002/api/devices/${deviceId}/factory-assignments`);
           if (assignmentsResponse.data.success) {
             const assignments = assignmentsResponse.data.data;
             for (const assignment of assignments) {
               try {
-                await axios.delete(`http://localhost:3001/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`);
+                await axios.delete(`http://localhost:3002/api/factory-locations/${assignment.factory_location_id}/devices/${deviceId}`);
               } catch (removeError) {
                 console.error(`Error removing device from factory ${assignment.factory_location_id}:`, removeError);
               }
@@ -340,7 +340,7 @@ const DeviceManagement: React.FC = () => {
         }
         
         // Then delete the device
-        const response = await axios.delete(`http://localhost:3001/api/devices/${deviceId}`);
+        const response = await axios.delete(`http://localhost:3002/api/devices/${deviceId}`);
         if (response.data.success) {
           setSuccess(`Device "${deviceName}" deleted successfully`);
           fetchDevices();
@@ -364,7 +364,7 @@ const DeviceManagement: React.FC = () => {
   const handleOpenMacDialog = async (device: Device) => {
     setSelectedDevice(device);
     try {
-      const response = await axios.get(`http://localhost:3001/api/devices/${device.id}/mac-addresses`);
+      const response = await axios.get(`http://localhost:3002/api/devices/${device.id}/mac-addresses`);
       if (response.data.success) {
         setMacAddresses(response.data.data);
       }
@@ -424,7 +424,7 @@ const DeviceManagement: React.FC = () => {
     }
     
     try {
-      const response = await axios.put(`http://localhost:3001/api/devices/${selectedDevice.id}/mac-addresses`, {
+      const response = await axios.put(`http://localhost:3002/api/devices/${selectedDevice.id}/mac-addresses`, {
         macAddresses: validMacs.map(mac => ({
           macAddress: mac.mac_address.trim(),
           adapterType: mac.adapter_type.trim(),

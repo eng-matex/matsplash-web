@@ -113,32 +113,32 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
 
       switch (selectedSection) {
         case 'overview':
-          const ordersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
+          const ordersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(ordersResponse.data.data || []);
           break;
         case 'general-sales':
           // Filter orders for general sales
-          const generalSalesResponse = await axios.get('http://localhost:3001/api/orders?type=general_sales', { headers });
+          const generalSalesResponse = await axios.get('http://localhost:3002/api/orders?type=general_sales', { headers });
           setGeneralSales(generalSalesResponse.data.data || []);
           break;
         case 'distributor-orders':
           // Filter orders for distributor orders
-          const distributorResponse = await axios.get('http://localhost:3001/api/orders?type=distributor_order', { headers });
+          const distributorResponse = await axios.get('http://localhost:3002/api/orders?type=distributor_order', { headers });
           setDistributorOrders(distributorResponse.data.data || []);
           break;
         case 'driver-dispatches':
           // Filter orders for driver dispatches
-          const dispatchResponse = await axios.get('http://localhost:3001/api/orders?type=driver_dispatch', { headers });
+          const dispatchResponse = await axios.get('http://localhost:3002/api/orders?type=driver_dispatch', { headers });
           setDriverDispatches(dispatchResponse.data.data || []);
           break;
         case 'order-status-logs':
-          const allOrdersResponse = await axios.get('http://localhost:3001/api/orders', { headers });
+          const allOrdersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
           break;
         case 'driver-settlement':
           // Fetch driver sales data
           try {
-            const driverSalesResponse = await axios.get('http://localhost:3001/api/sales/driver-sales', { headers });
+            const driverSalesResponse = await axios.get('http://localhost:3002/api/sales/driver-sales', { headers });
             if (driverSalesResponse.data.success) {
               setDriverSales(driverSalesResponse.data.data || []);
             } else {
@@ -151,7 +151,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           
           // Also fetch driver dispatches for the order dropdown
           try {
-            const dispatchResponse = await axios.get('http://localhost:3001/api/orders?type=driver_dispatch', { headers });
+            const dispatchResponse = await axios.get('http://localhost:3002/api/orders?type=driver_dispatch', { headers });
             setDriverDispatches(dispatchResponse.data.data || []);
           } catch (error) {
             console.log('Driver dispatches API not available, using empty array');
@@ -161,7 +161,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         case 'my-attendance':
           // Fetch attendance data for the current user
           try {
-            const attendanceResponse = await axios.get(`http://localhost:3001/api/attendance/status/${user?.id}`, { headers });
+            const attendanceResponse = await axios.get(`http://localhost:3002/api/attendance/status/${user?.id}`, { headers });
             if (attendanceResponse.data.success) {
               setAttendanceStatus(attendanceResponse.data.data);
             }
@@ -174,7 +174,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
 
       // Fetch drivers for all sections
       try {
-        const driversResponse = await axios.get('http://localhost:3001/api/sales/drivers', { headers });
+        const driversResponse = await axios.get('http://localhost:3002/api/sales/drivers', { headers });
         if (driversResponse.data.success) {
           setDrivers(driversResponse.data.data);
         }
@@ -292,7 +292,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         receptionist_id: 1 // This should come from auth context
       };
 
-      const response = await axios.post('http://localhost:3001/api/sales/driver-settlement', settlementPayload, { headers });
+      const response = await axios.post('http://localhost:3002/api/sales/driver-settlement', settlementPayload, { headers });
 
       if (response.data.success) {
         fetchData(); // Refresh data
@@ -346,7 +346,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         assigned_driver_id: newOrder.assigned_driver_id ? parseInt(newOrder.assigned_driver_id) : null
       };
 
-      const response = await axios.post('http://localhost:3001/api/orders', orderData, { headers });
+      const response = await axios.post('http://localhost:3002/api/orders', orderData, { headers });
 
       if (response.data.success) {
         // Refresh data
@@ -387,7 +387,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/orders/${selectedOrder.id}`, {
+      const response = await fetch(`http://localhost:3002/api/orders/${selectedOrder.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -421,7 +421,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/orders/${selectedOrder.id}/status`, {
+      const response = await fetch(`http://localhost:3002/api/orders/${selectedOrder.id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

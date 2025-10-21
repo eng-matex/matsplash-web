@@ -93,15 +93,15 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
 
       switch (selectedSection) {
         case 'overview':
-          const statsResponse = await axios.get('http://localhost:3001/api/dashboard/stats', { headers });
+          const statsResponse = await axios.get('http://localhost:3002/api/dashboard/stats', { headers });
           setStats(statsResponse.data.data);
           break;
         case 'employee-mgmt':
-          const employeesResponse = await axios.get('http://localhost:3001/api/employees', { headers });
+          const employeesResponse = await axios.get('http://localhost:3002/api/employees', { headers });
           setEmployees(employeesResponse.data.data || []);
           break;
         case 'attendance':
-          const attendanceResponse = await axios.get('http://localhost:3001/api/attendance', { headers });
+          const attendanceResponse = await axios.get('http://localhost:3002/api/attendance', { headers });
           setAttendance(attendanceResponse.data.data || []);
           break;
         case 'distributor-mgmt':
@@ -121,7 +121,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         case 'commission-approval':
           // Fetch commission approvals
           try {
-            const commissionResponse = await axios.get('http://localhost:3001/api/sales/driver-sales', { headers });
+            const commissionResponse = await axios.get('http://localhost:3002/api/sales/driver-sales', { headers });
             if (commissionResponse.data.success) {
               setCommissionApprovals(commissionResponse.data.data || []);
             } else {
@@ -187,7 +187,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.put(`http://localhost:3001/api/sales/commission/${commissionId}/approve`, {
+      const response = await axios.put(`http://localhost:3002/api/sales/commission/${commissionId}/approve`, {
         approved_by: 1, // This should come from auth context
         approval_notes: 'Approved by Manager'
       }, { headers });
@@ -209,7 +209,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.put(`http://localhost:3001/api/sales/commission/${commissionId}/reject`, {
+      const response = await axios.put(`http://localhost:3002/api/sales/commission/${commissionId}/reject`, {
         rejected_by: 1, // This should come from auth context
         rejection_notes: 'Rejected by Manager - requires review'
       }, { headers });

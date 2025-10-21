@@ -270,7 +270,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         params.append('userRole', userRole);
       }
       
-      const response = await fetch(`http://localhost:3001/api/employees?${params.toString()}`, { headers });
+      const response = await fetch(`http://localhost:3002/api/employees?${params.toString()}`, { headers });
       
       if (response.ok) {
         const data = await response.json();
@@ -348,7 +348,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}/reset-pin`, {
+      const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}/reset-pin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -380,7 +380,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
       const token = localStorage.getItem('token');
       const newStatus = selectedEmployee.status === 'active' ? 'inactive' : 'active';
       
-      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+      const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -424,7 +424,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+      const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -466,7 +466,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}/admin-login`, {
+      const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}/admin-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -500,7 +500,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const handleAdminLogout = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/employees/admin-logout', {
+      const response = await fetch('http://localhost:3002/api/employees/admin-logout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -553,7 +553,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/employees/${selectedEmployee.id}`, {
+      const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -643,7 +643,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
       // Create employee via API
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/employees', {
+      const response = await fetch('http://localhost:3002/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

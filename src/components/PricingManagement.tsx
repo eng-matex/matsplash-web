@@ -613,7 +613,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       try {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
-        const response = await fetch('http://localhost:3001/api/price-models', { headers });
+        const response = await fetch('http://localhost:3002/api/price-models', { headers });
         if (response.ok) {
           const data = await response.json();
           setPriceModels(data.data || []);
@@ -764,7 +764,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/price-models', {
+      const response = await fetch('http://localhost:3002/api/price-models', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -814,7 +814,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
       console.log('Updating price model:', selectedProduct.id, newPriceModel);
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/price-models/${selectedProduct.id}`, {
+      const response = await fetch(`http://localhost:3002/api/price-models/${selectedProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -845,7 +845,7 @@ const PricingManagement: React.FC<PricingManagementProps> = ({ selectedSection, 
     if (window.confirm('Are you sure you want to delete this price model?')) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:3001/api/price-models/${id}`, {
+        const response = await fetch(`http://localhost:3002/api/price-models/${id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
