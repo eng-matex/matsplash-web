@@ -1595,7 +1595,7 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
           ) : (
             <Box>
               <Typography variant="body1" sx={{ mb: 2 }}>
-                Found {networkDevices.length} devices on the network:
+                Found {networkDevices?.length || 0} devices on the network:
               </Typography>
               <TableContainer component={Paper}>
                 <Table>
@@ -1612,7 +1612,7 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {networkDevices.map((device, index) => (
+                    {(networkDevices || []).map((device, index) => (
                       <TableRow key={index}>
                         <TableCell>{device.ip}</TableCell>
                         <TableCell>{device.port}</TableCell>

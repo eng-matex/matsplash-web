@@ -427,35 +427,50 @@ export default function AIAnalytics() {
         </Typography>
         <Divider sx={{ mb: 2 }} />
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Alert severity="success" icon={<CheckCircle />}>
-              <AlertTitle>High Performance</AlertTitle>
-              Face recognition accuracy is at 94.5% - performing above industry standard of 90%.
-            </Alert>
+        {recentDetections.length > 0 || analytics.totalDetections > 0 ? (
+          <Grid container spacing={2}>
+            {analytics.totalDetections > 0 && (
+              <Grid item xs={12} md={6}>
+                <Alert severity="info" icon={<Assessment />}>
+                  <AlertTitle>System Status</AlertTitle>
+                  {analytics.totalDetections} detections processed in the last {timeRange} with {analytics.averageConfidence}% average confidence.
+                </Alert>
+              </Grid>
+            )}
+            
+            {analytics.falsePositives > 0 && (
+              <Grid item xs={12} md={6}>
+                <Alert severity="warning" icon={<Warning />}>
+                  <AlertTitle>Quality Alert</AlertTitle>
+                  {analytics.falsePositives} false positives detected. Consider reviewing detection thresholds.
+                </Alert>
+              </Grid>
+            )}
+            
+            {analytics.alerts > 0 && (
+              <Grid item xs={12} md={6}>
+                <Alert severity="error" icon={<Warning />}>
+                  <AlertTitle>Active Alerts</AlertTitle>
+                  {analytics.alerts} active security alerts require attention.
+                </Alert>
+              </Grid>
+            )}
+            
+            {recentDetections.length > 0 && (
+              <Grid item xs={12} md={6}>
+                <Alert severity="success" icon={<CheckCircle />}>
+                  <AlertTitle>Recent Activity</AlertTitle>
+                  {recentDetections.length} detections in the last 24 hours. System is actively monitoring.
+                </Alert>
+              </Grid>
+            )}
           </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Alert severity="warning" icon={<Warning />}>
-              <AlertTitle>Recommendation</AlertTitle>
-              License plate recognition could be improved with better camera positioning.
-            </Alert>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Alert severity="info" icon={<Psychology />}>
-              <AlertTitle>Pattern Detected</AlertTitle>
-              Peak activity detected between 8 AM - 10 AM with 3,200 person detections.
-            </Alert>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Alert severity="error" icon={<Warning />}>
-              <AlertTitle>Alert</AlertTitle>
-              Unusual behavior detected in Warehouse area at 3:45 PM - Review recommended.
-            </Alert>
-          </Grid>
-        </Grid>
+        ) : (
+          <Alert severity="info" icon={<Assessment />}>
+            <AlertTitle>No Data Available</AlertTitle>
+            AI Analytics data will appear here once detections are processed. Enable AI features and start monitoring to see insights and recommendations.
+          </Alert>
+        )}
       </Paper>
     </Box>
   );

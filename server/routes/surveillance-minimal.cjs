@@ -150,8 +150,8 @@ module.exports = function(db) {
         startTime: r.start_time,
         endTime: r.end_time,
         duration: r.end_time
-          ? Math.max(0, Math.round((new Date(r.end_time) - new Date(r.start_time)) / 60000))
-          : Math.max(0, Math.round((Date.now() - new Date(r.start_time)) / 60000)),
+          ? Math.max(0, Math.round((new Date(r.end_time) - new Date(r.start_time)) / 1000))
+          : Math.max(0, Math.round((Date.now() - new Date(r.start_time)) / 1000)),
         fileSize: r.file_size_mb || 0,
         status: r.status || 'completed',
         quality: '1080p',
@@ -323,8 +323,8 @@ module.exports = function(db) {
         startTime: recording.start_time,
         endTime: recording.end_time,
         duration: recording.end_time ? 
-          Math.round((new Date(recording.end_time) - new Date(recording.start_time)) / 1000 / 60) : 
-          Math.round((Date.now() - new Date(recording.start_time)) / 1000 / 60),
+          Math.round((new Date(recording.end_time) - new Date(recording.start_time)) / 1000) : 
+          Math.round((Date.now() - new Date(recording.start_time)) / 1000),
         fileSize: Math.floor(Math.random() * 1000) + 100, // Mock file size in MB
         status: recording.status,
         quality: '1080p',

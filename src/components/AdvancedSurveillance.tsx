@@ -181,7 +181,7 @@ export default function AdvancedSurveillance() {
       });
       const data = await response.json();
       if (data.success) {
-        const cameraList = data.data || [];
+        const cameraList = data.cameras || [];
         setCameras(cameraList);
         updateAnalytics(cameraList);
         

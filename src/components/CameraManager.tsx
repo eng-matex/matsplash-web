@@ -721,7 +721,7 @@ const CameraManager: React.FC = () => {
       <TabPanel value={tabValue} index={1}>
         <Box>
           <Card>
-          <CardContent>
+            <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Camera Credential Sets</Typography>
               <Button
@@ -769,10 +769,10 @@ const CameraManager: React.FC = () => {
               ))}
             </Grid>
           </CardContent>
-        </Card>
+          </Card>
 
-        {/* Add Credential Set Dialog */}
-        <Dialog open={showCredentialDialog} onClose={() => setShowCredentialDialog(false)} maxWidth="md" fullWidth>
+          {/* Add Credential Set Dialog */}
+          <Dialog open={showCredentialDialog} onClose={() => setShowCredentialDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Add Credential Set</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -831,7 +831,7 @@ const CameraManager: React.FC = () => {
           <Button onClick={() => setShowCredentialDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={saveCredentialSet}>Save Credential Set</Button>
         </DialogActions>
-      </Dialog>
+          </Dialog>
         </Box>
       </TabPanel>
     </Box>

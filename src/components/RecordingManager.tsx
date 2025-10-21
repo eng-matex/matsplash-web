@@ -41,6 +41,7 @@ import {
   Videocam,
   DateRange,
   Schedule,
+  Refresh,
 } from '@mui/icons-material';
 
 interface Recording {
@@ -278,6 +279,17 @@ export default function RecordingManager() {
             variant="outlined"
           >
             Date Range
+          </Button>
+          
+          <Button
+            startIcon={<Refresh />}
+            variant="outlined"
+            onClick={() => {
+              fetchRecordings();
+              fetchStorageInfo();
+            }}
+          >
+            Refresh
           </Button>
         </Stack>
       </Paper>
