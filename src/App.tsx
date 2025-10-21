@@ -48,6 +48,7 @@ import LoaderDashboard from './components/LoaderDashboard';
 import SalesDashboard from './components/SalesDashboard';
 import SecurityDashboard from './components/SecurityDashboard';
 import LoginPage from './components/LoginPage';
+import AdvancedSurveillance from './components/AdvancedSurveillance';
 
 const App: React.FC = () => {
   const { user, isAuthenticated, login, logout } = useAuth();
@@ -61,10 +62,13 @@ const App: React.FC = () => {
       const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
 
   useEffect(() => {
+    console.log('🔍 App useEffect - isAuthenticated:', isAuthenticated, 'user:', user);
     if (isAuthenticated && user) {
+      console.log('🔍 Setting isLoggedIn to true, user role:', user.role);
       setIsLoggedIn(true);
       setCurrentPage(getDefaultView(user.role));
     } else {
+      console.log('🔍 Setting isLoggedIn to false');
       setIsLoggedIn(false);
     }
   }, [isAuthenticated, user]);
@@ -78,12 +82,15 @@ const App: React.FC = () => {
       const result = await login({
         emailOrPhone: loginData.emailOrPhone,
         pin: loginData.pin
-      });
+      }, loginData.twoFactorCode);
       
       if (result.success) {
         setRequiresTwoFactor(false);
         setShowEmergencyAccess(false);
         setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
+      } else if (result.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError('Please enter your 2FA code');
       } else {
         setError(result.message || 'Login failed');
       }
@@ -109,13 +116,22 @@ const App: React.FC = () => {
           return <ClockInScreen user={user} />;
         }
 
+        // Handle advanced CCTV
+        if (currentPage === 'advanced-cctv') {
+          return <AdvancedSurveillance />;
+        }
+
         // Handle role-specific dashboards
+        console.log('🎯 User role for dashboard routing:', user?.role);
         switch (user?.role?.toLowerCase()) {
           case 'director':
+            console.log('🎯 Rendering DirectorDashboard');
             return <DirectorDashboard currentPage={currentPage} onPageChange={setCurrentPage} />;
           case 'admin':
+            console.log('🎯 Rendering ManagerDashboard for Admin');
             return <ManagerDashboard selectedSection={currentPage} />; // Admin uses Manager dashboard
           case 'manager':
+            console.log('🎯 Rendering ManagerDashboard for Manager');
             return <ManagerDashboard selectedSection={currentPage} />;
           case 'receptionist':
             return <ReceptionistDashboard selectedSection={currentPage} onPageChange={setCurrentPage} />;
@@ -138,6 +154,7 @@ const App: React.FC = () => {
           case 'security':
             return <SecurityDashboard selectedSection={currentPage} />;
           default:
+            console.log('🎯 Default case triggered for role:', user?.role);
             return (
               <Card sx={{ p: 3 }}>
                 <CardContent>

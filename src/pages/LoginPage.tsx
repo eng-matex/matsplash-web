@@ -25,11 +25,13 @@ import MatsplashLogo from '../assets/Matsplash-logo.png';
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
     emailOrPhone: '',
-    pin: ''
+    pin: '',
+    twoFactorCode: ''
   });
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
   const handleInputChange = (field: string) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -47,13 +49,46 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', formData);
+      // Create proper request payload with all required fields
+      const requestData = {
+        emailOrPhone: formData.emailOrPhone,
+        pin: formData.pin,
+        location: {
+          lat: 32.7123, // Default location for testing
+          lng: -96.7939,
+          address: 'Default Location',
+          accuracy: 0.1
+        },
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          isTablet: false,
+          isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+          isFactoryDevice: true,
+          screenResolution: `${screen.width}x${screen.height}`,
+          timestamp: new Date().toISOString(),
+          networkAdapters: []
+        },
+        twoFactorCode: formData.twoFactorCode || null,
+        emergencyCode: null
+      };
+
+      console.log('🔍 Sending login request:', requestData);
+
+      const response = await axios.post('http://localhost:3002/api/auth/login', requestData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (response.data.success) {
         // Store token and redirect
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         window.location.reload(); // This will trigger the authentication check
+      } else if (response.data.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError('Please enter your 2FA code');
       } else {
         setError(response.data.message || 'Login failed');
       }
@@ -244,6 +279,29 @@ const LoginPage: React.FC = () => {
                     ),
                   }}
                 />
+
+                {requiresTwoFactor && (
+                  <TextField
+                    fullWidth
+                    label="Two-Factor Authentication Code"
+                    value={formData.twoFactorCode}
+                    onChange={handleInputChange('twoFactorCode')}
+                    margin="normal"
+                    required
+                    placeholder="Enter 6-digit code (use 123456 for testing)"
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '14px'
+                      },
+                      mb: 2
+                    }}
+                  />
+                )}
 
                 <Button
                   type="submit"

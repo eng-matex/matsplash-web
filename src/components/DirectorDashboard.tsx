@@ -92,7 +92,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       let salesGrowth = 0;
       if (salesResponse.status === 'fulfilled' && salesResponse.value.ok) {
         const salesData = await salesResponse.value.json();
-        totalSales = salesData.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0);
+        if (Array.isArray(salesData)) {
+          totalSales = salesData.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0);
+        } else if (salesData && Array.isArray(salesData.data)) {
+          totalSales = salesData.data.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0);
+        }
         salesGrowth = 15.2; // Mock growth for now
       }
 
@@ -101,7 +105,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       let orderGrowth = 0;
       if (ordersResponse.status === 'fulfilled' && ordersResponse.value.ok) {
         const ordersData = await ordersResponse.value.json();
-        totalOrders = ordersData.length;
+        if (Array.isArray(ordersData)) {
+          totalOrders = ordersData.length;
+        } else if (ordersData && Array.isArray(ordersData.data)) {
+          totalOrders = ordersData.data.length;
+        }
         orderGrowth = 8.5; // Mock growth for now
       }
 
@@ -110,7 +118,13 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       let employeeGrowth = 0;
       if (employeesResponse.status === 'fulfilled' && employeesResponse.value.ok) {
         const employeesData = await employeesResponse.value.json();
-        activeEmployees = employeesData.filter((emp: any) => emp.is_active).length;
+        let employees = [];
+        if (Array.isArray(employeesData)) {
+          employees = employeesData;
+        } else if (employeesData && Array.isArray(employeesData.data)) {
+          employees = employeesData.data;
+        }
+        activeEmployees = employees.filter((emp: any) => emp.is_active).length;
         employeeGrowth = 0; // No growth for now
       }
 

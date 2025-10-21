@@ -30,12 +30,13 @@ interface LoginRequest {
   pin: string;
 }
 
-interface LoginResponse {
-  success: boolean;
-  user?: User;
-  token?: string;
-  message?: string;
-}
+  interface LoginResponse {
+    success: boolean;
+    user?: User;
+    token?: string;
+    message?: string;
+    requiresTwoFactor?: boolean;
+  }
 import axios from 'axios';
 
 interface AuthContextType {
@@ -51,17 +52,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // API base URL
-const API_BASE_URL = 'http://localhost:3001/api';
-
-// Configure axios defaults
-axios.defaults.baseURL = API_BASE_URL;
+const API_BASE_URL = 'http://localhost:3002/api';
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem('user');
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    console.log('🔍 Loading user from localStorage:', parsedUser);
+    if (parsedUser) {
+      console.log('🔍 Loaded user ID:', parsedUser.id);
+      console.log('🔍 Loaded user role:', parsedUser.role);
+      console.log('🔍 Loaded user email:', parsedUser.email);
+    }
+    return parsedUser;
+  });
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
@@ -115,7 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    console.log('Setting up auto-logout with 10-second timeout');
+    console.log(`Setting up auto-logout with ${AUTO_LOGOUT_TIME / 1000 / 60} minute timeout`);
 
     const checkTokenExpiry = async () => {
       const now = Date.now();
@@ -155,7 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           refreshAttemptedRef.current = true;
           try {
             console.log('🔄 Attempting token refresh...');
-            const response = await axios.post('/auth/refresh');
+            const response = await axios.post(`${API_BASE_URL}/auth/refresh`);
             if (response.data.success) {
               const newToken = response.data.token;
               setToken(newToken);
@@ -241,7 +249,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
+  const login = async (credentials: LoginRequest, twoFactorCode?: string): Promise<LoginResponse> => {
     try {
       setIsLoading(true);
       
@@ -278,18 +286,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
 
-      const response = await axios.post('/auth/login', {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         ...credentials,
         location,
-        deviceInfo
+        deviceInfo,
+        twoFactorCode
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       
       if (response.data.success) {
         if (response.data.token) {
           // Regular login
+          console.log('🔑 Setting user data:', response.data.user);
+          console.log('🔑 User ID:', response.data.user.id);
+          console.log('🔑 User Role:', response.data.user.role);
+          console.log('🔑 User Email:', response.data.user.email);
+          
+          // Clear any existing user data first
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
           setToken(response.data.token);
           setUser(response.data.user);
           localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          
+          console.log('🔑 User data saved to localStorage:', JSON.parse(localStorage.getItem('user') || '{}'));
           
           // Debug token expiry
           try {
@@ -315,6 +340,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             message: response.data.message
           };
         }
+      } else if (response.data.requiresTwoFactor) {
+        // 2FA required
+        return {
+          success: false,
+          requiresTwoFactor: true,
+          message: response.data.message
+        };
       }
       
       return {
@@ -337,6 +369,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
     
     if (autoLogout) {
@@ -349,7 +382,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const changePin = async (userId: number, newPin: string): Promise<ApiResponse> => {
     try {
-      const response = await axios.post('/auth/change-pin', {
+      const response = await axios.post(`${API_BASE_URL}/auth/change-pin`, {
         userId,
         newPin
       });

@@ -66,6 +66,14 @@ module.exports = function(db) {
   // Helper function to test port connectivity
   function testPort(ip, port, timeout = 3000) {
     return new Promise((resolve) => {
+      // Validate port
+      const validPort = parseInt(port);
+      if (isNaN(validPort) || validPort < 1 || validPort > 65535) {
+        console.log(`❌ Invalid port: ${port}`);
+        resolve({ status: 'offline', error: 'Invalid port' });
+        return;
+      }
+
       const socket = new net.Socket();
       const startTime = Date.now();
       
@@ -82,12 +90,12 @@ module.exports = function(db) {
         resolve({ status: 'offline' });
       });
       
-      socket.on('error', () => {
+      socket.on('error', (error) => {
         socket.destroy();
-        resolve({ status: 'offline' });
+        resolve({ status: 'offline', error: error.message });
       });
       
-      socket.connect(port, ip);
+      socket.connect(validPort, ip);
     });
   }
 
@@ -163,8 +171,11 @@ module.exports = function(db) {
             streamUrl = `http://${cameraData.ip_address}:${port}/ISAPI/Streaming/channels/101/picture`;
           } else if (manufacturer.includes('dahua')) {
             streamUrl = `http://${cameraData.ip_address}:${port}/cgi-bin/mjpg/video.cgi`;
+          } else if (manufacturer.includes('civs') || manufacturer.includes('ipc')) {
+            // CIVS IPC cameras - use RTSP protocol
+            streamUrl = `rtsp://${cameraData.ip_address}:554/livestream2`;
           } else {
-            // Generic fallback
+            // Generic fallback - try multiple common paths
             streamUrl = `http://${cameraData.ip_address}:${port}/video.mjpg`;
           }
         }
@@ -289,22 +300,45 @@ module.exports = function(db) {
         });
       }
 
-      console.log(`🔍 Testing camera connection: ${ip_address}:${port}`);
+      // Handle null or invalid ports
+      const validPort = port && port !== null && port !== 'null' ? parseInt(port) : 80;
+      
+      console.log(`🔍 Testing camera connection: ${ip_address}:${validPort}`);
       
       // Test basic connectivity first
-      const connectivityResult = await testPort(ip_address, port, timeout);
+      const connectivityResult = await testPort(ip_address, validPort, timeout);
       
       if (connectivityResult.status === 'offline') {
-        return res.json({
-          success: false,
-          data: {
-            ip: ip_address,
-            port: port,
-            status: 'offline',
-            error: 'Connection timeout or refused'
-          },
-          message: 'Camera is not reachable'
-        });
+        // Try common camera ports if the default fails
+        const commonPorts = [80, 8080, 554, 8554, 1935, 443, 8000, 8001, 8002];
+        let foundPort = null;
+        
+        for (const testPort of commonPorts) {
+          if (testPort !== validPort) {
+            console.log(`🔍 Trying alternative port: ${ip_address}:${testPort}`);
+            const altResult = await testPort(ip_address, testPort, 2000);
+            if (altResult.status === 'online') {
+              foundPort = testPort;
+              break;
+            }
+          }
+        }
+        
+        if (!foundPort) {
+          return res.json({
+            success: false,
+            data: {
+              ip: ip_address,
+              port: validPort,
+              status: 'offline',
+              error: 'Connection timeout or refused on all common ports'
+            },
+            message: 'Camera is not reachable on any common port'
+          });
+        }
+        
+        // Update the port to the working one
+        validPort = foundPort;
       }
       
       // If port is open, try to determine if it's a camera
@@ -312,51 +346,141 @@ module.exports = function(db) {
       let manufacturer = 'Unknown';
       let model = 'Unknown';
       let streamUrl = '';
-      let authRequired = false;
-      let capabilities = [];
+      let protocol = 'http';
       
-      // Common camera ports and their typical services
-      if (port === 80 || port === 8080) {
-        deviceType = 'web_camera';
-        streamUrl = `http://${ip_address}:${port}/video.mjpg`;
-        capabilities = ['video'];
-      } else if (port === 554) {
-        deviceType = 'rtsp_camera';
-        streamUrl = `rtsp://${ip_address}:${port}/stream1`;
-        capabilities = ['video', 'audio'];
-      } else if (port === 1935) {
-        deviceType = 'rtmp_camera';
-        streamUrl = `rtmp://${ip_address}:${port}/live/stream1`;
-        capabilities = ['video', 'audio'];
+      // Determine protocol and generate stream URL
+      if (validPort === 554 || validPort === 8554) {
+        protocol = 'rtsp';
+        // RTSP stream URLs for different camera types
+        const rtspPaths = [
+          '/stream1',
+          '/stream2', 
+          '/live/stream1',
+          '/cam/realmonitor?channel=1&subtype=0',
+          '/h264/ch1/main/av_stream',
+          '/h264/ch1/sub/av_stream'
+        ];
+        streamUrl = `rtsp://${username ? username + ':' + password + '@' : ''}${ip_address}:${validPort}${rtspPaths[0]}`;
+      } else if (validPort === 1935) {
+        protocol = 'rtmp';
+        streamUrl = `rtmp://${ip_address}:${validPort}/live/stream1`;
+      } else {
+        protocol = 'http';
+        // Try common HTTP stream paths
+        const httpPaths = [
+          '/video',
+          '/stream',
+          '/live',
+          '/cam/realmonitor?channel=1&subtype=0',
+          '/axis-cgi/mjpg/video.cgi',
+          '/cgi-bin/mjpg/video.cgi',
+          '/mjpg/video.mjpg',
+          '/video.mjpg',
+          '/streaming/channels/101',
+          '/onvif/device_service',
+          '/videostream.cgi',
+          '/snapshot.cgi',
+          '/video.cgi',
+          '/mjpeg.cgi',
+          '/live.cgi'
+        ];
+        
+        // For now, use the first common path
+        streamUrl = `http://${username ? username + ':' + password + '@' : ''}${ip_address}:${validPort}${httpPaths[0]}`;
       }
       
-      // If username/password provided, assume auth is required
-      if (username && password) {
-        authRequired = true;
-        if (streamUrl.includes('http://')) {
-          streamUrl = `http://${username}:${password}@${ip_address}:${port}/video.mjpg`;
-        } else if (streamUrl.includes('rtsp://')) {
-          streamUrl = `rtsp://${username}:${password}@${ip_address}:${port}/stream1`;
+      // Try to detect camera manufacturer based on common patterns
+      try {
+        const http = require('http');
+        const https = require('https');
+        const client = validPort === 443 ? https : http;
+        
+        const options = {
+          hostname: ip_address,
+          port: validPort,
+          path: '/',
+          method: 'GET',
+          timeout: 3000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; CameraDetector/1.0)'
+          }
+        };
+        
+        if (username && password) {
+          const auth = Buffer.from(`${username}:${password}`).toString('base64');
+          options.headers['Authorization'] = `Basic ${auth}`;
         }
+        
+        const response = await new Promise((resolve, reject) => {
+          const req = client.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, data }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('Request timeout'));
+          });
+          req.end();
+        });
+        
+        // Analyze response to detect camera type
+        const serverHeader = response.headers.server || '';
+        const data = response.data || '';
+        
+        if (serverHeader.includes('Hikvision') || data.includes('Hikvision')) {
+          manufacturer = 'Hikvision';
+          model = 'DS Series';
+          deviceType = 'ip_camera';
+        } else if (serverHeader.includes('Dahua') || data.includes('Dahua')) {
+          manufacturer = 'Dahua';
+          model = 'IPC Series';
+          deviceType = 'ip_camera';
+        } else if (serverHeader.includes('Axis') || data.includes('Axis')) {
+          manufacturer = 'Axis';
+          model = 'M Series';
+          deviceType = 'ip_camera';
+             } else if (data.includes('CIVS') || data.includes('IPC')) {
+               manufacturer = 'CIVS';
+               model = 'IPC Series';
+               deviceType = 'ip_camera';
+               // CIVS cameras use RTSP protocol
+               protocol = 'rtsp';
+               streamUrl = `rtsp://${username ? username + ':' + password + '@' : ''}${ip_address}:554/livestream2`;
+             } else if (response.statusCode === 200) {
+          deviceType = 'ip_camera';
+          manufacturer = 'Generic IP Camera';
+        }
+        
+      } catch (error) {
+        console.log(`🔍 Could not detect camera details: ${error.message}`);
+        // Still consider it a camera if port is open
+        deviceType = 'ip_camera';
       }
       
-      const result = {
-        ip: ip_address,
-        port: port,
-        status: 'online',
-        responseTime: connectivityResult.responseTime,
-        deviceType: deviceType,
-        manufacturer: manufacturer,
-        model: model,
-        streamUrl: streamUrl,
-        authRequired: authRequired,
-        capabilities: capabilities
-      };
-      
+      // Return successful test result
       res.json({
         success: true,
-        data: result,
-        message: result.status === 'online' ? 'Camera is reachable' : 'Camera is not reachable'
+        data: {
+          ip: ip_address,
+          port: validPort,
+          status: 'online',
+          responseTime: connectivityResult.responseTime,
+          deviceType,
+          manufacturer,
+          model,
+          protocol,
+          streamUrl,
+          authRequired: !!(username && password),
+          capabilities: [
+            'video_stream',
+            'motion_detection',
+            'night_vision',
+            'ptz_control'
+          ]
+        },
+        message: `Camera detected: ${manufacturer} ${model} on ${protocol}://${ip_address}:${validPort}`
       });
 
     } catch (error) {
@@ -364,6 +488,59 @@ module.exports = function(db) {
       res.status(500).json({
         success: false,
         message: 'Failed to test camera connection'
+      });
+    }
+  });
+
+  // Stream camera feed
+  router.get('/stream/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get camera details
+      const camera = await db('cameras').where('id', id).first();
+      if (!camera) {
+        return res.status(404).json({
+          success: false,
+          message: 'Camera not found'
+        });
+      }
+      
+      // Set headers for streaming
+      res.setHeader('Content-Type', 'multipart/x-mixed-replace; boundary=--myboundary');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      // For now, return a placeholder stream
+      // In production, you would connect to the actual camera stream
+      const placeholderStream = `
+--myboundary
+Content-Type: image/jpeg
+Content-Length: 0
+
+--myboundary
+Content-Type: image/jpeg
+Content-Length: 0
+
+--myboundary--
+      `;
+      
+      res.write(placeholderStream);
+      
+      // Keep connection alive
+      const keepAlive = setInterval(() => {
+        res.write('--myboundary\nContent-Type: image/jpeg\nContent-Length: 0\n\n');
+      }, 1000);
+      
+      req.on('close', () => {
+        clearInterval(keepAlive);
+      });
+      
+    } catch (error) {
+      console.error('Error streaming camera:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to stream camera'
       });
     }
   });

@@ -20,7 +20,8 @@ import {
   Search,
   CheckCircle,
   Devices,
-  LocationOn
+  LocationOn,
+  Videocam
 } from '@mui/icons-material';
 
 // Navigation sections for different roles
@@ -38,6 +39,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
+        { id: 'advanced-cctv', label: '🎥 Advanced CCTV/NVR', icon: Videocam, color: '#f44336' },
         { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
       ];
 
@@ -54,6 +56,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
         { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
+        { id: 'advanced-cctv', label: '🎥 Advanced CCTV/NVR', icon: Videocam, color: '#f44336' },
         { id: 'system-activity', label: 'System Activity', icon: Assessment, color: '#795548' }
       ];
 
@@ -68,7 +71,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
-        { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' }
+        { id: 'surveillance', label: '📹 Surveillance Center', icon: Search, color: '#673ab7' },
+        { id: 'advanced-cctv', label: '🎥 Advanced CCTV/NVR', icon: Videocam, color: '#f44336' }
       ];
 
     case 'receptionist':

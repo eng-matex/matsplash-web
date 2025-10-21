@@ -48,17 +48,52 @@ import {
   FormGroup,
   LinearProgress,
   Badge,
-  Avatar,
   Fab,
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
-  Switch,
-  Slider,
-  FormControlLabel as SwitchFormControlLabel,
+  Zoom,
+  Fade,
+  Slide,
+  Collapse,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Switch,
+  Slider,
+  ToggleButton,
+  ToggleButtonGroup,
+  Avatar,
+  AvatarGroup,
+  Skeleton,
+  AlertTitle,
+  Backdrop,
+  Modal,
+  Stack,
+  Container,
+  AppBar,
+  Toolbar,
+  Drawer,
+  ListItemButton,
+  ListItemAvatar,
+  ListSubheader,
+  Divider as MuiDivider,
+  Menu,
+  MenuList,
+  MenuItem as MuiMenuItem,
+  Popover,
+  Popper,
+  ClickAwayListener,
+  Grow,
+  Portal,
+  NoSsr,
+  CssBaseline,
+  ThemeProvider,
+  createTheme,
+  alpha,
+  styled,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Add,
@@ -109,7 +144,6 @@ import {
   CloudSync,
   History,
   Assessment,
-  Timeline,
   Schedule,
   Person,
   Group,
@@ -633,14 +667,70 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
       if (result.success) {
         setTestResult(result.data);
         setTestDialogOpen(true);
+        
+        // Show success message with detected camera details
+        console.log(`✅ Camera detected: ${result.data.manufacturer} ${result.data.model}`);
+        console.log(`📡 Protocol: ${result.data.protocol}`);
+        console.log(`🔗 Stream URL: ${result.data.streamUrl}`);
       } else {
         console.error('Camera test failed:', result.message);
+        setTestResult({
+          ip,
+          port,
+          status: 'offline',
+          error: result.message
+        });
+        setTestDialogOpen(true);
       }
     } catch (error) {
       console.error('Error testing camera:', error);
+      setTestResult({
+        ip,
+        port,
+        status: 'offline',
+        error: 'Network error'
+      });
+      setTestDialogOpen(true);
     } finally {
       setTesting(false);
     }
+  };
+
+  const testMultipleStreamPaths = async (camera: any) => {
+    const commonPaths = [
+      '/video.mjpg',
+      '/video.mjpeg', 
+      '/mjpg/video.mjpg',
+      '/cgi-bin/mjpg/video.cgi',
+      '/axis-cgi/mjpg/video.cgi',
+      '/videostream.cgi',
+      '/snapshot.cgi',
+      '/stream',
+      '/live',
+      '/video'
+    ];
+    
+    console.log(`🔍 Testing multiple stream paths for camera ${camera.name}:`);
+    
+    for (const path of commonPaths) {
+      const testUrl = `http://${camera.ip_address}:${camera.port}${path}`;
+      console.log(`Testing: ${testUrl}`);
+      
+      try {
+        const response = await fetch(testUrl, { 
+          method: 'HEAD',
+          mode: 'no-cors',
+          timeout: 2000
+        });
+        console.log(`✅ Path ${path} is accessible`);
+        return testUrl;
+      } catch (error) {
+        console.log(`❌ Path ${path} failed: ${error.message}`);
+      }
+    }
+    
+    console.log('❌ No working stream paths found');
+    return null;
   };
 
   const handleAddFromScan = (device: NetworkDevice) => {
@@ -1168,7 +1258,7 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
             {fullscreenCamera?.status === 'online' ? (
               <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
                 <img
-                  src={fullscreenCamera.stream_url}
+                  src={`/api/streaming/stream/${fullscreenCamera.id}`}
                   alt={fullscreenCamera.name}
                   style={{
                     width: '100%',
@@ -1177,10 +1267,46 @@ const SurveillanceManagement: React.FC<SurveillanceManagementProps> = ({ selecte
                     borderRadius: '8px'
                   }}
                   onError={(e) => {
-                    // Hide the broken image and show error message
-                    e.currentTarget.style.display = 'none';
-                    const errorDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (errorDiv) errorDiv.style.display = 'flex';
+                    console.log('Stream error, trying fallback URLs');
+                    const img = e.target as HTMLImageElement;
+                    
+                    // Try multiple common stream paths for port 80 cameras
+                    const commonPaths = [
+                      '/video.mjpg',
+                      '/video.mjpeg', 
+                      '/mjpg/video.mjpg',
+                      '/cgi-bin/mjpg/video.cgi',
+                      '/axis-cgi/mjpg/video.cgi',
+                      '/videostream.cgi',
+                      '/snapshot.cgi',
+                      '/stream',
+                      '/live',
+                      '/video'
+                    ];
+                    
+                    const baseUrl = `http://${fullscreenCamera.ip_address}:${fullscreenCamera.port}`;
+                    const currentSrc = img.src;
+                    
+                    // Find the current path index and try the next one
+                    let currentIndex = -1;
+                    for (let i = 0; i < commonPaths.length; i++) {
+                      if (currentSrc.includes(commonPaths[i])) {
+                        currentIndex = i;
+                        break;
+                      }
+                    }
+                    
+                    if (currentIndex >= 0 && currentIndex < commonPaths.length - 1) {
+                      // Try the next path
+                      const nextPath = commonPaths[currentIndex + 1];
+                      img.src = `${baseUrl}${nextPath}`;
+                      console.log(`Trying next path: ${nextPath}`);
+                    } else if (fullscreenCamera.stream_url) {
+                      // Fallback to direct stream URL if streaming server fails
+                      img.src = fullscreenCamera.stream_url;
+                    } else {
+                      console.log('No more fallback stream URLs available');
+                    }
                   }}
                 />
                 <Box sx={{

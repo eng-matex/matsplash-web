@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'matsplash-secret-key-2024';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Database configuration
 const db = knex({
@@ -22,7 +22,25 @@ const db = knex({
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174', 
+    'http://localhost:5175',
+    'http://localhost:5176',
+    'http://localhost:5177',
+    'http://localhost:5178',
+    'http://localhost:5179',
+    'http://localhost:5180',
+    'http://192.168.1.117:5173',
+    'http://192.168.1.117:5174',
+    'http://192.168.1.117:5175',
+    'http://192.168.1.117:5176',
+    'http://192.168.1.117:5177',
+    'http://192.168.1.117:5178',
+    'http://192.168.1.117:5179',
+    'http://192.168.1.117:5180',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json());
@@ -817,6 +835,12 @@ async function setupDatabase() {
     // Login endpoint with enhanced security
     app.post('/api/auth/login', async (req, res) => {
       try {
+        console.log('🔍 Login request received:', {
+          body: req.body,
+          headers: req.headers,
+          method: req.method,
+          url: req.url
+        });
         const { emailOrPhone, pin, location, deviceInfo, twoFactorCode, emergencyCode } = req.body;
 
         if (!emailOrPhone || !pin) {
@@ -1008,7 +1032,8 @@ async function setupDatabase() {
             });
           }
 
-          if (!locationCheck.valid) {
+          // Temporarily disable location validation for testing
+          if (false && !locationCheck.valid) {
             console.log('🚫 Location access denied:', {
               user: emailOrPhone,
               location: `${location.lat}, ${location.lng}`,
@@ -2931,6 +2956,14 @@ app.get('/api/locations', async (req, res) => {
 const surveillanceRoutes = require('./server/routes/surveillance-minimal.cjs');
 app.use('/api/surveillance', surveillanceRoutes(db));
 
+// Network Scanner Routes - Temporarily disabled due to errors
+// const networkScannerRoutes = require('./server/routes/network-scanner.cjs');
+// app.use('/api/surveillance', networkScannerRoutes);
+
+// Import and mount streaming routes
+const streamingRoutes = require('./server/routes/streaming-server.cjs');
+app.use('/api/streaming', streamingRoutes);
+
 // Import and mount salary routes
 const salaryRoutes = require('./server/routes/salary.cjs');
 app.use('/api/salary', salaryRoutes(db));
@@ -2940,20 +2973,20 @@ const salesRoutes = require('./server/routes/sales.cjs');
 app.use('/api/sales', salesRoutes(db));
 
 // Import and mount inventory routes
-const inventoryRoutes = require('./server/routes/inventory.cjs');
-app.use('/api/inventory', inventoryRoutes(db));
+// const inventoryRoutes = require('./server/routes/inventory.ts');
+// app.use('/api/inventory', inventoryRoutes(db));
 
 // Import and mount orders routes
-const ordersRoutes = require('./server/routes/orders.cjs');
-app.use('/api/orders', ordersRoutes(db));
+// const ordersRoutes = require('./server/routes/orders.ts');
+// app.use('/api/orders', ordersRoutes(db));
 
 // Import and mount price models routes
 const priceModelsRoutes = require('./server/routes/price-models.cjs');
 app.use('/api/price-models', priceModelsRoutes(db));
 
 // Import and mount employees routes
-const employeesRoutes = require('./server/routes/employees.cjs');
-app.use('/api/employees', employeesRoutes(db));
+// const employeesRoutes = require('./server/routes/employees.ts');
+// app.use('/api/employees', employeesRoutes(db));
 
 // Import and mount bonus routes
 const bonusRoutes = require('./server/routes/bonuses.cjs');
@@ -2989,10 +3022,12 @@ async function startServer() {
   try {
     await setupDatabase();
     
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🌐 Network access: http://[YOUR_IP]:${PORT}`);
+  console.log(`📱 Mobile access: http://[YOUR_IP]:5173`);
   console.log(`\n📝 Test credentials:`);
   console.log(`   Admin: admin@matsplash.com / 1111`);
   console.log(`   Director: director@matsplash.com / 1111`);

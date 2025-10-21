@@ -35,7 +35,8 @@ import {
   LocalShipping,
   Store,
   TrendingUp,
-  AccessTime
+  AccessTime,
+  Videocam
 } from '@mui/icons-material';
 // import { useAuth } from '../context/AuthContext';
 import { DashboardStats } from '../types';
@@ -134,6 +135,7 @@ const DashboardPage: React.FC = () => {
     { text: 'Inventory', icon: <Inventory />, path: '/inventory' },
     { text: 'Attendance', icon: <AccessTime />, path: '/attendance' },
     { text: 'Surveillance', icon: <Security />, path: '/surveillance' },
+    { text: 'Advanced CCTV', icon: <Videocam />, path: '/advanced-cctv' },
   ];
 
   const handleNavigation = (path: string) => {
