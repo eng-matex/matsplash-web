@@ -77,32 +77,7 @@ const AttendanceEnhancedPage: React.FC<AttendanceEnhancedPageProps> = () => {
         userId={user?.id}
       />
 
-      {/* Clock in/out dialogs removed - use dedicated Clock In/Out tab instead */}
-
-      {/* Break Dialog */}
-      <Dialog open={breakDialogOpen} onClose={() => setBreakDialogOpen(false)}>
-        <DialogTitle>Start Break</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            You are about to start your break. Your break time will be tracked automatically.
-          </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <AlertTitle>Break Time Tracking</AlertTitle>
-            Your break time will be automatically tracked and deducted from your total working hours.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBreakDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleStartBreak} 
-            variant="contained" 
-            disabled={loading}
-            color="secondary"
-          >
-            {loading ? 'Starting Break...' : 'Start Break'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Clock in/out and break dialogs removed - use dedicated Clock In/Out tab instead */}
     </Box>
   );
 };

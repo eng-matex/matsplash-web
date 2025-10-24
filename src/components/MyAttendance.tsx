@@ -87,7 +87,7 @@ const MyAttendance: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3002/api/attendance/records?employeeId=${user.id}&dateRange=${dateRange}`, {
+      const response = await fetch(`/api/attendance/records?employeeId=${user.id}&dateRange=${dateRange}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

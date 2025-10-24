@@ -196,7 +196,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
       const token = localStorage.getItem('token');
       
       // Fetch attendance records based on user role
-      const attendanceResponse = await fetch(`http://localhost:3002/api/attendance/records?role=${userRole}&userId=${userId || ''}`, {
+      const attendanceResponse = await fetch(`/api/attendance/records?role=${userRole}&userId=${userId || ''}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -210,7 +210,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
       }
 
       // Fetch employees based on user role
-      const employeesResponse = await fetch(`http://localhost:3002/api/employees?role=${userRole}&userId=${userId || ''}`, {
+      const employeesResponse = await fetch(`/api/employees?role=${userRole}&userId=${userId || ''}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
