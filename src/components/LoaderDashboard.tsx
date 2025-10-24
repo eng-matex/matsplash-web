@@ -67,6 +67,7 @@ import {
   Speed
 } from '@mui/icons-material';
 import axios from 'axios';
+import AttendanceManagement from './AttendanceManagement';
 
 interface LoaderDashboardProps {
   selectedSection: string;
@@ -986,6 +987,8 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
         return renderLoadingTasks();
       case 'inventory-management':
         return renderInventoryManagement();
+      case 'my-attendance':
+        return <AttendanceManagement selectedSection={selectedSection} userRole="loader" />;
       default:
         return renderOverview();
     }

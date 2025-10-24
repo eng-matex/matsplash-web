@@ -67,6 +67,7 @@ import {
   Power
 } from '@mui/icons-material';
 import axios from 'axios';
+import AttendanceManagement from './AttendanceManagement';
 
 interface OperatorDashboardProps {
   selectedSection: string;
@@ -1022,6 +1023,8 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
         return renderMaintenanceTasks();
       case 'equipment-status':
         return renderEquipmentStatus();
+      case 'my-attendance':
+        return <AttendanceManagement selectedSection={selectedSection} userRole="operator" />;
       default:
         return renderOverview();
     }

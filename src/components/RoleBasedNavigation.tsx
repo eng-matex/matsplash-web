@@ -30,8 +30,8 @@ export const getRoleNavigation = (role: string) => {
     case 'admin':
       return [
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
-        { id: 'attendance', label: 'Attendance Logs', icon: AccessTime, color: '#607d8b' },
-        { id: 'my-attendance', label: 'My Attendance', icon: People, color: '#795548' },
+        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
+        { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
@@ -46,9 +46,9 @@ export const getRoleNavigation = (role: string) => {
     case 'manager':
       return [
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
+        { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
-        { id: 'attendance', label: 'Attendance Logs', icon: AccessTime, color: '#607d8b' },
-        { id: 'my-attendance', label: 'My Attendance', icon: People, color: '#795548' },
         { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
@@ -63,6 +63,7 @@ export const getRoleNavigation = (role: string) => {
     case 'director':
       return [
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'device-management', label: 'Device Management', icon: Devices, color: '#13bbc6' },
         { id: 'factory-mgmt', label: 'Factory Management', icon: LocationOn, color: '#00bcd4' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
@@ -78,6 +79,7 @@ export const getRoleNavigation = (role: string) => {
     case 'receptionist':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'inventory', label: 'Inventory Management', icon: Inventory, color: '#ff9800' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
@@ -86,19 +88,18 @@ export const getRoleNavigation = (role: string) => {
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'store-dispatch', label: 'Store Dispatch', icon: LocalShipping, color: '#9c27b0' },
         { id: 'driver-settlement', label: 'Driver Settlement', icon: Payment, color: '#ff5722' },
-        { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
-        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
+        { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' }
       ];
 
     case 'storekeeper':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'pickup-confirmations', label: 'Pickup Confirmations', icon: CheckCircle, color: '#4caf50' },
         { id: 'inventory-audit', label: 'Inventory Audit', icon: Assessment, color: '#ff5722' },
         { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#ff9800' },
-        { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' },
-        { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
+        { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' }
       ];
 
     case 'driver':

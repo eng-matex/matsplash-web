@@ -229,19 +229,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
-        // Try to get user info from the stored token or set a default
-        // For now, we'll set a default user to prevent blank screen
-        setUser({
-          id: 1,
-          name: 'User',
-          email: 'user@matsplash.com',
-          role: 'Admin',
-          isEmployee: false,
-          isActive: true,
-          createdAt: new Date().toISOString()
-        });
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedToken && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setToken(storedToken);
+          setUser(userData);
+          console.log('🔑 Restored user from localStorage:', userData);
+        } catch (error) {
+          console.error('Error parsing stored user data:', error);
+          // Clear invalid data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       }
       setIsLoading(false);
     };

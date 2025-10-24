@@ -3005,6 +3005,10 @@ app.use('/api/surveillance', surveillanceRoutes(db));
 const networkScannerRoutes = require('./server/routes/network-scanner-realtime.cjs');
 app.use('/api/network', networkScannerRoutes);
 
+// Enhanced Attendance Routes
+const attendanceEnhancedRoutes = require('./server/routes/attendance-enhanced.cjs');
+app.use('/api/attendance', attendanceEnhancedRoutes);
+
 // Import and mount streaming routes
 const streamingRoutes = require('./server/routes/streaming-server.cjs');
 app.use('/api/streaming', streamingRoutes);

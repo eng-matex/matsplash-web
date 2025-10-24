@@ -67,6 +67,7 @@ import {
   CheckBoxOutlineBlank
 } from '@mui/icons-material';
 import axios from 'axios';
+import AttendanceManagement from './AttendanceManagement';
 
 interface CleanerDashboardProps {
   selectedSection: string;
@@ -692,6 +693,8 @@ const CleanerDashboard: React.FC<CleanerDashboardProps> = ({ selectedSection }) 
         return renderCleaningTasks();
       case 'supply-inventory':
         return renderSupplyInventory();
+      case 'my-attendance':
+        return <AttendanceManagement selectedSection={selectedSection} userRole="cleaner" />;
       default:
         return renderOverview();
     }

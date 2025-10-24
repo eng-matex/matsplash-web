@@ -49,6 +49,8 @@ import SalesDashboard from './components/SalesDashboard';
 import SecurityDashboard from './components/SecurityDashboard';
 import LoginPage from './components/LoginPage';
 import AdvancedSurveillance from './components/AdvancedSurveillance';
+import AttendanceEnhancedPage from './pages/AttendanceEnhancedPage';
+import MyAttendance from './components/MyAttendance';
 
 const App: React.FC = () => {
   const { user, isAuthenticated, login, logout } = useAuth();
@@ -110,6 +112,9 @@ const App: React.FC = () => {
         if (!user) return null;
 
         const navigationItems = getRoleNavigation(user?.role);
+        console.log('🎯 Current user in renderRoleBasedDashboard:', user);
+        console.log('🎯 Current page:', currentPage);
+        console.log('🎯 Navigation items for role:', user?.role, navigationItems);
 
         // Handle clock-in-out section
         if (currentPage === 'clock-in-out') {
@@ -121,6 +126,17 @@ const App: React.FC = () => {
           return <AdvancedSurveillance />;
         }
 
+        // Handle enhanced attendance (for Admin, Manager, Director only)
+        if (currentPage === 'attendance-enhanced') {
+          return <AttendanceEnhancedPage />;
+        }
+
+        // Handle My Attendance (for all employees)
+        if (currentPage === 'my-attendance') {
+          // For regular employees - show simplified My Attendance
+          return <MyAttendance />;
+        }
+
         // Handle role-specific dashboards
         console.log('🎯 User role for dashboard routing:', user?.role);
         switch (user?.role?.toLowerCase()) {
@@ -128,8 +144,8 @@ const App: React.FC = () => {
             console.log('🎯 Rendering DirectorDashboard');
             return <DirectorDashboard currentPage={currentPage} onPageChange={setCurrentPage} />;
           case 'admin':
-            console.log('🎯 Rendering ManagerDashboard for Admin');
-            return <ManagerDashboard selectedSection={currentPage} />; // Admin uses Manager dashboard
+            console.log('🎯 Rendering DirectorDashboard for Admin');
+            return <DirectorDashboard currentPage={currentPage} onPageChange={setCurrentPage} />; // Admin uses Director dashboard
           case 'manager':
             console.log('🎯 Rendering ManagerDashboard for Manager');
             return <ManagerDashboard selectedSection={currentPage} />;

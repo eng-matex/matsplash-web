@@ -63,6 +63,7 @@ import {
   LocalShipping
 } from '@mui/icons-material';
 import axios from 'axios';
+import AttendanceManagement from './AttendanceManagement';
 
 interface SalesDashboardProps {
   selectedSection: string;
@@ -633,6 +634,8 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
         return renderSalesEntry();
       case 'sales-history':
         return renderSalesHistory();
+      case 'my-attendance':
+        return <AttendanceManagement selectedSection={selectedSection} userRole="sales" />;
       default:
         return renderOverview();
     }
