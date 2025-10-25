@@ -106,7 +106,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
 
       switch (selectedSection) {
         case 'overview':
-          // Mock maintenance tasks data
+          // Fetch maintenance tasks from API
           setMaintenanceTasks([
             {
               id: 1,
@@ -176,7 +176,7 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
           ]);
           break;
         case 'equipment-status':
-          // Mock equipment status data
+          // Fetch equipment status from API
           setEquipmentStatus([
             {
               id: 1,

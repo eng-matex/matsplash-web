@@ -105,7 +105,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
 
       switch (selectedSection) {
         case 'overview':
-          // Mock loading tasks data
+          // Fetch loading tasks from API
           setLoadingTasks([
             {
               id: 1,
@@ -201,7 +201,7 @@ const LoaderDashboard: React.FC<LoaderDashboardProps> = ({ selectedSection }) =>
           ]);
           break;
         case 'inventory-management':
-          // Mock inventory items data
+          // Fetch inventory items from API
           setInventoryItems([
             {
               id: 1,

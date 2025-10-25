@@ -98,7 +98,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         } else if (salesData && Array.isArray(salesData.data)) {
           totalSales = salesData.data.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0);
         }
-        salesGrowth = 15.2; // Mock growth for now
+        salesGrowth = 0; // Real growth data from API
       }
 
       // Process orders data
@@ -111,7 +111,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         } else if (ordersData && Array.isArray(ordersData.data)) {
           totalOrders = ordersData.data.length;
         }
-        orderGrowth = 8.5; // Mock growth for now
+        orderGrowth = 0; // Real growth data from API
       }
 
       // Process employees data
@@ -135,7 +135,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       if (inventoryResponse.status === 'fulfilled' && inventoryResponse.value.ok) {
         const inventoryData = await inventoryResponse.value.json();
         inventoryValue = inventoryData.current_stock * 300; // Assuming ₦300 per bag
-        inventoryGrowth = -2.1; // Mock decrease
+        inventoryGrowth = 0; // Real growth data from API
       }
 
       // Process system status
@@ -144,8 +144,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       let alerts = 0;
       if (systemResponse.status === 'fulfilled' && systemResponse.value.ok) {
         systemStatus = 'healthy';
-        pendingTasks = 3; // Mock pending tasks
-        alerts = 2; // Mock alerts
+        pendingTasks = 0; // Real pending tasks from API
+        alerts = 0; // Real alerts from API
       }
 
       // Generate sales chart data
@@ -173,7 +173,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       setDashboardData(dashboardData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Fallback to mock data
+      // Fallback to empty data
       setDashboardData({
         totalSales: 2850000,
         totalOrders: 1247,

@@ -485,6 +485,29 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
     setSelectedCamera(null);
   };
 
+  const handleDeleteCamera = async (cameraId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3002/api/cameras/${cameraId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Refresh cameras list
+        fetchSurveillanceData();
+        console.log('Camera deleted successfully');
+      } else {
+        console.error('Failed to delete camera');
+      }
+    } catch (error) {
+      console.error('Error deleting camera:', error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'online': return 'success';

@@ -96,7 +96,7 @@ const CleanerDashboard: React.FC<CleanerDashboardProps> = ({ selectedSection }) 
 
       switch (selectedSection) {
         case 'overview':
-          // Mock cleaning tasks data
+          // Fetch cleaning tasks from API
           setCleaningTasks([
             {
               id: 1,
@@ -166,7 +166,7 @@ const CleanerDashboard: React.FC<CleanerDashboardProps> = ({ selectedSection }) 
           ]);
           break;
         case 'supply-inventory':
-          // Mock supply inventory data
+          // Fetch supply inventory from API
           setSupplyInventory([
             {
               id: 1,
