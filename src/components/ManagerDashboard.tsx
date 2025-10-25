@@ -95,6 +95,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         case 'overview':
           const statsResponse = await axios.get('http://localhost:3002/api/dashboard/stats', { headers });
           setStats(statsResponse.data.data);
+          try {
+            const invStats = await axios.get('http://localhost:3002/api/inventory/stats', { headers });
+            // merge inventory totals into stats for display if needed
+            setStats((prev: any) => ({ ...(prev || {}), totalInventory: invStats.data.data?.totalInventory || 0 }));
+          } catch (e) { /* ignore inventory errors */ }
           break;
         case 'employee-mgmt':
           const employeesResponse = await axios.get('http://localhost:3002/api/employees', { headers });

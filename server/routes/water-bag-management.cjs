@@ -305,6 +305,33 @@ module.exports = (db) => {
             updated_at: new Date().toISOString()
           });
         }
+
+        // Update inventory logs for approved bags
+        const stockAgg = await db('inventory_logs')
+          .where('product_name', 'Sachet Water')
+          .sum('quantity_change as total')
+          .first();
+        const previousStock = stockAgg.total || 0;
+        const newStock = previousStock + assignment.bags_assigned;
+
+        // Fetch names for context
+        const loader = await db('water_bag_batches')
+          .join('employees', 'water_bag_batches.loader_id', 'employees.id')
+          .where('water_bag_batches.id', assignment.batch_id)
+          .select('employees.name as loader_name')
+          .first();
+        const packer = await db('employees').where('id', assignment.packer_id).select('name').first();
+
+        await db('inventory_logs').insert({
+          product_name: 'Sachet Water',
+          quantity_change: assignment.bags_assigned,
+          current_stock: newStock,
+          operation_type: 'in',
+          reason: `Approved intake: ${assignment.bags_assigned} bags for packer ${packer?.name || ''} (loader ${loader?.loader_name || ''})`,
+          employee_id: req.user?.id || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
       }
 
       // Log system activity

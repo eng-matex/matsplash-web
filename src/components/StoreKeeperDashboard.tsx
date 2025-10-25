@@ -95,10 +95,18 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           const ordersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(ordersResponse.data.data || []);
           
-          // Mock inventory data
-          setInventory([
-            { id: 1, item_name: 'Sachet Water', current_stock: 1500, min_stock: 500, unit: 'bags', status: 'good' }
-          ]);
+          // Fetch inventory logs to compute current stock
+          try {
+            const statsResponse = await axios.get('http://localhost:3002/api/inventory/stats', { headers });
+            const sachet = (statsResponse.data.data?.inventoryByType || []).find((r: any) => r.product_name === 'Sachet Water');
+            const current = sachet ? sachet.total : 0;
+            setInventory([
+              { id: 1, item_name: 'Sachet Water', current_stock: current, min_stock: 500, unit: 'bags', status: current <= 500 ? 'low' : 'good' }
+            ]);
+          } catch (e) {
+            console.error('Error fetching inventory stats:', e);
+            setInventory([]);
+          }
           break;
         case 'inventory-audit':
           const inventoryResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
@@ -106,16 +114,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
           break;
         case 'inventory-management':
           // Fetch inventory data for management
-          try {
-            const inventoryMgmtResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
-            setInventory(inventoryMgmtResponse.data.data || []);
-          } catch (error) {
-            console.error('Error fetching inventory data:', error);
-            // Use mock data as fallback
-            setInventory([
-              { id: 1, item_name: 'Sachet Water', current_stock: -8, min_stock: 200, max_stock: 2000, unit: 'bags', status: 'out_of_stock', unit_price: 300 }
-            ]);
-          }
+          await fetchInventoryData();
           break;
         case 'order-status-logs':
           const allOrdersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
@@ -196,14 +195,15 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const inventoryMgmtResponse = await axios.get('http://localhost:3002/api/inventory', { headers });
-      setInventory(inventoryMgmtResponse.data.data || []);
+      const statsResponse = await axios.get('http://localhost:3002/api/inventory/stats', { headers });
+      const sachet = (statsResponse.data.data?.inventoryByType || []).find((r: any) => r.product_name === 'Sachet Water');
+      const current = sachet ? sachet.total : 0;
+      setInventory([
+        { id: 1, item_name: 'Sachet Water', current_stock: current, min_stock: 200, max_stock: 2000, unit: 'bags', status: current <= 200 ? 'out_of_stock' : 'good', unit_price: 300 }
+      ]);
     } catch (error) {
       console.error('Error fetching inventory data:', error);
-      // Use mock data as fallback
-      setInventory([
-        { id: 1, item_name: 'Sachet Water', current_stock: -8, min_stock: 200, max_stock: 2000, unit: 'bags', status: 'out_of_stock', unit_price: 300 }
-      ]);
+      setInventory([]);
     }
   };
 

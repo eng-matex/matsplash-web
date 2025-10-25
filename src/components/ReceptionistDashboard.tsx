@@ -115,6 +115,11 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         case 'overview':
           const ordersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(ordersResponse.data.data || []);
+          try {
+            const invStats = await axios.get('http://localhost:3002/api/inventory/stats', { headers });
+            // Optionally expose inventory totals here if needed by the UI
+            (window as any).__INV_STATS__ = invStats.data.data;
+          } catch (e) {}
           break;
         case 'general-sales':
           // Filter orders for general sales

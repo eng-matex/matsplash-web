@@ -408,13 +408,7 @@ const WaterBagManagement: React.FC = () => {
               New Intake
             </Button>
           )}
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setCreateBatchDialog(true)}
-          >
-            Create Batch
-          </Button>
+          {/* Remove Create Batch per requirements */}
         </Box>
       </Box>
 
@@ -462,19 +456,7 @@ const WaterBagManagement: React.FC = () => {
                     <Visibility />
                   </IconButton>
                 </Tooltip>
-                {batch.status === 'received' && user?.role?.toLowerCase() === 'storekeeper' && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {
-                      setSelectedBatch(batch);
-                      setAssignDialog(true);
-                    }}
-                    sx={{ ml: 1 }}
-                  >
-                    Assign to Packer
-                  </Button>
-                )}
+                {/* Assign to Packer is no longer used; submissions go via Intake */}
               </ListItemSecondaryAction>
             </ListItem>
           ))
@@ -762,7 +744,7 @@ const WaterBagManagement: React.FC = () => {
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
               <Tab label={`Batches (${batches.length})`} />
-              {user?.role === 'Manager' && <Tab label={`Submissions (${reviewQueue.length})`} />}
+              {user?.role?.toLowerCase() === 'manager' && <Tab label={`Submissions (${reviewQueue.length})`} />}
               {user?.role?.toLowerCase() === 'storekeeper' && <Tab label={`Rejected (${rejectedQueue.length})`} />}
               <Tab label={`Work Logs (${workLogs.length})`} />
             </Tabs>
@@ -772,7 +754,7 @@ const WaterBagManagement: React.FC = () => {
             {renderBatches()}
           </TabPanel>
 
-          {user?.role === 'Manager' && (
+          {user?.role?.toLowerCase() === 'manager' && (
             <TabPanel value={tabValue} index={1}>
               {renderReviewQueue()}
             </TabPanel>
@@ -804,7 +786,7 @@ const WaterBagManagement: React.FC = () => {
                 >
                   {loaders.map((loader) => (
                     <MenuItem key={loader.id} value={loader.id}>
-                      {loader.name} ({loader.email})
+                      {loader.name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -870,7 +852,7 @@ const WaterBagManagement: React.FC = () => {
                 >
                   {packers.map((packer) => (
                     <MenuItem key={packer.id} value={packer.id}>
-                      {packer.name} ({packer.email})
+                      {packer.name}
                     </MenuItem>
                   ))}
                 </Select>
