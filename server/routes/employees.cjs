@@ -94,13 +94,13 @@ module.exports = (db) => {
         pin,
         status = 'active',
         can_access_remotely = 0,
-        salary_type = 'monthly',
+        salary_type = 'fixed',
         fixed_salary = null,
         commission_rate = null
       } = req.body;
 
-      if (!name || !role || !pin) {
-        return res.status(400).json({ success: false, message: 'Name, role and PIN are required' });
+      if (!name || !role || !pin || !email) {
+        return res.status(400).json({ success: false, message: 'Name, email, role and PIN are required' });
       }
 
       const bcrypt = require('bcryptjs');
@@ -108,7 +108,7 @@ module.exports = (db) => {
 
       const [id] = await db('employees').insert({
         name,
-        email: email || null,
+        email,
         phone: phone || null,
         role,
         pin_hash,
