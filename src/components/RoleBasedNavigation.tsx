@@ -48,6 +48,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'overview', label: 'Global Overview', icon: DashboardIcon, color: '#2196f3' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
+        { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
+        { id: 'new-employee', label: 'Add Employee', icon: SupervisorAccount, color: '#13bbc6' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },

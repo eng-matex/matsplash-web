@@ -884,7 +884,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       case 'overview':
         return renderOverview();
       case 'employee-mgmt':
-        return <EmployeeManagement selectedSection={selectedSection} userRole="manager" />;
+        return <EmployeeManagement selectedSection="employee-mgmt" userRole="Manager" />;
+      case 'new-employee':
+        return <EmployeeManagement selectedSection="new-employee" userRole="Manager" />;
       case 'attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="manager" />;
       case 'distributor-mgmt':
