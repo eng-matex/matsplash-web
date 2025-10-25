@@ -43,24 +43,24 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true
 }));
-// Enhanced JSON parsing with error handling
+// JSON parsing with error handling
 app.use(express.json({ 
-  limit: '10mb',
-  verify: (req, res, buf, encoding) => {
-    try {
-      JSON.parse(buf);
-    } catch (e) {
-      console.log('Malformed JSON request:', buf.toString());
-      res.status(400).json({ 
-        success: false, 
-        message: 'Invalid JSON format',
-        error: 'Malformed JSON in request body'
-      });
-      return;
-    }
-  }
+  limit: '10mb'
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Error handling middleware for JSON parsing errors
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    console.log('Malformed JSON request:', error.body);
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid JSON format',
+      error: 'Malformed JSON in request body'
+    });
+  }
+  next(error);
+});
 
 // Logging middleware
 app.use((req, res, next) => {
