@@ -336,7 +336,8 @@ async function setupDatabase() {
 const tables = [
   'orders', 'inventory_logs', 'attendance_logs', 'packing_logs',
   'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts',
-  'water_bag_batches', 'water_bag_assignments', 'packer_work_logs'
+  'water_bag_batches', 'water_bag_assignments', 'packer_work_logs',
+  'gate_logs', 'incident_reports', 'products', 'sales_entries', 'sales_history', 'sales_stats'
 ];
 
     for (const tableName of tables) {
@@ -541,6 +542,86 @@ const tables = [
               table.timestamps(true, true);
             });
             break;
+          case 'gate_logs':
+            await db.schema.createTable('gate_logs', (table) => {
+              table.increments('id').primary();
+              table.string('log_number').notNullable();
+              table.string('visitor_name').notNullable();
+              table.string('visitor_phone');
+              table.string('visitor_company');
+              table.string('purpose');
+              table.string('vehicle_number');
+              table.timestamp('entry_time');
+              table.timestamp('exit_time');
+              table.string('status').defaultTo('inside');
+              table.string('security_guard');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'incident_reports':
+            await db.schema.createTable('incident_reports', (table) => {
+              table.increments('id').primary();
+              table.string('report_number').notNullable();
+              table.string('type').notNullable();
+              table.text('description').notNullable();
+              table.string('location');
+              table.string('severity').defaultTo('medium');
+              table.string('reported_by');
+              table.string('status').defaultTo('open');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'products':
+            await db.schema.createTable('products', (table) => {
+              table.increments('id').primary();
+              table.string('name').notNullable();
+              table.decimal('price', 10, 2).notNullable();
+              table.string('unit').notNullable();
+              table.integer('stock').defaultTo(0);
+              table.text('description');
+              table.string('category');
+              table.boolean('is_active').defaultTo(true);
+              table.timestamps(true, true);
+            });
+            break;
+          case 'sales_entries':
+            await db.schema.createTable('sales_entries', (table) => {
+              table.increments('id').primary();
+              table.string('sale_number').notNullable();
+              table.string('customer_name').notNullable();
+              table.string('customer_phone');
+              table.string('product_type').notNullable();
+              table.integer('quantity').notNullable();
+              table.decimal('unit_price', 10, 2).notNullable();
+              table.decimal('total_amount', 10, 2).notNullable();
+              table.string('payment_method');
+              table.string('status').defaultTo('pending');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'sales_history':
+            await db.schema.createTable('sales_history', (table) => {
+              table.increments('id').primary();
+              table.string('sale_number').notNullable();
+              table.string('customer_name').notNullable();
+              table.string('product_type').notNullable();
+              table.integer('quantity').notNullable();
+              table.decimal('total_amount', 10, 2).notNullable();
+              table.string('payment_method');
+              table.string('status').defaultTo('completed');
+              table.timestamp('created_at').defaultTo(db.fn.now());
+            });
+            break;
+          case 'sales_stats':
+            await db.schema.createTable('sales_stats', (table) => {
+              table.increments('id').primary();
+              table.decimal('total_sales', 15, 2).defaultTo(0);
+              table.decimal('monthly_sales', 15, 2).defaultTo(0);
+              table.decimal('daily_sales', 15, 2).defaultTo(0);
+              table.json('top_products');
+              table.timestamp('updated_at').defaultTo(db.fn.now());
+            });
+            break;
           default:
             // Create basic table structure for other tables
             await db.schema.createTable(tableName, (table) => {
@@ -616,6 +697,40 @@ const tables = [
       }
     } catch (error) {
       console.log('Error adding columns to attendance_logs:', error.message);
+    }
+
+    // Add missing columns to existing inventory_logs table
+    try {
+      const hasInventoryTable = await db.schema.hasTable('inventory_logs');
+      if (hasInventoryTable) {
+        const inventoryColumns = ['product_name', 'quantity_change', 'current_stock', 'operation_type', 'reason', 'employee_id'];
+
+        for (const column of inventoryColumns) {
+          const hasColumn = await db.schema.hasColumn('inventory_logs', column);
+          if (!hasColumn) {
+            console.log(`Adding ${column} column to inventory_logs table...`);
+            await db.schema.alterTable('inventory_logs', (table) => {
+              switch (column) {
+                case 'product_name':
+                case 'operation_type':
+                case 'reason':
+                  table.string(column);
+                  break;
+                case 'quantity_change':
+                case 'current_stock':
+                  table.integer(column);
+                  break;
+                case 'employee_id':
+                  table.integer('employee_id').unsigned().references('id').inTable('employees');
+                  break;
+              }
+            });
+            console.log(`Added ${column} column to inventory_logs table`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error adding columns to inventory_logs:', error.message);
     }
 
     // Add missing columns to existing system_activity table

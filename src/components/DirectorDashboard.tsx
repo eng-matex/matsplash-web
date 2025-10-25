@@ -201,24 +201,13 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
   };
 
   const generateSalesChartData = () => {
-    // Generate sample sales data for the last 7 days
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const data = days.map(day => ({
-      day,
-      sales: Math.floor(Math.random() * 500000) + 200000, // Random sales between 200k-700k
-      orders: Math.floor(Math.random() * 50) + 20 // Random orders between 20-70
-    }));
-    return data;
+    // Fetch real sales data from API
+    return [];
   };
 
   const generateRecentActivity = () => {
-    return [
-      { id: 1, type: 'order', message: 'New order #ORD-001234 received', time: '2 minutes ago', icon: ShoppingCart, color: '#4caf50' },
-      { id: 2, type: 'employee', message: 'John Doe clocked in', time: '5 minutes ago', icon: People, color: '#2196f3' },
-      { id: 3, type: 'inventory', message: 'Low stock alert: Sachet Water', time: '12 minutes ago', icon: Warning, color: '#ff9800' },
-      { id: 4, type: 'sales', message: 'Daily sales target achieved', time: '1 hour ago', icon: CheckCircle, color: '#4caf50' },
-      { id: 5, type: 'security', message: 'Camera 3 motion detected', time: '2 hours ago', icon: Security, color: '#f44336' }
-    ];
+    // Fetch real activity data from API
+    return [];
   };
 
   const handleQuickAction = (action: string) => {
