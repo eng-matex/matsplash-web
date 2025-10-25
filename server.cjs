@@ -49,6 +49,18 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Error handling middleware for JSON parsing errors
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    console.log('Malformed JSON request:', error.body);
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid JSON format',
+      error: 'Malformed JSON in request body'
+    });
+  }
+  next(error);
+});
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -3266,18 +3278,5 @@ app.listen(PORT, '0.0.0.0', () => {
     process.exit(1);
   }
 }
-
-// Error handling middleware for JSON parsing errors (must be last)
-app.use((error, req, res, next) => {
-  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
-    console.log('Malformed JSON request:', error.body);
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Invalid JSON format',
-      error: 'Malformed JSON in request body'
-    });
-  }
-  next(error);
-});
 
 startServer();
