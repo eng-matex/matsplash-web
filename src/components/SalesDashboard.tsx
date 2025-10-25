@@ -102,81 +102,34 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ selectedSection }) => {
 
       switch (selectedSection) {
         case 'overview':
-          // Mock sales data
-          setSalesEntries([
-            {
-              id: 1,
-              sale_number: 'SALE001',
-              customer_name: 'John Doe',
-              customer_phone: '08012345678',
-              product_type: 'Sachet Water',
-              quantity: 50,
-              unit_price: 300,
-              total_amount: 15000,
-              payment_method: 'cash',
-              status: 'completed',
-              created_at: new Date().toISOString()
-            },
-            {
-              id: 2,
-              sale_number: 'SALE002',
-              customer_name: 'Jane Smith',
-              customer_phone: '08087654321',
-              product_type: 'Sachet Water',
-              quantity: 30,
-              unit_price: 500,
-              total_amount: 15000,
-              payment_method: 'transfer',
-              status: 'pending',
-              created_at: new Date(Date.now() - 3600000).toISOString()
-            }
-          ]);
+          // Fetch sales data from API
+          try {
+            const salesResponse = await axios.get('http://localhost:3002/api/sales/entries', { headers });
+            setSalesEntries(salesResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching sales entries:', error);
+            setSalesEntries([]);
+          }
           break;
         case 'sales-entry':
-          // Mock products data
-          setProducts([
-            { id: 1, name: 'Sachet Water', price: 300, unit: 'bags', stock: 1000 },
-            { id: 2, name: 'Sachet Water', price: 500, unit: 'bags', stock: 500 },
-            { id: 3, name: 'Water Bottles (500ml)', price: 200, unit: 'bottles', stock: 200 }
-          ]);
+          // Fetch products from API
+          try {
+            const productsResponse = await axios.get('http://localhost:3002/api/products', { headers });
+            setProducts(productsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching products:', error);
+            setProducts([]);
+          }
           break;
         case 'sales-history':
-          // Mock sales history data
-          setSalesHistory([
-            {
-              id: 1,
-              sale_number: 'SALE001',
-              customer_name: 'John Doe',
-              product_type: 'Sachet Water',
-              quantity: 50,
-              total_amount: 15000,
-              payment_method: 'cash',
-              status: 'completed',
-              created_at: new Date().toISOString()
-            },
-            {
-              id: 2,
-              sale_number: 'SALE002',
-              customer_name: 'Jane Smith',
-              product_type: 'Sachet Water',
-              quantity: 30,
-              total_amount: 15000,
-              payment_method: 'transfer',
-              status: 'completed',
-              created_at: new Date(Date.now() - 3600000).toISOString()
-            },
-            {
-              id: 3,
-              sale_number: 'SALE003',
-              customer_name: 'Mike Johnson',
-              product_type: 'Water Bottles (500ml)',
-              quantity: 100,
-              total_amount: 20000,
-              payment_method: 'cash',
-              status: 'completed',
-              created_at: new Date(Date.now() - 86400000).toISOString()
-            }
-          ]);
+          // Fetch sales history from API
+          try {
+            const historyResponse = await axios.get('http://localhost:3002/api/sales/history', { headers });
+            setSalesHistory(historyResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching sales history:', error);
+            setSalesHistory([]);
+          }
           break;
       }
     } catch (error) {

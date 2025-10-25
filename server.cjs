@@ -3047,6 +3047,14 @@ app.use('/api/devices', devicesRoutes(db));
 const packingRoutes = require('./server/routes/packing.cjs');
 app.use('/api/packing', packingRoutes(db));
 
+// Security Routes
+const securityRoutes = require('./server/routes/security.cjs');
+app.use('/api/security', securityRoutes(db));
+
+// Products Routes
+const productsRoutes = require('./server/routes/products.cjs');
+app.use('/api/products', productsRoutes(db));
+
 // Network Scanner Routes
 const networkScannerRoutes = require('./server/routes/network-scanner-realtime.cjs');
 app.use('/api/network', networkScannerRoutes);

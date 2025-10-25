@@ -112,93 +112,34 @@ const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ selectedSection }
 
       switch (selectedSection) {
         case 'overview':
-          // Mock gate activity data
-          setGateLogs([
-            {
-              id: 1,
-              log_number: 'GATE001',
-              visitor_name: 'John Doe',
-              visitor_phone: '08012345678',
-              visitor_company: 'ABC Suppliers',
-              purpose: 'Delivery',
-              vehicle_number: 'ABC123',
-              entry_time: new Date().toISOString(),
-              exit_time: null,
-              status: 'inside',
-              security_guard: 'Security Guard 1'
-            },
-            {
-              id: 2,
-              log_number: 'GATE002',
-              visitor_name: 'Jane Smith',
-              visitor_phone: '08087654321',
-              visitor_company: 'XYZ Logistics',
-              purpose: 'Pickup',
-              vehicle_number: 'XYZ789',
-              entry_time: new Date(Date.now() - 3600000).toISOString(),
-              exit_time: new Date(Date.now() - 1800000).toISOString(),
-              status: 'exited',
-              security_guard: 'Security Guard 2'
-            }
-          ]);
+          // Fetch gate activity from API
+          try {
+            const activityResponse = await axios.get('http://localhost:3002/api/security/gate-activity', { headers });
+            setGateLogs(activityResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching gate activity:', error);
+            setGateLogs([]);
+          }
           break;
         case 'gate-log':
-          // Same as overview for gate logs
-          setGateLogs([
-            {
-              id: 1,
-              log_number: 'GATE001',
-              visitor_name: 'John Doe',
-              visitor_phone: '08012345678',
-              visitor_company: 'ABC Suppliers',
-              purpose: 'Delivery',
-              vehicle_number: 'ABC123',
-              entry_time: new Date().toISOString(),
-              exit_time: null,
-              status: 'inside',
-              security_guard: 'Security Guard 1'
-            },
-            {
-              id: 2,
-              log_number: 'GATE002',
-              visitor_name: 'Jane Smith',
-              visitor_phone: '08087654321',
-              visitor_company: 'XYZ Logistics',
-              purpose: 'Pickup',
-              vehicle_number: 'XYZ789',
-              entry_time: new Date(Date.now() - 3600000).toISOString(),
-              exit_time: new Date(Date.now() - 1800000).toISOString(),
-              status: 'exited',
-              security_guard: 'Security Guard 2'
-            }
-          ]);
+          // Fetch gate logs from API
+          try {
+            const logsResponse = await axios.get('http://localhost:3002/api/security/gate-logs', { headers });
+            setGateLogs(logsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching gate logs:', error);
+            setGateLogs([]);
+          }
           break;
         case 'incident-reports':
-          // Mock incident reports data
-          setIncidentReports([
-            {
-              id: 1,
-              report_number: 'INC001',
-              type: 'Unauthorized Access',
-              description: 'Person attempted to enter restricted area without proper authorization',
-              location: 'Main Gate',
-              severity: 'medium',
-              reported_by: 'Security Guard 1',
-              status: 'investigating',
-              created_at: new Date().toISOString()
-            },
-            {
-              id: 2,
-              report_number: 'INC002',
-              type: 'Vehicle Accident',
-              description: 'Minor collision between delivery truck and company vehicle',
-              location: 'Loading Bay',
-              severity: 'low',
-              reported_by: 'Security Guard 2',
-              status: 'resolved',
-              created_at: new Date(Date.now() - 86400000).toISOString()
-            }
-          ]);
+          // Fetch incident reports from API
+          try {
+            const reportsResponse = await axios.get('http://localhost:3002/api/security/incident-reports', { headers });
+            setIncidentReports(reportsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching incident reports:', error);
+            setIncidentReports([]);
+          }
           break;
       }
     } catch (error) {

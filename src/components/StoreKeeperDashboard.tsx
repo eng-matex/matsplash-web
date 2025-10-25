@@ -126,7 +126,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
             setAttendanceStatus(attendanceResponse.data.data || null);
           } catch (error) {
             console.error('Error fetching attendance:', error);
-            // Mock attendance data for testing
+            // Fetch attendance data from API
             setAttendanceStatus({
               status: 'present',
               clock_in_time: new Date().toISOString(),

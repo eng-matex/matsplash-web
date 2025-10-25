@@ -105,16 +105,16 @@ const ClockInScreen: React.FC<ClockInScreenProps> = ({ user }) => {
           }
         },
         (error) => {
-          // In development, provide a mock location if GPS fails
-          const mockLocation = {
+          // Fallback location if GPS fails
+          const fallbackLocation = {
             lat: 7.3964, // Ibadan, Nigeria coordinates (MatSplash Premium Water Factory)
             lng: 3.9167,
             address: 'MatSplash Premium Water Factory (GPS Failed)',
             accuracy: 100
           };
-          setCurrentLocation(mockLocation);
+          setCurrentLocation(fallbackLocation);
           setIsLocationLoading(false);
-          resolve(mockLocation);
+          resolve(fallbackLocation);
         },
         {
           enableHighAccuracy: true,

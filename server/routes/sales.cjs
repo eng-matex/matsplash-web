@@ -615,5 +615,73 @@ module.exports = (db) => {
     }
   });
 
+  // Get sales entries
+  router.get('/entries', async (req, res) => {
+    try {
+      const entries = await db('sales_entries')
+        .select('*')
+        .orderBy('created_at', 'desc');
+
+      res.json({
+        success: true,
+        data: entries
+      });
+
+    } catch (error) {
+      console.error('Error fetching sales entries:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch sales entries'
+      });
+    }
+  });
+
+  // Get sales history
+  router.get('/history', async (req, res) => {
+    try {
+      const history = await db('sales_history')
+        .select('*')
+        .orderBy('created_at', 'desc');
+
+      res.json({
+        success: true,
+        data: history
+      });
+
+    } catch (error) {
+      console.error('Error fetching sales history:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch sales history'
+      });
+    }
+  });
+
+  // Get sales stats
+  router.get('/stats', async (req, res) => {
+    try {
+      const stats = await db('sales_stats')
+        .select('*')
+        .first();
+
+      res.json({
+        success: true,
+        data: stats || {
+          totalSales: 0,
+          monthlySales: 0,
+          dailySales: 0,
+          topProducts: []
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching sales stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch sales stats'
+      });
+    }
+  });
+
   return router;
 };
