@@ -15,7 +15,11 @@ const db = knex({
 // Get attendance records with role-based filtering
 router.get('/records', async (req, res) => {
   try {
-    const { role, userId, dateRange = 'today', employeeId, status } = req.query;
+    const { role, userId, dateRange = 'today', employeeId, status, roleFilter, search } = req.query;
+    
+    console.log('🔍 Attendance records request received:', {
+      role, userId, dateRange, employeeId, status, roleFilter, search
+    });
     
     let query = db('attendance_logs')
       .join('employees', 'attendance_logs.employee_id', 'employees.id')
@@ -58,8 +62,18 @@ router.get('/records', async (req, res) => {
     if (status) {
       query = query.where('attendance_logs.status', status);
     }
+    if (search) {
+      query = query.where(function() {
+        this.whereRaw('LOWER(employees.name) LIKE ?', [`%${search.toLowerCase()}%`])
+          .orWhereRaw('LOWER(employees.email) LIKE ?', [`%${search.toLowerCase()}%`])
+          .orWhereRaw('LOWER(employees.role) LIKE ?', [`%${search.toLowerCase()}%`]);
+      });
+    }
 
     const records = await query;
+    
+    console.log('📊 Records found:', records.length);
+    console.log('📊 Sample record:', records[0] || 'No records found');
 
     // Calculate statistics
     const stats = await calculateAttendanceStats(role, userId, dateRange);

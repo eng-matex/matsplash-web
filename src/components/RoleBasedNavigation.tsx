@@ -94,6 +94,7 @@ export const getRoleNavigation = (role: string) => {
     case 'storekeeper':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'water-bag-management', label: 'Water Bag Management', icon: Inventory, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'pickup-confirmations', label: 'Pickup Confirmations', icon: CheckCircle, color: '#4caf50' },
@@ -123,6 +124,7 @@ export const getRoleNavigation = (role: string) => {
     case 'packer':
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'water-bag-work', label: 'Water Bag Work', icon: Inventory, color: '#ff9800' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'packing-log', label: 'Packing Log', icon: Inventory, color: '#4caf50' },
         { id: 'my-logs', label: 'My Logs', icon: Assessment, color: '#ff5722' },

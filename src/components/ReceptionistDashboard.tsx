@@ -307,18 +307,18 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     }
   };
 
+  const getOrderType = () => {
+    if (dialogType === 'create-store-dispatch') return 'store_dispatch';
+    if (dialogType === 'create-driver-dispatch') return 'driver_dispatch';
+    if (dialogType === 'create-distributor-order') return 'distributor_order';
+    return 'general_sales';
+  };
+
   const handleCreateOrder = async () => {
     if (!newOrder.customer_name || !newOrder.customer_phone) {
       alert('Please fill in customer name and phone number');
       return;
     }
-
-    const getOrderType = () => {
-      if (dialogType === 'create-store-dispatch') return 'store_dispatch';
-      if (dialogType === 'create-driver-dispatch') return 'driver_dispatch';
-      if (dialogType === 'create-distributor-order') return 'distributor_order';
-      return 'general_sales';
-    };
 
     const orderType = getOrderType();
 
@@ -912,13 +912,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   );
 
   const renderOrderCreationForm = () => {
-    const getOrderType = () => {
-      if (dialogType === 'create-store-dispatch') return 'store_dispatch';
-      if (dialogType === 'create-driver-dispatch') return 'driver_dispatch';
-      if (dialogType === 'create-distributor-order') return 'distributor_order';
-      return 'general_sales';
-    };
-
     const orderType = getOrderType();
 
     return (

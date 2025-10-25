@@ -335,7 +335,8 @@ async function setupDatabase() {
     // Create other tables
 const tables = [
   'orders', 'inventory_logs', 'attendance_logs', 'packing_logs',
-  'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts'
+  'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts',
+  'water_bag_batches', 'water_bag_assignments', 'packer_work_logs'
 ];
 
     for (const tableName of tables) {
@@ -406,6 +407,39 @@ const tables = [
               table.timestamp('packing_end_time');
               table.string('status').defaultTo('in_progress').notNullable();
               table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'water_bag_batches':
+            await db.schema.createTable('water_bag_batches', (table) => {
+              table.increments('id').primary();
+              table.string('batch_number').unique().notNullable();
+              table.integer('loader_id').unsigned().references('id').inTable('employees');
+              table.integer('bags_received').notNullable();
+              table.string('status').defaultTo('received').notNullable(); // received, assigned, packed, completed
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'water_bag_assignments':
+            await db.schema.createTable('water_bag_assignments', (table) => {
+              table.increments('id').primary();
+              table.integer('batch_id').unsigned().references('id').inTable('water_bag_batches');
+              table.integer('packer_id').unsigned().references('id').inTable('employees');
+              table.integer('bags_assigned').notNullable();
+              table.string('status').defaultTo('assigned').notNullable(); // assigned, in_progress, completed, approved
+              table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'packer_work_logs':
+            await db.schema.createTable('packer_work_logs', (table) => {
+              table.increments('id').primary();
+              table.integer('assignment_id').unsigned().references('id').inTable('water_bag_assignments');
+              table.integer('packer_id').unsigned().references('id').inTable('employees');
+              table.integer('bags_packed').notNullable();
+              table.string('status').defaultTo('pending').notNullable(); // pending, approved, rejected
+              table.text('modification_comment');
               table.timestamps(true, true);
             });
             break;
@@ -3022,20 +3056,24 @@ const salesRoutes = require('./server/routes/sales.cjs');
 app.use('/api/sales', salesRoutes(db));
 
 // Import and mount inventory routes
-// const inventoryRoutes = require('./server/routes/inventory.ts');
-// app.use('/api/inventory', inventoryRoutes(db));
+const inventoryRoutes = require('./server/routes/inventory.cjs');
+app.use('/api/inventory', inventoryRoutes(db));
+
+// Import and mount water bag management routes
+const waterBagRoutes = require('./server/routes/water-bag-management.cjs');
+app.use('/api/water-bags', waterBagRoutes(db));
 
 // Import and mount orders routes
-// const ordersRoutes = require('./server/routes/orders.ts');
-// app.use('/api/orders', ordersRoutes(db));
+const ordersRoutes = require('./server/routes/orders.cjs');
+app.use('/api/orders', ordersRoutes(db));
 
 // Import and mount price models routes
 const priceModelsRoutes = require('./server/routes/price-models.cjs');
 app.use('/api/price-models', priceModelsRoutes(db));
 
 // Import and mount employees routes
-// const employeesRoutes = require('./server/routes/employees.ts');
-// app.use('/api/employees', employeesRoutes(db));
+const employeesRoutes = require('./server/routes/employees.cjs');
+app.use('/api/employees', employeesRoutes(db));
 
 // Import and mount bonus routes
 const bonusRoutes = require('./server/routes/bonuses.cjs');

@@ -36,6 +36,7 @@ import theme from './theme';
 import logo from './assets/Matsplash-logo.png';
 import { getRoleNavigation, getDefaultView } from './components/RoleBasedNavigation';
 import ClockInScreen from './components/ClockInScreen';
+import AdminClockInOut from './components/AdminClockInOut';
 import DirectorDashboard from './components/DirectorDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import ReceptionistDashboard from './components/ReceptionistDashboard';
@@ -119,6 +120,11 @@ const App: React.FC = () => {
         // Handle clock-in-out section
         if (currentPage === 'clock-in-out') {
           return <ClockInScreen user={user} />;
+        }
+
+        // Handle admin clock-in-out section
+        if (currentPage === 'admin-clock') {
+          return <AdminClockInOut />;
         }
 
         // Handle advanced CCTV
@@ -309,19 +315,21 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LoginPage
-        loginData={loginData}
-        setLoginData={setLoginData}
-        handleLogin={handleLogin}
-        loading={loading}
-        error={error}
-        requiresTwoFactor={requiresTwoFactor}
-        setRequiresTwoFactor={setRequiresTwoFactor}
-        showEmergencyAccess={showEmergencyAccess}
-        setShowEmergencyAccess={setShowEmergencyAccess}
-        showPin={showPin}
-        setShowPin={setShowPin}
-      />
+      <Box sx={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden' }}>
+        <LoginPage
+          loginData={loginData}
+          setLoginData={setLoginData}
+          handleLogin={handleLogin}
+          loading={loading}
+          error={error}
+          requiresTwoFactor={requiresTwoFactor}
+          setRequiresTwoFactor={setRequiresTwoFactor}
+          showEmergencyAccess={showEmergencyAccess}
+          setShowEmergencyAccess={setShowEmergencyAccess}
+          showPin={showPin}
+          setShowPin={setShowPin}
+        />
+      </Box>
     </ThemeProvider>
   );
 };

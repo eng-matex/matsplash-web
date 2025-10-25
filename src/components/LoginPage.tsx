@@ -50,31 +50,49 @@ const LoginPage: React.FC<LoginPageProps> = ({
   return (
     <Box 
       sx={{ 
-        minHeight: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 2
+        padding: 0,
+        margin: 0,
+        overflow: 'hidden',
+        zIndex: 9999
       }}
     >
-      <Container component="main" maxWidth="lg" sx={{ px: { xs: 1, sm: 2 } }}>
+      <Box component="main" sx={{ 
+        width: '100%', 
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: { xs: 2, sm: 100, md: 2 }
+      }}>
         <Card 
           elevation={24}
           sx={{ 
-            borderRadius: 4,
+            borderRadius: 6,
             overflow: 'hidden',
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
-            minHeight: { xs: 'auto', md: '600px' },
-            maxWidth: { xs: '100%', sm: '900px' },
-            margin: 'auto'
+            width: '100%',
+            height: '100%',
+            maxWidth: 'none',
+            margin: 0,
+            padding: { xs: 2, sm: 2 }
           }}
         >
           <Box sx={{ 
             display: 'flex', 
-            minHeight: { xs: 'auto', md: '600px' },
+            height: '90vh',
             flexDirection: { xs: 'column', md: 'row' }
           }}>
             {/* Left Side - Login Content */}
@@ -83,10 +101,10 @@ const LoginPage: React.FC<LoginPageProps> = ({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              order: { xs: 2, md: 1 }
+              order: { xs: 1, md: 1 }
             }}>
               <CardContent sx={{ 
-                p: { xs: 3, sm: 4 }, 
+                p: { xs: 4, sm: 5, md: 6 }, 
                 maxWidth: 400, 
                 width: '100%' 
               }}>
@@ -98,7 +116,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
                       src={logo} 
                       alt="MatSplash Logo" 
                       sx={{ 
-                        height: { xs: '60px', sm: '80px' },
+                        height: { xs: '70px', sm: '100px' },
                         width: 'auto',
                         filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
                       }}
@@ -301,7 +319,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
                           sx={{ 
                             color: '#13bbc6', 
                             borderColor: '#13bbc6',
-                            fontSize: '13px',
+                            fontSize: '18px',
                             textTransform: 'none'
                           }}
                         >
@@ -416,7 +434,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
                   alignItems: 'center',
                   position: 'relative',
                   zIndex: 1,
-                  p: { xs: 2, sm: 3 }
+                  p: { xs: 3, sm: 4, md: 5 }
                 }}
               >
                 <Box
@@ -462,7 +480,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
             </Box>
           </Box>
         </Card>
-      </Container>
+      </Box>
     </Box>
   );
 };

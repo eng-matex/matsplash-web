@@ -55,6 +55,7 @@ interface Device {
   created_at: string;
   updated_at: string;
   macAddresses?: MacAddress[];
+  assigned_employees?: Employee[];
 }
 
 interface MacAddress {
@@ -138,7 +139,38 @@ const DeviceManagement: React.FC = () => {
     try {
       const response = await axios.get('http://localhost:3002/api/devices');
       if (response.data.success) {
-        setDevices(response.data.data);
+        const devices = response.data.data;
+        
+        // Fetch assigned employees for each device
+        const devicesWithEmployees = await Promise.all(
+          devices.map(async (device: Device) => {
+            try {
+              // For factory devices, fetch assigned employees from factory assignments
+              if (device.is_factory_device) {
+                const assignmentsResponse = await axios.get(`http://localhost:3002/api/factory-locations/devices/${device.id}/factory-assignments`);
+                if (assignmentsResponse.data.success) {
+                  const assignments = assignmentsResponse.data.data;
+                  // Map factory assignments to actual factory names
+                  device.assigned_employees = assignments.map((assignment: any) => {
+                    const factory = factories.find(f => f.id === assignment.factory_location_id);
+                    return {
+                      id: assignment.factory_location_id,
+                      name: factory ? factory.name : `Factory Location ${assignment.factory_location_id}`,
+                      email: 'factory@matsplash.com',
+                      role: 'Factory Device'
+                    };
+                  });
+                }
+              }
+              return device;
+            } catch (error) {
+              console.error(`Error fetching assignments for device ${device.id}:`, error);
+              return device;
+            }
+          })
+        );
+        
+        setDevices(devicesWithEmployees);
       }
     } catch (error) {
       console.error('Error fetching devices:', error);
@@ -445,10 +477,28 @@ const DeviceManagement: React.FC = () => {
     }
   };
 
-  const getEmployeeName = (employeeId?: number) => {
-    if (!employeeId) return 'Factory Device';
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? `${employee.name} (${employee.role})` : 'Unknown Employee';
+  const getEmployeeName = (device: Device) => {
+    // If device has a direct employee assignment
+    if (device.employee_id) {
+      const employee = employees.find(emp => emp.id === device.employee_id);
+      return employee ? `${employee.name} (${employee.role})` : 'Unknown Employee';
+    }
+    
+    // If device is a factory device with assigned employees
+    if (device.is_factory_device && device.assigned_employees && device.assigned_employees.length > 0) {
+      if (device.assigned_employees.length === 1) {
+        return device.assigned_employees[0].name;
+      } else {
+        return `${device.assigned_employees.length} Factory Locations`;
+      }
+    }
+    
+    // Default for factory devices without assignments
+    if (device.is_factory_device) {
+      return 'Factory Device (No Assignments)';
+    }
+    
+    return 'Unassigned';
   };
 
   if (loading && devices.length === 0) {
@@ -538,7 +588,7 @@ const DeviceManagement: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {getEmployeeName(device.employee_id)}
+                        {getEmployeeName(device)}
                       </Typography>
                     </TableCell>
                     <TableCell>

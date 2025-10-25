@@ -156,6 +156,7 @@ function TabPanel(props: TabPanelProps) {
 
 const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, userId }) => {
   const [loading, setLoading] = useState(false);
+  const [applyingFilters, setApplyingFilters] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
@@ -190,13 +191,39 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isFilterApply = false) => {
+    if (isFilterApply) {
+      setApplyingFilters(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       
-      // Fetch attendance records based on user role
-      const attendanceResponse = await fetch(`/api/attendance/records?role=${userRole}&userId=${userId || ''}`, {
+      // Build query parameters for attendance records
+      const attendanceParams = new URLSearchParams({
+        role: userRole,
+        userId: userId || '',
+        dateRange: dateFilter,
+        ...(employeeFilter !== 'all' && { employeeId: employeeFilter }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(roleFilter !== 'all' && { roleFilter: roleFilter }),
+        ...(searchTerm && { search: searchTerm })
+      });
+      
+      console.log('🔍 Filter parameters being sent:', {
+        role: userRole,
+        userId: userId || '',
+        dateRange: dateFilter,
+        employeeFilter,
+        statusFilter,
+        roleFilter,
+        searchTerm
+      });
+      console.log('🔍 URL being called:', `/api/attendance/records?${attendanceParams}`);
+      
+      // Fetch attendance records based on user role and filters
+      const attendanceResponse = await fetch(`/api/attendance/records?${attendanceParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -204,13 +231,18 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
       });
       const attendanceData = await attendanceResponse.json();
       
+      console.log('📊 Attendance data received:', attendanceData);
+      
       if (attendanceData.success) {
         setAttendanceRecords(attendanceData.records || []);
         setAttendanceStats(attendanceData.stats || attendanceStats);
+        console.log('✅ Records updated:', attendanceData.records?.length || 0, 'records');
+      } else {
+        console.error('❌ Failed to fetch attendance data:', attendanceData.message);
       }
 
       // Fetch employees based on user role
-      const employeesResponse = await fetch(`/api/employees?role=${userRole}&userId=${userId || ''}`, {
+      const employeesResponse = await fetch(`/api/attendance/employees?role=${userRole}&userId=${userId || ''}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -226,6 +258,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
       console.error('Error fetching attendance data:', error);
     } finally {
       setLoading(false);
+      setApplyingFilters(false);
     }
   };
 
@@ -583,6 +616,18 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ userRole, use
                 </FormControl>
               </Grid>
             )}
+            <Grid item xs={12} md={1}>
+              <Button
+                variant="contained"
+                fullWidth
+                size="small"
+                onClick={() => fetchData(true)}
+                startIcon={<FilterList />}
+                disabled={applyingFilters}
+              >
+                {applyingFilters ? 'Applying...' : 'Apply'}
+              </Button>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>

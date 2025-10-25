@@ -60,6 +60,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import AttendanceManagement from './AttendanceManagement';
+import PackerWorkSubmission from './PackerWorkSubmission';
 
 interface PackerDashboardProps {
   selectedSection: string;
@@ -782,6 +783,8 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
         return renderPackingLog();
       case 'my-logs':
         return renderMyLogs();
+      case 'water-bag-work':
+        return <PackerWorkSubmission />;
       case 'my-attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="packer" />;
       default:
