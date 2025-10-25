@@ -88,6 +88,13 @@ interface Packer {
   status: string;
 }
 
+interface Loader {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+}
+
 interface Assignment {
   id: number;
   batch_id: number;
@@ -117,8 +124,11 @@ const WaterBagManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<WaterBagBatch[]>([]);
   const [packers, setPackers] = useState<Packer[]>([]);
+  const [loaders, setLoaders] = useState<Loader[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<Assignment[]>([]);
+  const [rejectedQueue, setRejectedQueue] = useState<Assignment[]>([]);
   const [stats, setStats] = useState({
     totalBatches: 0,
     pendingAssignments: 0,
@@ -128,9 +138,13 @@ const WaterBagManagement: React.FC = () => {
 
   // Dialog states
   const [createBatchDialog, setCreateBatchDialog] = useState(false);
+  const [intakeDialog, setIntakeDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState(false);
   const [viewAssignmentsDialog, setViewAssignmentsDialog] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<WaterBagBatch | null>(null);
+  const [reviewDialog, setReviewDialog] = useState<{ open: boolean; id?: number; action?: 'approve' | 'reject' }>({ open: false });
+  const [reviewComment, setReviewComment] = useState('');
+  const [resubmitDialog, setResubmitDialog] = useState<{ open: boolean; id?: number; currentBags?: number; currentNotes?: string }>({ open: false });
 
   // Form states
   const [batchForm, setBatchForm] = useState({
@@ -141,6 +155,12 @@ const WaterBagManagement: React.FC = () => {
   const [assignmentForm, setAssignmentForm] = useState({
     packer_id: '',
     bags_assigned: '',
+    notes: ''
+  });
+  const [intakeForm, setIntakeForm] = useState({
+    loader_id: '',
+    packer_id: '',
+    bags_submitted: '',
     notes: ''
   });
 
@@ -157,24 +177,33 @@ const WaterBagManagement: React.FC = () => {
         'Content-Type': 'application/json'
       };
 
-      const [batchesRes, packersRes, workLogsRes, statsRes] = await Promise.all([
+      const [batchesRes, packersRes, loadersRes, workLogsRes, statsRes, reviewRes, rejectedRes] = await Promise.all([
         fetch('/api/water-bags/batches', { headers }),
         fetch('/api/water-bags/packers', { headers }),
+        fetch('/api/water-bags/loaders', { headers }),
         fetch('/api/water-bags/work-logs', { headers }),
-        fetch('/api/water-bags/dashboard-stats', { headers })
+        fetch('/api/water-bags/dashboard-stats', { headers }),
+        fetch('/api/water-bags/assignments?status=pending_review', { headers }),
+        fetch('/api/water-bags/assignments?status=rejected', { headers })
       ]);
 
-      const [batchesData, packersData, workLogsData, statsData] = await Promise.all([
+      const [batchesData, packersData, loadersData, workLogsData, statsData, reviewData, rejectedData] = await Promise.all([
         batchesRes.json(),
         packersRes.json(),
+        loadersRes.json(),
         workLogsRes.json(),
-        statsRes.json()
+        statsRes.json(),
+        reviewRes.json(),
+        rejectedRes.json()
       ]);
 
       if (batchesData.success) setBatches(batchesData.data);
       if (packersData.success) setPackers(packersData.data);
+      if (loadersData.success) setLoaders(loadersData.data);
       if (workLogsData.success) setWorkLogs(workLogsData.data);
       if (statsData.success) setStats(statsData.data);
+      if (reviewData.success) setReviewQueue(reviewData.data);
+      if (rejectedData.success) setRejectedQueue(rejectedData.data);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -242,6 +271,87 @@ const WaterBagManagement: React.FC = () => {
     }
   };
 
+  const handleSubmitIntake = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/water-bags/intake', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(intakeForm)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Intake submitted for manager review!');
+        setIntakeDialog(false);
+        setIntakeForm({ loader_id: '', packer_id: '', bags_submitted: '', notes: '' });
+        fetchData();
+      } else {
+        alert('Failed to submit intake: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error submitting intake:', error);
+      alert('Failed to submit intake');
+    }
+  };
+
+  const handleReviewAssignment = async () => {
+    if (!reviewDialog.id || !reviewDialog.action) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/water-bags/assignments/${reviewDialog.id}/review`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: reviewDialog.action, comment: reviewComment })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setReviewDialog({ open: false });
+        setReviewComment('');
+        fetchData();
+      } else {
+        alert('Failed to update submission: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error reviewing submission:', error);
+      alert('Failed to update submission');
+    }
+  };
+
+  const handleResubmitAssignment = async () => {
+    if (!resubmitDialog.id) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/water-bags/assignments/${resubmitDialog.id}/resubmit`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bags_assigned: resubmitDialog.currentBags,
+          notes: resubmitDialog.currentNotes
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setResubmitDialog({ open: false });
+        fetchData();
+      } else {
+        alert('Failed to resubmit: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error resubmitting:', error);
+      alert('Failed to resubmit');
+    }
+  };
+
   const handleViewAssignments = async (batch: WaterBagBatch) => {
     setSelectedBatch(batch);
     try {
@@ -288,13 +398,24 @@ const WaterBagManagement: React.FC = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Water Bag Batches</Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setCreateBatchDialog(true)}
-        >
-          Create Batch
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {user?.role?.toLowerCase() === 'storekeeper' && (
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setIntakeDialog(true)}
+            >
+              New Intake
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setCreateBatchDialog(true)}
+          >
+            Create Batch
+          </Button>
+        </Box>
       </Box>
 
       <List>
@@ -341,7 +462,7 @@ const WaterBagManagement: React.FC = () => {
                     <Visibility />
                   </IconButton>
                 </Tooltip>
-                {batch.status === 'received' && (
+                {batch.status === 'received' && user?.role?.toLowerCase() === 'storekeeper' && (
                   <Button
                     variant="outlined"
                     size="small"
@@ -359,6 +480,103 @@ const WaterBagManagement: React.FC = () => {
           ))
         )}
       </List>
+    </Box>
+  );
+
+  const renderReviewQueue = () => (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Pending Submissions</Typography>
+        <Button variant="outlined" startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
+      </Box>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Batch</TableCell>
+              <TableCell>Loader</TableCell>
+              <TableCell>Packer</TableCell>
+              <TableCell>Bags</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {reviewQueue.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">No pending submissions</TableCell>
+              </TableRow>
+            ) : (
+              reviewQueue.map(item => (
+                <TableRow key={item.id}>
+                  <TableCell>{(item as any).batch_number}</TableCell>
+                  <TableCell>{(item as any).loader_name}</TableCell>
+                  <TableCell>{(item as any).packer_name}</TableCell>
+                  <TableCell>{item.bags_assigned}</TableCell>
+                  <TableCell><Chip size="small" color={getStatusColor(item.status)} label={item.status} /></TableCell>
+                  <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    {user?.role === 'Manager' && (
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" color="success" onClick={() => setReviewDialog({ open: true, id: item.id, action: 'approve' })}>Approve</Button>
+                        <Button size="small" color="error" onClick={() => setReviewDialog({ open: true, id: item.id, action: 'reject' })}>Reject</Button>
+                      </Box>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  const renderRejectedQueue = () => (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">Rejected Submissions</Typography>
+        <Button variant="outlined" startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
+      </Box>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Batch</TableCell>
+              <TableCell>Loader</TableCell>
+              <TableCell>Packer</TableCell>
+              <TableCell>Bags</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rejectedQueue.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">No rejected submissions</TableCell>
+              </TableRow>
+            ) : (
+              rejectedQueue.map(item => (
+                <TableRow key={item.id}>
+                  <TableCell>{(item as any).batch_number}</TableCell>
+                  <TableCell>{(item as any).loader_name}</TableCell>
+                  <TableCell>{(item as any).packer_name}</TableCell>
+                  <TableCell>{item.bags_assigned}</TableCell>
+                  <TableCell><Chip size="small" color={getStatusColor(item.status)} label={item.status} /></TableCell>
+                  <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    {user?.role?.toLowerCase() === 'storekeeper' && (
+                      <Button size="small" onClick={() => setResubmitDialog({ open: true, id: item.id, currentBags: item.bags_assigned, currentNotes: item.notes })}>Adjust & Resubmit</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 
@@ -544,6 +762,8 @@ const WaterBagManagement: React.FC = () => {
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
               <Tab label={`Batches (${batches.length})`} />
+              {user?.role === 'Manager' && <Tab label={`Submissions (${reviewQueue.length})`} />}
+              {user?.role?.toLowerCase() === 'storekeeper' && <Tab label={`Rejected (${rejectedQueue.length})`} />}
               <Tab label={`Work Logs (${workLogs.length})`} />
             </Tabs>
           </Box>
@@ -552,7 +772,19 @@ const WaterBagManagement: React.FC = () => {
             {renderBatches()}
           </TabPanel>
 
-          <TabPanel value={tabValue} index={1}>
+          {user?.role === 'Manager' && (
+            <TabPanel value={tabValue} index={1}>
+              {renderReviewQueue()}
+            </TabPanel>
+          )}
+
+          {user?.role?.toLowerCase() === 'storekeeper' && (
+            <TabPanel value={tabValue} index={1}>
+              {renderRejectedQueue()}
+            </TabPanel>
+          )}
+
+          <TabPanel value={tabValue} index={user?.role === 'Manager' ? 2 : user?.role?.toLowerCase() === 'storekeeper' ? 2 : 1}>
             {renderWorkLogs()}
           </TabPanel>
         </CardContent>
@@ -570,9 +802,9 @@ const WaterBagManagement: React.FC = () => {
                   value={batchForm.loader_id}
                   onChange={(e) => setBatchForm(prev => ({ ...prev, loader_id: e.target.value }))}
                 >
-                  {packers.map((packer) => (
-                    <MenuItem key={packer.id} value={packer.id}>
-                      {packer.name} ({packer.email})
+                  {loaders.map((loader) => (
+                    <MenuItem key={loader.id} value={loader.id}>
+                      {loader.name} ({loader.email})
                     </MenuItem>
                   ))}
                 </Select>
@@ -606,6 +838,70 @@ const WaterBagManagement: React.FC = () => {
           <Button onClick={handleCreateBatch} variant="contained">
             Create Batch
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Intake Dialog */}
+      <Dialog open={intakeDialog} onClose={() => setIntakeDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>New Loader Intake</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Loader</InputLabel>
+                <Select
+                  value={intakeForm.loader_id}
+                  onChange={(e) => setIntakeForm(prev => ({ ...prev, loader_id: e.target.value }))}
+                >
+                  {loaders.map((loader) => (
+                    <MenuItem key={loader.id} value={loader.id}>
+                      {loader.name} ({loader.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Packer</InputLabel>
+                <Select
+                  value={intakeForm.packer_id}
+                  onChange={(e) => setIntakeForm(prev => ({ ...prev, packer_id: e.target.value }))}
+                >
+                  {packers.map((packer) => (
+                    <MenuItem key={packer.id} value={packer.id}>
+                      {packer.name} ({packer.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Bags Submitted"
+                type="number"
+                value={intakeForm.bags_submitted}
+                onChange={(e) => setIntakeForm(prev => ({ ...prev, bags_submitted: e.target.value }))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Notes"
+                multiline
+                rows={3}
+                value={intakeForm.notes}
+                onChange={(e) => setIntakeForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Optional notes"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIntakeDialog(false)}>Cancel</Button>
+          <Button onClick={handleSubmitIntake} variant="contained">Submit Intake</Button>
         </DialogActions>
       </Dialog>
 
@@ -710,6 +1006,60 @@ const WaterBagManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setViewAssignmentsDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manager Review Dialog */}
+      <Dialog open={reviewDialog.open} onClose={() => setReviewDialog({ open: false })} maxWidth="sm" fullWidth>
+        <DialogTitle>{reviewDialog.action === 'approve' ? 'Approve Submission' : 'Reject Submission'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label={reviewDialog.action === 'approve' ? 'Comment (optional)' : 'Reason'}
+            multiline
+            rows={3}
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReviewDialog({ open: false })}>Cancel</Button>
+          <Button variant="contained" color={reviewDialog.action === 'approve' ? 'success' as any : 'error' as any} onClick={handleReviewAssignment}>
+            {reviewDialog.action === 'approve' ? 'Approve' : 'Reject'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Storekeeper Resubmit Dialog */}
+      <Dialog open={resubmitDialog.open} onClose={() => setResubmitDialog({ open: false })} maxWidth="sm" fullWidth>
+        <DialogTitle>Adjust and Resubmit</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Bags to Submit"
+                type="number"
+                value={resubmitDialog.currentBags || ''}
+                onChange={(e) => setResubmitDialog(prev => ({ ...prev, currentBags: Number(e.target.value) }))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Notes"
+                multiline
+                rows={3}
+                value={resubmitDialog.currentNotes || ''}
+                onChange={(e) => setResubmitDialog(prev => ({ ...prev, currentNotes: e.target.value }))}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResubmitDialog({ open: false })}>Cancel</Button>
+          <Button variant="contained" onClick={handleResubmitAssignment}>Resubmit</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -72,6 +72,64 @@ module.exports = (db) => {
     }
   });
 
+  // Combined intake: storekeeper records loader submission and selects packer
+  router.post('/intake', async (req, res) => {
+    try {
+      const { loader_id, packer_id, bags_submitted, notes } = req.body;
+
+      if (!loader_id || !packer_id || !bags_submitted) {
+        return res.status(400).json({
+          success: false,
+          message: 'Loader, packer and submitted bags are required'
+        });
+      }
+
+      // Authorization: only StoreKeeper can submit intake
+      if (!req.user || !['storekeeper', 'StoreKeeper'].includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      // Create batch
+      const batch_number = generateBatchNumber();
+      const [batchId] = await db('water_bag_batches').insert({
+        batch_number,
+        loader_id,
+        bags_received: bags_submitted,
+        status: 'received',
+        notes: notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Create assignment for manager review
+      const [assignmentId] = await db('water_bag_assignments').insert({
+        batch_id: batchId,
+        packer_id,
+        bags_assigned: bags_submitted,
+        status: 'pending_review',
+        notes: notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      await db('system_activity').insert({
+        employee_id: req.user?.id,
+        activity_type: 'water_bag_intake_submitted',
+        description: `Intake submitted for ${bags_submitted} bags (batch ${batch_number})`,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        message: 'Intake submitted for manager review',
+        data: { batch_id: batchId, assignment_id: assignmentId, batch_number }
+      });
+    } catch (error) {
+      console.error('Error submitting intake:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit intake' });
+    }
+  });
+
   // Get packers (employees with role 'Packer')
   router.get('/packers', async (req, res) => {
     try {
@@ -87,7 +145,22 @@ module.exports = (db) => {
     }
   });
 
-  // Assign bags to packer
+  // Get loaders (employees with role 'Loader')
+  router.get('/loaders', async (req, res) => {
+    try {
+      const loaders = await db('employees')
+        .where('role', 'Loader')
+        .select('id', 'name', 'email', 'status')
+        .orderBy('name');
+
+      res.json({ success: true, data: loaders });
+    } catch (error) {
+      console.error('Error fetching loaders:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch loaders' });
+    }
+  });
+
+  // Assign bags to packer (submitted by Storekeeper -> goes to Manager for review)
   router.post('/assignments', async (req, res) => {
     try {
       const { batch_id, packer_id, bags_assigned, notes } = req.body;
@@ -97,6 +170,11 @@ module.exports = (db) => {
           success: false,
           message: 'Batch ID, packer ID, and bags assigned are required'
         });
+      }
+
+      // Authorization: only StoreKeeper
+      if (!req.user || !['storekeeper', 'StoreKeeper'].includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
       }
 
       // Check if batch exists and has enough bags
@@ -126,36 +204,170 @@ module.exports = (db) => {
         batch_id,
         packer_id,
         bags_assigned,
-        status: 'assigned',
+        status: 'pending_review',
         notes: notes || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
 
-      // Update batch status if all bags are assigned
-      const newTotalAssigned = currentAssigned + bags_assigned;
-      if (newTotalAssigned >= batch.bags_received) {
-        await db('water_bag_batches')
-          .where('id', batch_id)
-          .update({ status: 'assigned', updated_at: new Date().toISOString() });
-      }
+      // Do not finalize batch yet; wait for manager approval of submissions
 
       // Log system activity
       await db('system_activity').insert({
         employee_id: packer_id,
-        activity_type: 'water_bag_assigned',
-        description: `Assigned ${bags_assigned} bags to packer`,
+        activity_type: 'water_bag_submission_created',
+        description: `Submitted ${bags_assigned} bags for packer review`,
         timestamp: new Date().toISOString()
       });
 
       res.json({
         success: true,
-        message: 'Bags assigned to packer successfully',
+        message: 'Submission sent to manager for review',
         data: { id: assignmentId }
       });
     } catch (error) {
       console.error('Error assigning bags:', error);
       res.status(500).json({ success: false, message: 'Failed to assign bags' });
+    }
+  });
+
+  // List assignments with optional status filter (e.g., pending_review for Manager queue)
+  router.get('/assignments', async (req, res) => {
+    try {
+      const { status } = req.query;
+      let query = db('water_bag_assignments')
+        .join('water_bag_batches', 'water_bag_assignments.batch_id', 'water_bag_batches.id')
+        .join('employees as packers', 'water_bag_assignments.packer_id', 'packers.id')
+        .join('employees as loaders', 'water_bag_batches.loader_id', 'loaders.id')
+        .select(
+          'water_bag_assignments.*',
+          'water_bag_batches.batch_number',
+          'water_bag_batches.bags_received as batch_bags_received',
+          'packers.name as packer_name',
+          'packers.email as packer_email',
+          'loaders.name as loader_name',
+          'loaders.email as loader_email'
+        )
+        .orderBy('water_bag_assignments.created_at', 'desc');
+
+      if (status) {
+        query = query.where('water_bag_assignments.status', status);
+      }
+
+      const items = await query;
+      res.json({ success: true, data: items });
+    } catch (error) {
+      console.error('Error fetching assignment list:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch assignments' });
+    }
+  });
+
+  // Manager review: approve or reject a submission
+  router.put('/assignments/:assignmentId/review', async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const { action, comment } = req.body; // approve | reject
+
+      if (!action || !['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ success: false, message: 'Invalid action' });
+      }
+
+      // Authorization: Manager/Admin only
+      if (!req.user || !['manager', 'admin', 'Manager', 'Admin'].includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      const assignment = await db('water_bag_assignments').where('id', assignmentId).first();
+      if (!assignment) {
+        return res.status(404).json({ success: false, message: 'Assignment not found' });
+      }
+
+      const newStatus = action === 'approve' ? 'assigned' : 'rejected';
+      await db('water_bag_assignments')
+        .where('id', assignmentId)
+        .update({
+          status: newStatus,
+          notes: comment || assignment.notes,
+          updated_at: new Date().toISOString()
+        });
+
+      // If all submissions for a batch are approved up to batch quantity, update batch status
+      if (action === 'approve') {
+        const batch = await db('water_bag_batches').where('id', assignment.batch_id).first();
+        const totalApproved = await db('water_bag_assignments')
+          .where('batch_id', assignment.batch_id)
+          .andWhere('status', 'assigned')
+          .sum('bags_assigned as total')
+          .first();
+        if ((totalApproved.total || 0) >= (batch?.bags_received || 0)) {
+          await db('water_bag_batches').where('id', assignment.batch_id).update({
+            status: 'assigned',
+            updated_at: new Date().toISOString()
+          });
+        }
+      }
+
+      // Log system activity
+      await db('system_activity').insert({
+        employee_id: req.user?.id,
+        activity_type: `water_bag_submission_${action}`,
+        description: `${action === 'approve' ? 'Approved' : 'Rejected'} submission for assignment ${assignmentId}`,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json({ success: true, message: `Submission ${action}d successfully` });
+    } catch (error) {
+      console.error('Error reviewing assignment:', error);
+      res.status(500).json({ success: false, message: 'Failed to review submission' });
+    }
+  });
+
+  // Storekeeper resubmits a rejected assignment with adjustments
+  router.put('/assignments/:assignmentId/resubmit', async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const { bags_assigned, notes } = req.body;
+
+      // Authorization: only StoreKeeper
+      if (!req.user || !['storekeeper', 'StoreKeeper'].includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      const assignment = await db('water_bag_assignments').where('id', assignmentId).first();
+      if (!assignment) {
+        return res.status(404).json({ success: false, message: 'Assignment not found' });
+      }
+
+      // Ensure does not exceed batch total against other approved/ pending quantities
+      const batch = await db('water_bag_batches').where('id', assignment.batch_id).first();
+      const otherAssigned = await db('water_bag_assignments')
+        .where('batch_id', assignment.batch_id)
+        .andWhereNot('id', assignmentId)
+        .sum('bags_assigned as total')
+        .first();
+      const currentOther = otherAssigned.total || 0;
+      if (currentOther + bags_assigned > (batch?.bags_received || 0)) {
+        return res.status(400).json({ success: false, message: 'Adjusted amount exceeds batch total' });
+      }
+
+      await db('water_bag_assignments').where('id', assignmentId).update({
+        bags_assigned,
+        notes: notes || assignment.notes,
+        status: 'pending_review',
+        updated_at: new Date().toISOString()
+      });
+
+      await db('system_activity').insert({
+        employee_id: req.user?.id,
+        activity_type: 'water_bag_submission_resubmitted',
+        description: `Resubmitted assignment ${assignmentId} with ${bags_assigned} bags`,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json({ success: true, message: 'Resubmitted for manager review' });
+    } catch (error) {
+      console.error('Error resubmitting assignment:', error);
+      res.status(500).json({ success: false, message: 'Failed to resubmit assignment' });
     }
   });
 
