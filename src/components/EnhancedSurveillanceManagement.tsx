@@ -629,7 +629,7 @@ const EnhancedSurveillanceManagement: React.FC<SurveillanceManagementProps> = ({
                   <Tooltip title="Delete Camera">
                     <IconButton 
                       size="small" 
-                      onClick={() => {/* TODO: Implement delete */}}
+                      onClick={() => handleDeleteCamera(camera.id)}
                       color="error"
                     >
                       <Delete />

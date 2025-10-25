@@ -171,7 +171,18 @@ export default function AIAnalytics() {
       )
     );
     
-    // TODO: Implement API call to update feature status
+    // Update feature status via API
+    try {
+      const response = await axios.put(`http://localhost:3002/api/ai/features/${featureId}`, {
+        enabled: enabled
+      }, { headers });
+      
+      if (response.data.success) {
+        console.log('Feature status updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating feature status:', error);
+    }
     try {
       const token = localStorage.getItem('token');
       await fetch('http://localhost:3002/api/surveillance/ai/features', {
