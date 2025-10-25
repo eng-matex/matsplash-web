@@ -106,5 +106,43 @@ module.exports = (db) => {
     }
   });
 
+  // Add water to inventory
+  router.post('/add-water', async (req, res) => {
+    try {
+      const { quantity, reason, employee_id } = req.body;
+
+      if (!quantity || quantity <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Valid quantity is required'
+        });
+      }
+
+      // Add to inventory logs
+      await db('inventory_logs').insert({
+        product_name: 'Sachet Water',
+        quantity_change: quantity,
+        current_stock: quantity, // This will be calculated properly in a real system
+        operation_type: 'in',
+        reason: reason || 'Water added to inventory',
+        employee_id: employee_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      res.json({
+        success: true,
+        message: 'Water added to inventory successfully'
+      });
+
+    } catch (error) {
+      console.error('Error adding water to inventory:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add water to inventory'
+      });
+    }
+  });
+
   return router;
 };

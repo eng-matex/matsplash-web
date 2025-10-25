@@ -147,11 +147,11 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
             if (driverSalesResponse.data.success) {
               setDriverSales(driverSalesResponse.data.data || []);
             } else {
-              setDriverSales(getMockDriverSales());
+              setDriverSales([]);
             }
           } catch (error) {
-            console.log('Driver sales API not available, using mock data');
-            setDriverSales(getMockDriverSales());
+            console.error('Error fetching driver sales:', error);
+            setDriverSales([]);
           }
           
           // Also fetch driver dispatches for the order dropdown
@@ -261,20 +261,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
     });
   };
 
-  const getMockDriverSales = () => [
-    {
-      id: 1,
-      order_number: 'ORD-000001',
-      driver_name: 'John Driver',
-      bags_sold: 45,
-      bags_returned: 5,
-      total_sales: 12150,
-      commission_earned: 1350,
-      money_submitted: 0,
-      approval_status: 'Pending Settlement',
-      created_at: new Date().toISOString()
-    }
-  ];
 
   const handleSubmitSettlement = async () => {
     if (!settlementData.driver_id || !settlementData.order_id) {

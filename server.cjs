@@ -3035,6 +3035,18 @@ app.get('/api/locations', async (req, res) => {
 const surveillanceRoutes = require('./server/routes/surveillance-minimal.cjs');
 app.use('/api/surveillance', surveillanceRoutes(db));
 
+// Dashboard Routes
+const dashboardRoutes = require('./server/routes/dashboard.cjs');
+app.use('/api/dashboard', dashboardRoutes(db));
+
+// Devices Routes
+const devicesRoutes = require('./server/routes/devices.cjs');
+app.use('/api/devices', devicesRoutes(db));
+
+// Packing Routes
+const packingRoutes = require('./server/routes/packing.cjs');
+app.use('/api/packing', packingRoutes(db));
+
 // Network Scanner Routes
 const networkScannerRoutes = require('./server/routes/network-scanner-realtime.cjs');
 app.use('/api/network', networkScannerRoutes);

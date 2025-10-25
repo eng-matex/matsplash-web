@@ -110,18 +110,24 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
           setAttendance(attendanceResponse.data.data || []);
           break;
         case 'distributor-mgmt':
-          // Mock data for distributors
-          setDistributors([
-            { id: 1, name: 'ABC Distributors', contact: 'John Doe', phone: '08012345678', email: 'john@abc.com', status: 'active' },
-            { id: 2, name: 'XYZ Enterprises', contact: 'Jane Smith', phone: '08087654321', email: 'jane@xyz.com', status: 'active' }
-          ]);
+          // Fetch distributors from API
+          try {
+            const distributorsResponse = await axios.get('http://localhost:3002/api/distributors', { headers });
+            setDistributors(distributorsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching distributors:', error);
+            setDistributors([]);
+          }
           break;
         case 'system-activity':
-          // Mock system activity data
-          setSystemActivity([
-            { id: 1, user: 'Manager', action: 'Created new order', timestamp: new Date().toISOString(), details: 'Order #ORD001' },
-            { id: 2, user: 'Receptionist', action: 'Updated inventory', timestamp: new Date().toISOString(), details: 'Added 100 bags' }
-          ]);
+          // Fetch system activity from API
+          try {
+            const activityResponse = await axios.get('http://localhost:3002/api/system/activity', { headers });
+            setSystemActivity(activityResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching system activity:', error);
+            setSystemActivity([]);
+          }
           break;
         case 'commission-approval':
           // Fetch commission approvals
@@ -130,11 +136,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
             if (commissionResponse.data.success) {
               setCommissionApprovals(commissionResponse.data.data || []);
             } else {
-              setCommissionApprovals(getMockCommissionApprovals());
+              setCommissionApprovals([]);
             }
           } catch (error) {
-            console.log('Commission API not available, using mock data');
-            setCommissionApprovals(getMockCommissionApprovals());
+            console.error('Error fetching commission approvals:', error);
+            setCommissionApprovals([]);
           }
           break;
       }
@@ -171,21 +177,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
     }
   };
 
-  const getMockCommissionApprovals = () => [
-    {
-      id: 1,
-      order_number: 'ORD-000001',
-      driver_name: 'John Driver',
-      bags_sold: 45,
-      bags_returned: 5,
-      total_sales: 12150,
-      commission_earned: 1350,
-      money_submitted: 12150,
-      approval_status: 'Pending Manager Approval',
-      receptionist_notes: 'Driver submitted all money and sales data',
-      created_at: new Date().toISOString()
-    }
-  ];
 
   const handleApproveCommission = async (commissionId: number) => {
     try {

@@ -107,12 +107,11 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             if (response.data.success) {
               setActiveDispatches(response.data.data || []);
             } else {
-              // Fallback to mock data
-              setActiveDispatches(getMockActiveDispatches());
+              setActiveDispatches([]);
             }
           } catch (error) {
-            console.log('API not available, using mock data');
-            setActiveDispatches(getMockActiveDispatches());
+            console.error('Error fetching active dispatches:', error);
+            setActiveDispatches([]);
           }
           break;
         case 'dispatch-log':
@@ -122,11 +121,11 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             if (response.data.success) {
               setDispatchLogs(response.data.data || []);
             } else {
-              setDispatchLogs(getMockDispatchLogs());
+              setDispatchLogs([]);
             }
           } catch (error) {
-            console.log('API not available, using mock data');
-            setDispatchLogs(getMockDispatchLogs());
+            console.error('Error fetching dispatch logs:', error);
+            setDispatchLogs([]);
           }
           break;
         case 'sales-accounting':
@@ -143,9 +142,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               setCommissionData(commissionResponse.data.data || {});
             }
           } catch (error) {
-            console.log('API not available, using mock data');
-            setSalesLogs(getMockSalesLogs());
-            setCommissionData(getMockCommissionData());
+            console.error('Error fetching sales data:', error);
+            setSalesLogs([]);
+            setCommissionData({ totalSales: 0, totalCommission: 0, pendingCommission: 0 });
           }
           break;
       }
@@ -156,59 +155,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     }
   };
 
-  // Mock data functions
-  const getMockActiveDispatches = () => [
-    {
-      id: 1,
-      order_number: 'ORD-000001',
-      customer_name: 'John Doe',
-      customer_phone: '08012345678',
-      delivery_address: '123 Main Street, Lagos',
-      items: [
-        { product_name: 'Sachet Water', quantity: 50, unit_price: 270 }
-      ],
-      total_amount: 13500,
-      status: 'picked_up',
-      created_at: new Date().toISOString(),
-      notes: 'Call before delivery'
-    }
-  ];
-
-  const getMockDispatchLogs = () => [
-    {
-      id: 1,
-      order_number: 'ORD-000001',
-      customer_name: 'John Doe',
-      status: 'delivered',
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-      total_amount: 13500
-    }
-  ];
-
-  const getMockSalesLogs = () => [
-    {
-      id: 1,
-      order_number: 'ORD-000001',
-      bags_sold: 45,
-      bags_returned: 5,
-      total_sales: 12150,
-      commission_earned: 1350,
-      money_submitted: 12150,
-      approval_status: 'Pending Approval',
-      created_at: new Date().toISOString()
-    }
-  ];
-
-  const getMockCommissionData = () => ({
-    total_commission: 1350,
-    bags_sold_today: 45,
-    total_sales_today: 12150,
-    commission_rate: 30, // ₦30 per bag
-    expected_salary: 1350,
-    next_payment_date: '2025-11-05',
-    payment_status: 'Pending Manager Approval',
-    last_payment_date: '2025-10-18'
-  });
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);

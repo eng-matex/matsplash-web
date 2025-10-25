@@ -92,85 +92,34 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
 
       switch (selectedSection) {
         case 'overview':
-          // Mock packing tasks data
-          setPackingTasks([
-            {
-              id: 1,
-              task_number: 'PACK001',
-              product_type: 'Sachet Water',
-              target_quantity: 1000,
-              completed_quantity: 750,
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              estimated_completion: new Date(Date.now() + 3600000).toISOString(),
-              priority: 'high'
-            },
-            {
-              id: 2,
-              task_number: 'PACK002',
-              product_type: 'Sachet Water',
-              target_quantity: 500,
-              completed_quantity: 0,
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              estimated_completion: new Date(Date.now() + 7200000).toISOString(),
-              priority: 'medium'
-            }
-          ]);
+          // Fetch packing tasks from API
+          try {
+            const tasksResponse = await axios.get('http://localhost:3002/api/packing/tasks', { headers });
+            setPackingTasks(tasksResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching packing tasks:', error);
+            setPackingTasks([]);
+          }
           break;
         case 'packing-log':
-          // Mock packing logs data
-          setPackingTasks([
-            {
-              id: 1,
-              task_number: 'PACK001',
-              product_type: 'Sachet Water',
-              target_quantity: 1000,
-              completed_quantity: 750,
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              estimated_completion: new Date(Date.now() + 3600000).toISOString(),
-              priority: 'high'
-            },
-            {
-              id: 2,
-              task_number: 'PACK002',
-              product_type: 'Sachet Water',
-              target_quantity: 500,
-              completed_quantity: 0,
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              estimated_completion: new Date(Date.now() + 7200000).toISOString(),
-              priority: 'medium'
-            }
-          ]);
+          // Fetch packing logs from API
+          try {
+            const logsResponse = await axios.get('http://localhost:3002/api/packing/logs', { headers });
+            setPackingTasks(logsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching packing logs:', error);
+            setPackingTasks([]);
+          }
           break;
         case 'my-logs':
-          // Mock personal logs data
-          setMyLogs([
-            {
-              id: 1,
-              task_number: 'PACK003',
-              product_type: 'Sachet Water',
-              quantity_packed: 1000,
-              start_time: new Date(Date.now() - 86400000).toISOString(),
-              end_time: new Date(Date.now() - 82800000).toISOString(),
-              duration: '1 hour',
-              status: 'completed',
-              quality_score: 95
-            },
-            {
-              id: 2,
-              task_number: 'PACK004',
-              product_type: 'Sachet Water',
-              quantity_packed: 500,
-              start_time: new Date(Date.now() - 172800000).toISOString(),
-              end_time: new Date(Date.now() - 169200000).toISOString(),
-              duration: '1 hour',
-              status: 'completed',
-              quality_score: 98
-            }
-          ]);
+          // Fetch personal logs from API
+          try {
+            const myLogsResponse = await axios.get('http://localhost:3002/api/packing/my-logs', { headers });
+            setMyLogs(myLogsResponse.data.data || []);
+          } catch (error) {
+            console.error('Error fetching personal logs:', error);
+            setMyLogs([]);
+          }
           break;
       }
     } catch (error) {
