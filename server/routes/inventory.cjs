@@ -144,5 +144,49 @@ module.exports = (db) => {
     }
   });
 
+  // Fix existing inventory data - migrate old schema to new schema
+  router.post('/fix-data', async (req, res) => {
+    try {
+      console.log('🔧 Starting inventory data migration...');
+      
+      // Get all records with null product_name
+      const recordsToFix = await db('inventory_logs')
+        .whereNull('product_name')
+        .select('*');
+
+      console.log(`Found ${recordsToFix.length} records to migrate`);
+
+      for (const record of recordsToFix) {
+        // Calculate quantity_change from bags_added and bags_removed
+        const quantityChange = (record.bags_added || 0) - (record.bags_removed || 0);
+        
+        // Update the record with proper values
+        await db('inventory_logs')
+          .where('id', record.id)
+          .update({
+            product_name: 'Sachet Water',
+            quantity_change: quantityChange,
+            operation_type: record.operation_type || 'STOCK_ADJUSTMENT',
+            reason: record.notes || record.reason || 'Data migration',
+            employee_id: record.performed_by || record.employee_id
+          });
+      }
+
+      console.log('✅ Inventory data migration completed');
+      res.json({
+        success: true,
+        message: `Successfully migrated ${recordsToFix.length} inventory records`
+      });
+
+    } catch (error) {
+      console.error('Error fixing inventory data:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fix inventory data',
+        error: error.message
+      });
+    }
+  });
+
   return router;
 };

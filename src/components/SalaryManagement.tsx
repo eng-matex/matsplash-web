@@ -227,8 +227,8 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
         }
       } catch (error) {
         console.error('Error fetching bonuses:', error);
-        // Use mock data if API fails
-        setBonuses(getMockBonuses());
+        // Set empty array if API fails
+        setBonuses([]);
       }
 
     } catch (error) {
@@ -238,37 +238,6 @@ const SalaryManagement: React.FC<SalaryManagementProps> = ({ selectedSection, us
     }
   };
 
-  const getMockBonuses = (): Bonus[] => {
-    return [
-      {
-        id: 1,
-        employee_id: 1,
-        amount: 5000,
-        reason: 'Exceptional performance during peak season',
-        bonus_date: '2024-01-15',
-        status: 'approved',
-        approved_by: 1,
-        approved_at: '2024-01-16T10:00:00Z',
-        created_by: 1,
-        created_at: '2024-01-15T14:30:00Z',
-        employee_name: 'John Doe',
-        approved_by_name: 'Admin User',
-        created_by_name: 'Admin User'
-      },
-      {
-        id: 2,
-        employee_id: 2,
-        amount: 3000,
-        reason: 'Outstanding customer service',
-        bonus_date: '2024-01-20',
-        status: 'pending',
-        created_by: 1,
-        created_at: '2024-01-20T09:15:00Z',
-        employee_name: 'Jane Smith',
-        created_by_name: 'Admin User'
-      }
-    ];
-  };
 
   const handleCreateBonus = async () => {
     try {
