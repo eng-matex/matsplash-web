@@ -963,7 +963,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">
-                          ₦{employee.salary.toLocaleString()}
+                          ₦{(employee as any).salary ? (employee as any).salary.toLocaleString() : '0'}
                         </Typography>
                       </TableCell>
                       <TableCell>

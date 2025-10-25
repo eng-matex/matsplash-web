@@ -10,7 +10,21 @@ module.exports = (db) => {
       
       let query = db('employees')
         .where('deletion_status', 'Active')
-        .select('id', 'name', 'email', 'phone', 'role', 'status', 'created_at', 'last_login', 'salary_type', 'fixed_salary', 'commission_rate', 'can_access_remotely')
+        .select(
+          'id',
+          'name',
+          'email',
+          'phone',
+          'role',
+          'status',
+          'created_at',
+          'last_login',
+          'salary_type',
+          'fixed_salary',
+          db.raw('COALESCE(fixed_salary, 0) as salary'),
+          'commission_rate',
+          'can_access_remotely'
+        )
         .orderBy('name')
         .limit(parseInt(limit));
 
