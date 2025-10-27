@@ -56,6 +56,40 @@ app.use((req, res, next) => {
   next();
 });
 
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return next(); // Continue without user if no token
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET); // Use same secret as login
+    const user = await db('employees')
+      .where('id', decoded.userId)
+      .andWhere('status', 'active')
+      .andWhere('deletion_status', 'Active')
+      .first();
+    
+    if (user) {
+      req.user = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      };
+    }
+  } catch (error) {
+    console.log('Token verification failed:', error.message);
+  }
+  
+  next();
+};
+
+app.use(authenticateToken);
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -1076,30 +1110,7 @@ const tables = [
 
         console.log('User found:', { id: user.id, name: user.name, email: user.email, role: user.role });
 
-        // Check if it's first login
-        if (user.first_login) {
-          console.log('Is first login?', user.first_login);
-          const userResponse = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-            phone: user.phone,
-        role: user.role,
-        isEmployee: user.role !== 'Admin' && user.role !== 'Director',
-            isActive: user.status === 'active',
-            createdAt: user.created_at,
-        first_login: user.first_login
-          };
-
-          return res.status(200).json({
-            success: true,
-            firstLogin: true,
-            user: userResponse,
-            message: 'First login detected. Please change your PIN.'
-          });
-        }
-
-        // Verify PIN
+        // Verify PIN first
         console.log('Comparing PIN for user:', user.name);
         const isPinValid = await bcrypt.compare(pin, user.pin_hash);
         console.log('PIN match result:', isPinValid);
@@ -1108,6 +1119,29 @@ const tables = [
           return res.status(401).json({
             success: false,
             message: 'Invalid PIN'
+          });
+        }
+
+        // If PIN is valid and it's first login, return first login response
+        if (user.first_login) {
+          console.log('Is first login?', user.first_login);
+          const userResponse = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            isEmployee: user.role !== 'Admin' && user.role !== 'Director',
+            isActive: user.status === 'active',
+            createdAt: user.created_at,
+            first_login: user.first_login
+          };
+
+          return res.status(200).json({
+            success: true,
+            firstLogin: true,
+            user: userResponse,
+            message: 'First login detected. Please change your PIN.'
           });
         }
 
@@ -1417,6 +1451,53 @@ app.post('/api/auth/refresh', async (req, res) => {
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// Change PIN endpoint (for first login)
+app.post('/api/auth/change-pin', async (req, res) => {
+  try {
+    const { userId, newPin } = req.body;
+
+    if (!userId || !newPin) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID and new PIN are required'
+      });
+    }
+
+    // Hash the new PIN
+    const saltRounds = 10;
+    const pinHash = await bcrypt.hash(newPin, saltRounds);
+
+    // Update user's PIN and set first_login to false
+    await db('employees')
+      .where('id', userId)
+      .update({
+        pin_hash: pinHash,
+        first_login: false,
+        updated_at: new Date().toISOString()
+      });
+
+    // Log system activity
+    await db('system_activity').insert({
+      employee_id: userId,
+      activity_type: 'pin_change',
+      description: 'User changed PIN on first login',
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'PIN changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change PIN error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change PIN'
+    });
+  }
 });
 
 // Mock dashboard stats

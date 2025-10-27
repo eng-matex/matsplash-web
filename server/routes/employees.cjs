@@ -237,12 +237,20 @@ module.exports = (db) => {
   router.post('/:id/reset-pin', async (req, res) => {
     try {
       const { id } = req.params;
+      const { tempPin } = req.body;
 
-      // Hash default PIN
+      // Validate temporary PIN
+      if (!tempPin || tempPin.length < 4 || tempPin.length > 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Temporary PIN must be 4-6 digits'
+        });
+      }
+
+      // Hash the custom temporary PIN
       const bcrypt = require('bcryptjs');
       const saltRounds = 10;
-      const defaultPin = '1111';
-      const pinHash = await bcrypt.hash(defaultPin, saltRounds);
+      const pinHash = await bcrypt.hash(tempPin, saltRounds);
 
       await db('employees')
         .where('id', id)
@@ -254,7 +262,7 @@ module.exports = (db) => {
 
       res.json({
         success: true,
-        message: 'Employee PIN reset successfully'
+        message: `Employee PIN reset successfully with temporary PIN: ${tempPin}`
       });
 
     } catch (error) {

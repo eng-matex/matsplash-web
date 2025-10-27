@@ -82,10 +82,21 @@ const LoginPage: React.FC = () => {
       });
       
       if (response.data.success) {
-        // Store token and redirect
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        window.location.reload(); // This will trigger the authentication check
+        if (response.data.firstLogin) {
+          // First login - store user and reload to trigger first login flow
+          console.log('🔍 First login detected, storing user and reloading');
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('firstLogin', 'true');
+          console.log('🔍 Stored user:', response.data.user);
+          console.log('🔍 Stored firstLogin:', 'true');
+          window.location.reload(); // This will trigger the App.tsx first login check
+        } else if (response.data.token) {
+          // Regular login
+          console.log('🔍 Regular login, storing token and user');
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          window.location.reload(); // This will trigger the authentication check
+        }
       } else if (response.data.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setError('Please enter your 2FA code');

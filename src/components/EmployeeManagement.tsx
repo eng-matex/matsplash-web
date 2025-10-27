@@ -126,6 +126,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [tempPin, setTempPin] = useState('');
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
     name: '',
     email: '',
@@ -296,6 +297,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const handleOpenDialog = (type: string, employee?: Employee) => {
     setDialogType(type);
     setSelectedEmployee(employee || null);
+    
+    // Clear tempPin when opening reset-pin dialog
+    if (type === 'reset-pin') {
+      setTempPin('');
+    }
+    
     if (type === 'new') {
       setNewEmployee({
         name: '',
@@ -346,25 +353,47 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const handleResetPin = async () => {
     if (!selectedEmployee) return;
 
+    console.log('🔍 handleResetPin called with:', { selectedEmployee: selectedEmployee.id, tempPin });
+
+    // Validate temporary PIN
+    if (!tempPin || tempPin.length < 4 || tempPin.length > 6) {
+      alert('Please enter a valid temporary PIN (4-6 digits)');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
+      const requestBody = {
+        userId: 1, // This should come from auth context
+        userEmail: 'admin@matsplash.com',
+        tempPin: tempPin
+      };
+      
+      console.log('🔍 Sending reset PIN request:', requestBody);
+      console.log('🔍 JSON stringified body:', JSON.stringify(requestBody));
+      console.log('🔍 Token:', token);
+      
       const response = await fetch(`http://localhost:3002/api/employees/${selectedEmployee.id}/reset-pin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          userId: 1, // This should come from auth context
-          userEmail: 'admin@matsplash.com'
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('🔍 Reset PIN response status:', response.status);
+
       if (response.ok) {
-        alert('PIN reset successfully! Default PIN is 1111');
+        const result = await response.json();
+        console.log('🔍 Reset PIN success:', result);
+        alert(`Employee PIN reset successfully. Temporary PIN: ${tempPin}`);
+        setTempPin(''); // Clear the temp PIN
         handleCloseDialog();
+        fetchData();
       } else {
         const error = await response.json();
+        console.error('🔍 Reset PIN error:', error);
         alert(`Failed to reset PIN: ${error.message || 'Unknown error'}`);
       }
     } catch (error) {
@@ -936,10 +965,10 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                             <RoleIcon />
                           </Avatar>
                           <Box>
-                            <Typography variant="body2" fontWeight="bold">
+                            <Typography variant="body2" fontWeight="bold" component="div">
                               {employee.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" component="div">
                               {employee.email}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" display="block">
@@ -951,29 +980,29 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <RoleIcon sx={{ mr: 1, color: roleInfo.color }} />
-                          <Typography variant="body2">
+                          <Typography variant="body2" component="div">
                             {roleInfo.name}
                           </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">
+                        <Typography variant="body2" component="div">
                           {employee.department}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight="bold">
+                        <Typography variant="body2" fontWeight="bold" component="div">
                           ₦{(employee as any).salary ? (employee as any).salary.toLocaleString() : '0'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">
+                        <Typography variant="body2" component="div">
                           {employee.has_commission ? (
                             <Box>
-                              <Typography variant="body2" fontWeight="bold" color="primary">
+                              <Typography variant="body2" fontWeight="bold" color="primary" component="div">
                                 ₦{employee.commission_rate}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" component="div">
                                 {employee.commission_type === 'per_bag_sold' 
                                   ? 'per bag sold'
                                   : employee.commission_type === 'per_bag_packed'
@@ -983,7 +1012,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                               </Typography>
                             </Box>
                           ) : (
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" color="text.secondary" component="div">
                               No Commission
                             </Typography>
                           )}
@@ -997,7 +1026,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">
+                        <Typography variant="body2" component="div">
                           {employee.last_login 
                             ? new Date(employee.last_login).toLocaleDateString()
                             : 'Never'
@@ -1365,23 +1394,23 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Name</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.name}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.name}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Email</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.email}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.email}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.phone}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.phone}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Role</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.role}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.role}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Department</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.department || 'N/A'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.department || 'N/A'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Status</Typography>
@@ -1394,11 +1423,11 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Base Salary</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>₦{selectedEmployee.salary?.toLocaleString() || '0'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">₦{selectedEmployee.salary?.toLocaleString() || '0'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Commission</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">
               {selectedEmployee.has_commission ? 
                 `₦${selectedEmployee.commission_rate} ${selectedEmployee.commission_type === 'per_bag_sold' ? 'per bag sold' : 'per bag packed'}` : 
                 'No Commission'
@@ -1407,29 +1436,29 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">Address</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.address || 'N/A'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.address || 'N/A'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Emergency Contact</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.emergency_contact || 'N/A'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.emergency_contact || 'N/A'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Emergency Phone</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.emergency_phone || 'N/A'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.emergency_phone || 'N/A'}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{selectedEmployee.notes || 'No notes'}</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">{selectedEmployee.notes || 'No notes'}</Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Created</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">
               {selectedEmployee.created_at ? new Date(selectedEmployee.created_at).toLocaleDateString() : 'N/A'}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">Last Login</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ mb: 2 }} component="div">
               {selectedEmployee.last_login ? new Date(selectedEmployee.last_login).toLocaleDateString() : 'Never'}
             </Typography>
           </Grid>
@@ -1629,22 +1658,33 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           Reset PIN for {selectedEmployee.name}
         </Typography>
         
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            This will reset the employee's PIN to the default value (1111). 
-            The employee will be required to change their PIN on their next login.
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2" component="div">
+            Enter a temporary PIN for this employee. They will be required to change it on their next login.
           </Typography>
         </Alert>
 
-        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 3 }}>
           <Typography variant="subtitle2" gutterBottom>Employee Details:</Typography>
-          <Typography variant="body2"><strong>Name:</strong> {selectedEmployee.name}</Typography>
-          <Typography variant="body2"><strong>Email:</strong> {selectedEmployee.email}</Typography>
-          <Typography variant="body2"><strong>Role:</strong> {selectedEmployee.role}</Typography>
+          <Typography variant="body2" component="div"><strong>Name:</strong> {selectedEmployee.name}</Typography>
+          <Typography variant="body2" component="div"><strong>Email:</strong> {selectedEmployee.email}</Typography>
+          <Typography variant="body2" component="div"><strong>Role:</strong> {selectedEmployee.role}</Typography>
         </Box>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Are you sure you want to reset the PIN for this employee?
+        <TextField
+          fullWidth
+          label="Temporary PIN"
+          type="password"
+          value={tempPin}
+          onChange={(e) => setTempPin(e.target.value)}
+          placeholder="Enter temporary PIN (4-6 digits)"
+          helperText="Employee will use this PIN to login and then change it"
+          sx={{ mb: 2 }}
+          inputProps={{ maxLength: 6 }}
+        />
+
+        <Typography variant="body2" color="text.secondary" component="div">
+          The employee will receive this temporary PIN and must change it on first login.
         </Typography>
       </Box>
     );
@@ -1663,7 +1703,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         </Typography>
         
         <Alert severity={actionText === 'activate' ? 'success' : 'warning'} sx={{ mb: 3 }}>
-          <Typography variant="body2">
+          <Typography variant="body2" component="div">
             {actionText === 'activate' 
               ? 'This will activate the employee account and allow them to log in.'
               : 'This will suspend the employee account and prevent them from logging in.'
@@ -1673,10 +1713,10 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
 
         <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Typography variant="subtitle2" gutterBottom>Employee Details:</Typography>
-          <Typography variant="body2"><strong>Name:</strong> {selectedEmployee.name}</Typography>
-          <Typography variant="body2"><strong>Email:</strong> {selectedEmployee.email}</Typography>
-          <Typography variant="body2"><strong>Role:</strong> {selectedEmployee.role}</Typography>
-          <Typography variant="body2"><strong>Current Status:</strong> 
+          <Typography variant="body2" component="div"><strong>Name:</strong> {selectedEmployee.name}</Typography>
+          <Typography variant="body2" component="div"><strong>Email:</strong> {selectedEmployee.email}</Typography>
+          <Typography variant="body2" component="div"><strong>Role:</strong> {selectedEmployee.role}</Typography>
+          <Typography variant="body2" component="div"><strong>Current Status:</strong> 
             <Chip 
               label={selectedEmployee.status} 
               color={selectedEmployee.status === 'active' ? 'success' : 'error'}
@@ -1684,7 +1724,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
               sx={{ ml: 1 }}
             />
           </Typography>
-          <Typography variant="body2"><strong>New Status:</strong> 
+          <Typography variant="body2" component="div"><strong>New Status:</strong> 
             <Chip 
               label={newStatus} 
               color={newStatus === 'active' ? 'success' : 'error'}
@@ -1694,7 +1734,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
           </Typography>
         </Box>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }} component="div">
           Are you sure you want to {actionText} this employee?
         </Typography>
       </Box>

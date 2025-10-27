@@ -36,6 +36,7 @@ interface LoginRequest {
     token?: string;
     message?: string;
     requiresTwoFactor?: boolean;
+    firstLogin?: boolean;
   }
 import axios from 'axios';
 
@@ -230,18 +231,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
+      const isFirstLogin = localStorage.getItem('firstLogin') === 'true';
       
-      if (storedToken && storedUser) {
+      if (storedUser) {
         try {
           const userData = JSON.parse(storedUser);
-          setToken(storedToken);
           setUser(userData);
           console.log('🔑 Restored user from localStorage:', userData);
+          
+          // Set token if available (regular login)
+          if (storedToken) {
+            setToken(storedToken);
+          }
+          // For first login, no token is set until PIN is changed
         } catch (error) {
           console.error('Error parsing stored user data:', error);
           // Clear invalid data
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          localStorage.removeItem('firstLogin');
         }
       }
       setIsLoading(false);
@@ -334,6 +342,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           };
         } else if (response.data.firstLogin) {
           // First login - user needs to change PIN
+          // Store user data for first login (no token yet)
+          console.log('🔍 First login detected, storing user in state and localStorage');
+          setUser(response.data.user);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('firstLogin', 'true');
           return {
             success: true,
             firstLogin: true,
@@ -371,6 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('firstLogin');
     delete axios.defaults.headers.common['Authorization'];
     
     if (autoLogout) {

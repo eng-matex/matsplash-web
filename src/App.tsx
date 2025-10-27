@@ -52,6 +52,7 @@ import LoginPage from './components/LoginPage';
 import AdvancedSurveillance from './components/AdvancedSurveillance';
 import AttendanceEnhancedPage from './pages/AttendanceEnhancedPage';
 import MyAttendance from './components/MyAttendance';
+import ChangePinPage from './pages/ChangePinPage';
 
 const App: React.FC = () => {
   const { user, isAuthenticated, login, logout } = useAuth();
@@ -65,8 +66,15 @@ const App: React.FC = () => {
       const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
 
   useEffect(() => {
-    console.log('🔍 App useEffect - isAuthenticated:', isAuthenticated, 'user:', user);
-    if (isAuthenticated && user) {
+    const isFirstLogin = localStorage.getItem('firstLogin') === 'true';
+    console.log('🔍 App useEffect - isAuthenticated:', isAuthenticated, 'user:', user, 'isFirstLogin:', isFirstLogin);
+    
+    // Check if it's a first login
+    if (isFirstLogin && user) {
+      console.log('🔍 First login detected, setting isLoggedIn to true for PIN change');
+      setIsLoggedIn(true);
+      setCurrentPage('change-pin');
+    } else if (isAuthenticated && user) {
       console.log('🔍 Setting isLoggedIn to true, user role:', user.role);
       setIsLoggedIn(true);
       setCurrentPage(getDefaultView(user.role));
@@ -91,6 +99,12 @@ const App: React.FC = () => {
         setRequiresTwoFactor(false);
         setShowEmergencyAccess(false);
         setLoginData({ emailOrPhone: '', pin: '', twoFactorCode: '', emergencyCode: '' });
+        
+        // If first login, set firstLogin flag and reload to show ChangePinPage
+        if ((result as any).firstLogin) {
+          console.log('🔍 First login detected in handleLogin, reloading...');
+          window.location.reload();
+        }
       } else if (result.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setError('Please enter your 2FA code');
@@ -216,6 +230,20 @@ const App: React.FC = () => {
       };
 
   if (isLoggedIn) {
+    // Check if it's a first login
+    const isFirstLogin = localStorage.getItem('firstLogin') === 'true';
+    
+    // If it's first login, show ChangePinPage without the dashboard layout
+    if (isFirstLogin) {
+      console.log('🔍 Rendering ChangePinPage for first login');
+      return (
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <ChangePinPage />
+        </ThemeProvider>
+      );
+    }
+    
     const navigationItems = getRoleNavigation(user?.role);
     
     return (
