@@ -88,6 +88,7 @@ module.exports = (db) => {
           'email',
           'phone',
           'role',
+          'profile_picture_url',
           'status',
           'created_at',
           'last_login',

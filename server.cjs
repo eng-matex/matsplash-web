@@ -114,6 +114,7 @@ async function setupDatabase() {
         table.string('phone').unique();
         table.string('role').notNullable();
         table.string('pin_hash').notNullable();
+        table.string('profile_picture_url').nullable();
         table.string('status').defaultTo('active').notNullable();
         table.string('deletion_status').defaultTo('Active').notNullable();
         table.boolean('is_archived').defaultTo(false);
@@ -135,6 +136,14 @@ async function setupDatabase() {
           table.timestamp('last_login');
         });
         console.log('Added last_login column to employees table');
+      }
+      
+      const hasProfilePictureColumn = await db.schema.hasColumn('employees', 'profile_picture_url');
+      if (!hasProfilePictureColumn) {
+        await db.schema.alterTable('employees', (table) => {
+          table.string('profile_picture_url').nullable();
+        });
+        console.log('Added profile_picture_url column to employees table');
       }
     } catch (error) {
       console.log('Column already exists or error adding column:', error.message);
@@ -1131,6 +1140,7 @@ const tables = [
             email: user.email,
             phone: user.phone,
             role: user.role,
+            profilePicture: user.profile_picture_url,
             isEmployee: user.role !== 'Admin' && user.role !== 'Director',
             isActive: user.status === 'active',
             createdAt: user.created_at,
@@ -1364,6 +1374,7 @@ const tables = [
           email: user.email,
           phone: user.phone,
           role: user.role,
+          profilePicture: user.profile_picture_url,
           isEmployee: user.role !== 'Admin' && user.role !== 'Director',
           isActive: user.status === 'active',
           createdAt: user.created_at,

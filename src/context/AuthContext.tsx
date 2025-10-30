@@ -6,6 +6,7 @@ interface User {
   phone?: string;
   name: string;
   role: 'Admin' | 'Director' | 'Manager' | 'Receptionist' | 'StoreKeeper' | 'Packer' | 'Driver' | 'Driver Assistant' | 'Sales' | 'Security' | 'Cleaner' | 'Operator' | 'Loader';
+  profilePicture?: string;
   pin?: string;
   isEmployee: boolean;
   isActive: boolean;

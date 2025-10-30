@@ -22,7 +22,8 @@ import {
   ListItemText,
   Divider,
   Chip,
-  Grid
+  Grid,
+  Avatar
 } from '@mui/material';
 import {
   Email,
@@ -64,6 +65,11 @@ const App: React.FC = () => {
       const [currentPage, setCurrentPage] = useState('overview');
       const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
       const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
+
+  // Helper function to get first name
+  const getFirstName = (fullName: string): string => {
+    return fullName.split(' ')[0];
+  };
 
   useEffect(() => {
     const isFirstLogin = localStorage.getItem('firstLogin') === 'true';
@@ -328,9 +334,22 @@ const App: React.FC = () => {
               width: 'calc(100% - 240px)',
             }}
           >
-            <Typography variant="h4" gutterBottom sx={{ color: theme.palette.text.primary, fontWeight: 700, mb: 3 }}>
-              MatSplash Suite - {user?.role} Dashboard
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Avatar 
+                src={user?.profilePicture}
+                sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
+              >
+                {getFirstName(user?.name || '').charAt(0).toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography variant="h4" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                  Welcome, {getFirstName(user?.name || 'User')}!
+                </Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                  {user?.role} Dashboard
+                </Typography>
+              </Box>
+            </Box>
             
             {/* Role-Based Dashboard Content */}
             {renderRoleBasedDashboard()}
