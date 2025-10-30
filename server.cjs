@@ -109,7 +109,9 @@ async function setupDatabase() {
     if (!hasEmployeesTable) {
       await db.schema.createTable('employees', (table) => {
         table.increments('id').primary();
-        table.string('name').notNullable();
+        table.string('name').notNullable(); // Full name for backward compatibility
+        table.string('first_name').nullable();
+        table.string('last_name').nullable();
         table.string('email').unique().notNullable();
         table.string('phone').unique();
         table.string('role').notNullable();
@@ -144,6 +146,15 @@ async function setupDatabase() {
           table.string('profile_picture_url').nullable();
         });
         console.log('Added profile_picture_url column to employees table');
+      }
+      
+      const hasFirstNameColumn = await db.schema.hasColumn('employees', 'first_name');
+      if (!hasFirstNameColumn) {
+        await db.schema.alterTable('employees', (table) => {
+          table.string('first_name').nullable();
+          table.string('last_name').nullable();
+        });
+        console.log('Added first_name and last_name columns to employees table');
       }
     } catch (error) {
       console.log('Column already exists or error adding column:', error.message);
@@ -1137,6 +1148,8 @@ const tables = [
           const userResponse = {
             id: user.id,
             name: user.name,
+            firstName: user.first_name,
+            lastName: user.last_name,
             email: user.email,
             phone: user.phone,
             role: user.role,
@@ -1371,6 +1384,8 @@ const tables = [
         const userResponse = {
           id: user.id,
           name: user.name,
+          firstName: user.first_name,
+          lastName: user.last_name,
           email: user.email,
           phone: user.phone,
           role: user.role,

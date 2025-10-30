@@ -5,6 +5,8 @@ interface User {
   email: string;
   phone?: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   role: 'Admin' | 'Director' | 'Manager' | 'Receptionist' | 'StoreKeeper' | 'Packer' | 'Driver' | 'Driver Assistant' | 'Sales' | 'Security' | 'Cleaner' | 'Operator' | 'Loader';
   profilePicture?: string;
   pin?: string;

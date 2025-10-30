@@ -66,9 +66,17 @@ const App: React.FC = () => {
       const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
       const [showEmergencyAccess, setShowEmergencyAccess] = useState(false);
 
-  // Helper function to get first name
-  const getFirstName = (fullName: string): string => {
-    return fullName.split(' ')[0];
+  // Helper function to get first name and last name
+  const getFirstName = (user: any): string => {
+    if (user?.firstName) return user.firstName;
+    return user?.name?.split(' ')[0] || 'User';
+  };
+  
+  const getFullName = (user: any): string => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.name || 'User';
   };
 
   useEffect(() => {
@@ -339,11 +347,11 @@ const App: React.FC = () => {
                 src={user?.profilePicture}
                 sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
               >
-                {getFirstName(user?.name || '').charAt(0).toUpperCase()}
+                {getFirstName(user).charAt(0).toUpperCase()}
               </Avatar>
               <Box>
                 <Typography variant="h4" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
-                  Welcome, {getFirstName(user?.name || 'User')}!
+                  Welcome, {getFullName(user)}!
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary">
                   {user?.role} Dashboard
