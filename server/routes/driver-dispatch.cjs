@@ -582,10 +582,13 @@ module.exports = (db) => {
       // Check if settlement already exists
       const existingSettlement = await db('driver_settlements').where('order_id', id).first();
 
+      // Determine if this is the first actual settlement (bags_sold is 0 and no amount_collected)
+      const isFirstSettlement = !existingSettlement || (existingSettlement.bags_sold === 0 && existingSettlement.amount_collected === 0);
+
       let bagsAt250 = 0;
 
       // Only process customer calls if this is the first settlement
-      if (!existingSettlement) {
+      if (isFirstSettlement) {
         // Get stored customer calls (50+ bag customers that driver called about)
         const customerCalls = await db('driver_customer_calls')
           .where('dispatch_order_id', id)
@@ -626,9 +629,9 @@ module.exports = (db) => {
       // Calculate expected amount:
       // For first settlement: bags at 250 * 250 + (bags_sold - bags at 250) * 270
       // For partial payments: use existing expected_amount
-      const expectedAmount = existingSettlement?.expected_amount 
-        ? existingSettlement.expected_amount
-        : ((bagsAt250 * 250) + ((bags_sold - bagsAt250) * 270));
+      const expectedAmount = isFirstSettlement
+        ? ((bagsAt250 * 250) + ((bags_sold - bagsAt250) * 270))
+        : existingSettlement.expected_amount;
       
       // For partial payments, add to existing amount_collected
       const totalCollected = existingSettlement 
