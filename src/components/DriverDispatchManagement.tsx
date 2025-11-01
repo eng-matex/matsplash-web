@@ -78,6 +78,10 @@ interface DriverDispatch {
   created_at: string;
   settlement_status?: string;
   balance_due?: number;
+  assigned_driver_id?: number;
+  amount_collected?: number;
+  settled_at?: string;
+  bags_sold?: number;
 }
 
 interface Driver {
@@ -96,10 +100,12 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [bagsDispatched, setBagsDispatched] = useState<number>(0);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer' | 'settle' | 'return'>('create');
+  const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer' | 'settle' | 'return' | 'record-call'>('create');
   const [settlementData, setSettlementData] = useState({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] as CustomerOrder[] });
   const [selectedDispatch, setSelectedDispatch] = useState<DriverDispatch | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [customerCalls, setCustomerCalls] = useState<any[]>([]);
+  const [newCall, setNewCall] = useState({ customer_name: '', customer_phone: '', customer_address: '', bags: 0 });
 
   useEffect(() => {
     fetchData();
@@ -129,7 +135,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     }
   };
 
-  const handleOpenDialog = (type: 'create' | 'view' | 'customer' | 'settle' | 'return', dispatch?: DriverDispatch) => {
+  const handleOpenDialog = async (type: 'create' | 'view' | 'customer' | 'settle' | 'return' | 'record-call', dispatch?: DriverDispatch) => {
     setDialogType(type);
     setSelectedDispatch(dispatch || null);
     if (type === 'create') {
@@ -137,9 +143,30 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       setSelectedAssistant('');
       setBagsDispatched(0);
     } else if (type === 'settle' && dispatch) {
-      setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
+      setSettlementData({ 
+        bags_sold: dispatch.bags_sold || 0, 
+        bags_at_250: 0, 
+        amount_paid: 0, 
+        customer_orders: [] 
+      });
+      // Fetch stored customer calls for this dispatch
+      await fetchCustomerCalls(dispatch.id);
+    } else if (type === 'record-call' && dispatch) {
+      setNewCall({ customer_name: '', customer_phone: '', customer_address: '', bags: 0 });
+      await fetchCustomerCalls(dispatch.id);
     }
     setDialogOpen(true);
+  };
+
+  const fetchCustomerCalls = async (dispatchId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`/api/driver-dispatch/${dispatchId}/customer-calls`, { headers });
+      setCustomerCalls(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching customer calls:', error);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -148,6 +175,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     setSelectedDispatch(null);
     setNewCustomer({ name: '', phone: '', address: '' });
     setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
+    setNewCall({ customer_name: '', customer_phone: '', customer_address: '', bags: 0 });
+    setCustomerCalls([]);
   };
 
 
@@ -220,26 +249,56 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     }
   };
 
+  const handleRecordCall = async () => {
+    if (!selectedDispatch) return;
+
+    if (!newCall.customer_name || !newCall.customer_phone || !newCall.bags || newCall.bags < 50) {
+      alert('Customer name, phone, and bags (50+) are required');
+      return;
+    }
+
+    if (!selectedDispatch.assigned_driver_id) {
+      alert('Driver ID not found. Please refresh and try again.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.post(`/api/driver-dispatch/${selectedDispatch.id}/customer-calls`, {
+        customer_name: newCall.customer_name,
+        customer_phone: newCall.customer_phone,
+        customer_address: newCall.customer_address,
+        bags: newCall.bags,
+        driver_id: selectedDispatch.assigned_driver_id
+      }, { headers });
+
+      if (response.data.success) {
+        alert('Customer call recorded successfully!');
+        setNewCall({ customer_name: '', customer_phone: '', customer_address: '', bags: 0 });
+        await fetchCustomerCalls(selectedDispatch.id);
+      } else {
+        alert(response.data.message || 'Error recording call');
+      }
+    } catch (error: any) {
+      console.error('Error recording call:', error);
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert('Error recording customer call');
+      }
+    }
+  };
+
   const handleProcessSettlement = async () => {
     if (!selectedDispatch) return;
 
-    const { bags_sold, amount_paid, customer_orders } = settlementData;
+    const { bags_sold, amount_paid } = settlementData;
 
     if (!bags_sold || bags_sold <= 0) {
       alert('Please enter number of bags sold');
       return;
-    }
-
-    // Validate customer orders - all must be 50+ bags
-    for (const order of customer_orders) {
-      if (!order.customer_name || !order.customer_phone || !order.bags) {
-        alert('Please complete all fields for all customer orders');
-        return;
-      }
-      if (order.bags < 50) {
-        alert('Customer orders must be 50 bags or more');
-        return;
-      }
     }
 
     try {
@@ -250,7 +309,6 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
         bags_sold,
         bags_returned: 0,
         amount_paid,
-        customer_orders,
         notes: ''
       }, { headers });
 
@@ -281,7 +339,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
 
   const calculateExpectedAmount = () => {
     if (!settlementData.bags_sold) return 0;
-    const bagsAt250 = settlementData.customer_orders.reduce((sum, o) => sum + (o.bags || 0), 0);
+    // Calculate from stored customer calls
+    const bagsAt250 = customerCalls.filter(c => !c.processed).reduce((sum, c) => sum + (c.bags || 0), 0);
     const bagsAt270 = settlementData.bags_sold - bagsAt250;
     return (bagsAt250 * 250) + (bagsAt270 * 270);
   };
@@ -291,43 +350,6 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     return expected - settlementData.amount_paid;
   };
 
-  const addSettlementCustomer = () => {
-    setSettlementData({
-      ...settlementData,
-      customer_orders: [...settlementData.customer_orders, { customer_name: '', customer_phone: '', bags: 0, price: 0, is_new_customer: false }]
-    });
-  };
-
-  const updateSettlementCustomer = (index: number, field: string, value: any) => {
-    const updated = [...settlementData.customer_orders];
-    if (field === 'bags') {
-      const bags = parseInt(value) || 0;
-      updated[index].bags = bags;
-      updated[index].price = bags >= 50 ? 250 : 270;
-    } else if (field === 'customer_phone') {
-      const customer = customers.find(c => c.phone === value);
-      if (customer) {
-        updated[index].customer_id = customer.id;
-        updated[index].customer_name = customer.name;
-        updated[index].customer_address = customer.address;
-        updated[index].is_new_customer = false;
-      } else {
-        updated[index].is_new_customer = true;
-        updated[index].customer_id = undefined;
-      }
-      (updated[index] as any)[field] = value;
-    } else {
-      (updated[index] as any)[field] = value;
-    }
-    setSettlementData({ ...settlementData, customer_orders: updated });
-  };
-
-  const removeSettlementCustomer = (index: number) => {
-    setSettlementData({
-      ...settlementData,
-      customer_orders: settlementData.customer_orders.filter((_, i) => i !== index)
-    });
-  };
 
   // Helper function to get bags count from items JSON
   const getBagsCount = (dispatch: DriverDispatch): number => {
@@ -411,9 +433,10 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                   <TableCell>Driver</TableCell>
                   <TableCell>Assistant</TableCell>
                   <TableCell>Bags</TableCell>
-                  <TableCell>Total Amount</TableCell>
+                    <TableCell>Total Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Settlement</TableCell>
+                  <TableCell>Balance Due</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
@@ -442,6 +465,17 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                         />
                       )}
                     </TableCell>
+                    <TableCell>
+                      {dispatch.settlement_status ? (
+                        <Chip 
+                          label={`₦${dispatch.balance_due?.toLocaleString() || 0}`} 
+                          color={dispatch.balance_due === 0 ? 'success' : 'error'}
+                          size="small"
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">-</Typography>
+                      )}
+                    </TableCell>
                     <TableCell>{new Date(dispatch.created_at).toLocaleString()}</TableCell>
                     <TableCell>
                       <Tooltip title="View Details">
@@ -450,9 +484,23 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                         </IconButton>
                       </Tooltip>
                       {userRole === 'receptionist' && dispatch.status === 'out_for_delivery' && (
-                        <Tooltip title="Process Settlement">
-                          <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)}>
-                            <AttachMoney />
+                        <>
+                          <Tooltip title="Record Customer Call">
+                            <IconButton size="small" onClick={() => handleOpenDialog('record-call', dispatch)}>
+                              <PersonAdd />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={dispatch.settlement_status ? 'Complete Settlement' : 'Process Settlement'}>
+                            <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)}>
+                              <AttachMoney />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                      {userRole === 'receptionist' && dispatch.status === 'settled' && dispatch.balance_due > 0 && (
+                        <Tooltip title="Complete Payment">
+                          <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)} color="success">
+                            <CheckCircle />
                           </IconButton>
                         </Tooltip>
                       )}
@@ -588,7 +636,28 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
               <Alert severity="info" sx={{ mb: 3 }}>
                 <Typography variant="body2"><strong>Driver:</strong> {selectedDispatch.driver_name}</Typography>
                 <Typography variant="body2"><strong>Order:</strong> {selectedDispatch.order_number}</Typography>
+                {selectedDispatch.status === 'settled' && selectedDispatch.balance_due > 0 && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>Current Outstanding Balance:</strong> ₦{selectedDispatch.balance_due?.toLocaleString() || 0}
+                  </Typography>
+                )}
               </Alert>
+
+              {selectedDispatch.settlement_status && (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>Settlement Status:</strong> {selectedDispatch.settlement_status.replace('_', ' ').toUpperCase()}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Amount Collected:</strong> ₦{selectedDispatch.amount_collected?.toLocaleString() || 0}
+                  </Typography>
+                  {selectedDispatch.settled_at && (
+                    <Typography variant="body2">
+                      <strong>Last Settled:</strong> {new Date(selectedDispatch.settled_at).toLocaleString()}
+                    </Typography>
+                  )}
+                </Alert>
+              )}
 
               <Grid container spacing={2}>
                 <Grid item xs={12}>
@@ -602,63 +671,52 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">Customers with 50+ Bags</Typography>
-                    <Button startIcon={<Add />} onClick={addSettlementCustomer} size="small">
-                      Add Customer
-                    </Button>
-                  </Box>
-
-                  {settlementData.customer_orders.map((order, index) => (
-                    <Card key={index} sx={{ mb: 2, p: 2 }}>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
-                          <TextField
-                            label="Customer Name"
-                            fullWidth
-                            value={order.customer_name}
-                            onChange={(e) => updateSettlementCustomer(index, 'customer_name', e.target.value)}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <TextField
-                            label="Phone Number"
-                            fullWidth
-                            value={order.customer_phone}
-                            onChange={(e) => updateSettlementCustomer(index, 'customer_phone', e.target.value)}
-                            helperText={order.is_new_customer ? 'New customer' : ''}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <TextField
-                            label="Number of Bags"
-                            type="number"
-                            fullWidth
-                            value={order.bags}
-                            onChange={(e) => updateSettlementCustomer(index, 'bags', e.target.value)}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={1}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                            <Button
-                              color="error"
-                              onClick={() => removeSettlementCustomer(index)}
-                              size="small"
-                            >
-                              Remove
-                            </Button>
-                          </Box>
-                        </Grid>
-                        {order.bags > 0 && (
-                          <Grid item xs={12}>
-                            <Alert severity="info">
-                              Price: ₦250 per bag (Total: ₦{(order.bags * 250).toLocaleString()})
-                            </Alert>
+                  <Typography variant="h6" gutterBottom>Customers with 50+ Bags (Recorded Calls)</Typography>
+                  {customerCalls.length === 0 ? (
+                    <Alert severity="info">
+                      No customer calls recorded for this dispatch. Customer calls should be recorded when driver calls about 50+ bag customers.
+                    </Alert>
+                  ) : (
+                    <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                      {customerCalls.map((call) => (
+                        <Card key={call.id} sx={{ mb: 2, p: 2, bgcolor: call.processed ? '#f5f5f5' : 'white' }}>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} md={4}>
+                              <Typography variant="subtitle2" color="text.secondary">Customer Name</Typography>
+                              <Typography variant="body1">{call.customer_name}</Typography>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                              <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
+                              <Typography variant="body1">{call.customer_phone}</Typography>
+                            </Grid>
+                            <Grid item xs={12} md={2}>
+                              <Typography variant="subtitle2" color="text.secondary">Bags</Typography>
+                              <Typography variant="body1">{call.bags}</Typography>
+                            </Grid>
+                            <Grid item xs={12} md={2}>
+                              <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                              <Typography variant="body1">₦{(call.bags * 250).toLocaleString()}</Typography>
+                            </Grid>
+                            {call.customer_address && (
+                              <Grid item xs={12}>
+                                <Typography variant="subtitle2" color="text.secondary">Address</Typography>
+                                <Typography variant="body2">{call.customer_address}</Typography>
+                              </Grid>
+                            )}
+                            <Grid item xs={12}>
+                              <Typography variant="caption" color="text.secondary">
+                                Called: {new Date(call.called_at).toLocaleString()} | 
+                                Originator: {call.originator_driver_name || 'N/A'}
+                              </Typography>
+                            </Grid>
                           </Grid>
-                        )}
-                      </Grid>
-                    </Card>
-                  ))}
+                        </Card>
+                      ))}
+                    </Box>
+                  )}
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    Total bags at ₦250: {customerCalls.filter(c => !c.processed).reduce((sum, c) => sum + (c.bags || 0), 0)}
+                  </Alert>
                 </Grid>
 
                 <Grid item xs={12}>
@@ -690,7 +748,102 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleProcessSettlement} variant="contained" sx={{ bgcolor: '#13bbc6' }}>
-            Process Settlement
+            {selectedDispatch?.settlement_status ? 'Add Payment' : 'Process Settlement'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Record Customer Call Dialog */}
+      <Dialog open={dialogOpen && dialogType === 'record-call'} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Record Customer Call (50+ Bags)</DialogTitle>
+        <DialogContent>
+          {selectedDispatch && (
+            <Box>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2"><strong>Driver:</strong> {selectedDispatch.driver_name}</Typography>
+                <Typography variant="body2"><strong>Order:</strong> {selectedDispatch.order_number}</Typography>
+              </Alert>
+
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Customer Name"
+                    value={newCall.customer_name}
+                    onChange={(e) => setNewCall({ ...newCall, customer_name: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Customer Phone"
+                    value={newCall.customer_phone}
+                    onChange={(e) => {
+                      const phone = e.target.value;
+                      setNewCall({ ...newCall, customer_phone: phone });
+                      // Auto-fill from existing customers
+                      const existing = customers.find(c => c.phone === phone);
+                      if (existing) {
+                        setNewCall({ 
+                          ...newCall, 
+                          customer_phone: phone,
+                          customer_name: existing.name,
+                          customer_address: existing.address || ''
+                        });
+                      }
+                    }}
+                    helperText="Enter phone to auto-fill existing customer"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Customer Address"
+                    multiline
+                    rows={2}
+                    value={newCall.customer_address}
+                    onChange={(e) => setNewCall({ ...newCall, customer_address: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Number of Bags"
+                    type="number"
+                    value={newCall.bags}
+                    onChange={(e) => setNewCall({ ...newCall, bags: parseInt(e.target.value) || 0 })}
+                    helperText="Must be 50 or more bags"
+                  />
+                </Grid>
+                {newCall.bags >= 50 && (
+                  <Grid item xs={12}>
+                    <Alert severity="success">
+                      Price: ₦250 per bag (Total: ₦{(newCall.bags * 250).toLocaleString()})
+                    </Alert>
+                  </Grid>
+                )}
+              </Grid>
+
+              {customerCalls.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>Previously Recorded Calls:</Typography>
+                  {customerCalls.map((call) => (
+                    <Chip
+                      key={call.id}
+                      label={`${call.customer_name} - ${call.bags} bags`}
+                      sx={{ mr: 1, mb: 1 }}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleRecordCall} variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            Record Call
           </Button>
         </DialogActions>
       </Dialog>

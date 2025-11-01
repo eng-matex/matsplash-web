@@ -62,6 +62,7 @@ import SalaryManagement from './SalaryManagement';
 import SalesManagement from './SalesManagement';
 import PackerWorkflowManagement from './PackerWorkflowManagement';
 import DriverDispatchManagement from './DriverDispatchManagement';
+import DriverCustomerCallsView from './DriverCustomerCallsView';
 import InventoryManagement from './InventoryManagement';
 
 interface ManagerDashboardProps {
@@ -906,6 +907,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         return <OrderManagement selectedSection={selectedSection} userRole="manager" />;
       case 'driver-dispatches':
         return <DriverDispatchManagement userRole="manager" />;
+      case 'customer-calls':
+        return <DriverCustomerCallsView />;
       default:
         return renderOverview();
     }

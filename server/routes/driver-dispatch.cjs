@@ -96,6 +96,251 @@ module.exports = (db) => {
     }
   });
 
+  // ====== CUSTOMER CALLS MANAGEMENT ======
+  
+  // Record customer call (when driver calls receptionist about 50+ bag customer)
+  router.post('/:dispatchId/customer-calls', async (req, res) => {
+    try {
+      const { dispatchId } = req.params;
+      const { customer_name, customer_phone, customer_address, bags, driver_id } = req.body;
+      const receptionist_id = req.user?.id;
+
+      if (!customer_name || !customer_phone || !bags || bags < 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'Customer name, phone, and bags (50+) are required'
+        });
+      }
+
+      if (!driver_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Driver ID is required'
+        });
+      }
+
+      // Verify dispatch order exists
+      const dispatch = await db('orders')
+        .where('id', dispatchId)
+        .where('order_type', 'driver_dispatch')
+        .first();
+
+      if (!dispatch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dispatch order not found'
+        });
+      }
+
+      // Check if customer exists
+      const existingCustomer = await db('driver_customers')
+        .where('phone', customer_phone)
+        .first();
+
+      let customer_id = null;
+      let originator_driver_id = null;
+
+      if (existingCustomer) {
+        customer_id = existingCustomer.id;
+        // Use existing originator if available, otherwise set current driver as originator
+        originator_driver_id = existingCustomer.originator_driver_id || driver_id;
+      } else {
+        // Create new customer - first driver to call is the originator
+        const [newCustomerId] = await db('driver_customers').insert({
+          name: customer_name,
+          phone: customer_phone,
+          address: customer_address || null,
+          originator_driver_id: driver_id,
+          last_driver_id: driver_id,
+          total_orders: 0,
+          total_amount: 0,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        customer_id = newCustomerId;
+        originator_driver_id = driver_id;
+      }
+
+      // Record the customer call
+      const [callId] = await db('driver_customer_calls').insert({
+        dispatch_order_id: dispatchId,
+        customer_id,
+        customer_name,
+        customer_phone,
+        customer_address: customer_address || null,
+        driver_id,
+        originator_driver_id,
+        bags,
+        processed: false,
+        receptionist_id,
+        called_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      const call = await db('driver_customer_calls')
+        .where('id', callId)
+        .first();
+
+      res.json({
+        success: true,
+        data: call,
+        message: 'Customer call recorded successfully'
+      });
+    } catch (error) {
+      console.error('Error recording customer call:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to record customer call'
+      });
+    }
+  });
+
+  // Get customer calls for a dispatch
+  router.get('/:dispatchId/customer-calls', async (req, res) => {
+    try {
+      const { dispatchId } = req.params;
+      
+      const calls = await db('driver_customer_calls')
+        .select(
+          'driver_customer_calls.*',
+          'driver.name as driver_name',
+          'originator.name as originator_driver_name'
+        )
+        .leftJoin('employees as driver', 'driver_customer_calls.driver_id', 'driver.id')
+        .leftJoin('employees as originator', 'driver_customer_calls.originator_driver_id', 'originator.id')
+        .where('driver_customer_calls.dispatch_order_id', dispatchId)
+        .orderBy('driver_customer_calls.called_at', 'desc');
+
+      res.json({
+        success: true,
+        data: calls
+      });
+    } catch (error) {
+      console.error('Error fetching customer calls:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customer calls'
+      });
+    }
+  });
+
+  // Get all customer calls (for filtering view)
+  router.get('/customer-calls/all', async (req, res) => {
+    try {
+      const { start_date, end_date, driver_id, originator_driver_id, phone, sort_by } = req.query;
+      
+      let query = db('driver_customer_calls')
+        .select(
+          'driver_customer_calls.*',
+          'driver.name as driver_name',
+          'originator.name as originator_driver_name',
+          'dispatch.order_number as dispatch_order_number'
+        )
+        .leftJoin('employees as driver', 'driver_customer_calls.driver_id', 'driver.id')
+        .leftJoin('employees as originator', 'driver_customer_calls.originator_driver_id', 'originator.id')
+        .leftJoin('orders as dispatch', 'driver_customer_calls.dispatch_order_id', 'dispatch.id');
+
+      if (start_date) {
+        query = query.where('driver_customer_calls.called_at', '>=', start_date);
+      }
+
+      if (end_date) {
+        query = query.where('driver_customer_calls.called_at', '<=', end_date);
+      }
+
+      if (driver_id) {
+        query = query.where('driver_customer_calls.driver_id', driver_id);
+      }
+
+      if (originator_driver_id) {
+        query = query.where('driver_customer_calls.originator_driver_id', originator_driver_id);
+      }
+
+      if (phone) {
+        query = query.where('driver_customer_calls.customer_phone', 'like', `%${phone}%`);
+      }
+
+      // Sort by highest purchaser (total bags per customer) or date
+      if (sort_by === 'highest_purchaser') {
+        // For highest purchaser, we'll group by customer and calculate totals, then sort
+        // This is done in memory after fetching for simplicity
+        const calls = await query;
+        // Group by customer phone and calculate totals
+        const customerTotals = {};
+        calls.forEach((call) => {
+          if (!customerTotals[call.customer_phone]) {
+            customerTotals[call.customer_phone] = 0;
+          }
+          customerTotals[call.customer_phone] += call.bags;
+        });
+        // Sort by total bags
+        calls.sort((a, b) => {
+          const totalA = customerTotals[a.customer_phone] || 0;
+          const totalB = customerTotals[b.customer_phone] || 0;
+          return totalB - totalA;
+        });
+        return res.json({
+          success: true,
+          data: calls
+        });
+      } else {
+        query = query.orderBy('driver_customer_calls.called_at', 'desc');
+      }
+
+      if (sort_by !== 'highest_purchaser') {
+        const calls = await query;
+        res.json({
+          success: true,
+          data: calls
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching all customer calls:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customer calls'
+      });
+    }
+  });
+
+  // Delete customer call (before settlement)
+  router.delete('/customer-calls/:callId', async (req, res) => {
+    try {
+      const { callId } = req.params;
+      
+      const call = await db('driver_customer_calls').where('id', callId).first();
+      
+      if (!call) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer call not found'
+        });
+      }
+
+      if (call.processed) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete processed customer call'
+        });
+      }
+
+      await db('driver_customer_calls').where('id', callId).delete();
+
+      res.json({
+        success: true,
+        message: 'Customer call deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting customer call:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete customer call'
+      });
+    }
+  });
+
   // ====== DRIVER DISPATCH CREATION ======
   
   // Create driver dispatch order
@@ -211,6 +456,8 @@ module.exports = (db) => {
           'orders.*',
           'driver.name as driver_name',
           'assistant.name as assistant_name',
+          'orders.assigned_driver_id',
+          'orders.assigned_assistant_id',
           'settlement.status as settlement_status',
           'settlement.balance_due'
         )
@@ -307,7 +554,7 @@ module.exports = (db) => {
   router.post('/:id/settle', async (req, res) => {
     try {
       const { id } = req.params;
-      const { bags_sold, bags_returned, amount_paid, customer_orders, notes } = req.body;
+      const { bags_sold, bags_returned, amount_paid, notes } = req.body;
       const receptionist_id = req.user?.id;
 
       const dispatch = await db('orders')
@@ -329,38 +576,39 @@ module.exports = (db) => {
         });
       }
 
-      // Save customer orders (50+ bag customers that driver called about)
+      // Get stored customer calls (50+ bag customers that driver called about)
+      const customerCalls = await db('driver_customer_calls')
+        .where('dispatch_order_id', id)
+        .where('processed', false);
+
       let bagsAt250 = 0;
-      if (customer_orders && Array.isArray(customer_orders)) {
-        for (const order of customer_orders) {
-          // Save or update customer
-          const existing = await db('driver_customers').where('phone', order.customer_phone).first();
-          if (existing) {
+      
+      // Process stored customer calls and update customer stats
+      for (const call of customerCalls) {
+        // Update customer stats
+        if (call.customer_id) {
+          const customer = await db('driver_customers').where('id', call.customer_id).first();
+          if (customer) {
             await db('driver_customers')
-              .where('id', existing.id)
+              .where('id', call.customer_id)
               .update({
-                total_orders: existing.total_orders + 1,
-                total_amount: existing.total_amount + (order.bags * 250),
+                total_orders: customer.total_orders + 1,
+                total_amount: customer.total_amount + (call.bags * 250),
                 last_order_date: new Date().toISOString(),
                 last_driver_id: dispatch.assigned_driver_id,
                 updated_at: new Date().toISOString()
               });
-          } else {
-            await db('driver_customers').insert({
-              name: order.customer_name,
-              phone: order.customer_phone,
-              address: order.customer_address || null,
-              last_driver_id: dispatch.assigned_driver_id,
-              total_orders: 1,
-              total_amount: order.bags * 250,
-              last_order_date: new Date().toISOString(),
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
           }
-          bagsAt250 += order.bags;
         }
+        bagsAt250 += call.bags;
+        
+        // Mark call as processed
+        await db('driver_customer_calls')
+          .where('id', call.id)
+          .update({
+            processed: true,
+            updated_at: new Date().toISOString()
+          });
       }
 
       const bagsAt270 = bags_sold - bagsAt250;

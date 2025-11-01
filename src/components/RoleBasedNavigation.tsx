@@ -21,7 +21,8 @@ import {
   CheckCircle,
   Devices,
   LocationOn,
-  Videocam
+  Videocam,
+  Phone
 } from '@mui/icons-material';
 
 // Navigation sections for different roles
@@ -37,6 +38,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
+        { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
+        { id: 'customer-calls', label: 'Customer Calls (50+)', icon: Phone, color: '#4caf50' },
         { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#00bcd4' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
@@ -58,6 +61,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'commission-approval', label: 'Commission Approval', icon: CheckCircle, color: '#4caf50' },
+        { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
+        { id: 'customer-calls', label: 'Customer Calls (50+)', icon: Phone, color: '#4caf50' },
         { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#00bcd4' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
@@ -77,6 +82,8 @@ export const getRoleNavigation = (role: string) => {
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
+        { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
+        { id: 'customer-calls', label: 'Customer Calls (50+)', icon: Phone, color: '#4caf50' },
         { id: 'inventory-management', label: 'Inventory Management', icon: Inventory, color: '#00bcd4' },
         { id: 'sales-management', label: 'Sales Management', icon: PointOfSale, color: '#ff5722' },
         { id: 'reports', label: 'Reports & Analytics', icon: Assessment, color: '#673ab7' },
@@ -94,6 +101,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'general-sales', label: 'General Sales', icon: PointOfSale, color: '#4caf50' },
         { id: 'distributor-orders', label: 'Distributor Orders', icon: Business, color: '#9c27b0' },
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
+        { id: 'customer-calls', label: 'Customer Calls (50+)', icon: Phone, color: '#4caf50' },
         { id: 'store-dispatch', label: 'Store Dispatch', icon: LocalShipping, color: '#9c27b0' },
         { id: 'driver-settlement', label: 'Driver Settlement', icon: Payment, color: '#ff5722' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' }

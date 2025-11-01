@@ -224,6 +224,18 @@ async function setupDatabase() {
           console.log('Added pickup authorization columns to orders table');
         }
       }
+
+      // Add originator_driver_id to driver_customers if missing
+      const hasDriverCustomersTable = await db.schema.hasTable('driver_customers');
+      if (hasDriverCustomersTable) {
+        const hasOriginatorDriverId = await db.schema.hasColumn('driver_customers', 'originator_driver_id');
+        if (!hasOriginatorDriverId) {
+          await db.schema.alterTable('driver_customers', (table) => {
+            table.integer('originator_driver_id').unsigned().nullable().references('id').inTable('employees');
+          });
+          console.log('Added originator_driver_id column to driver_customers table');
+        }
+      }
     } catch (error) {
       console.log('Column already exists or error adding column:', error.message);
     }
@@ -464,7 +476,7 @@ const tables = [
   'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts',
   'water_bag_batches', 'water_bag_assignments', 'packer_work_logs',
   'gate_logs', 'incident_reports', 'products', 'sales_entries', 'sales_history', 'sales_stats',
-  'driver_customers', 'driver_commissions', 'driver_settlements'
+  'driver_customers', 'driver_commissions', 'driver_settlements', 'driver_customer_calls'
 ];
 
     for (const tableName of tables) {
@@ -581,6 +593,7 @@ const tables = [
               table.string('phone').notNullable();
               table.text('address');
               table.integer('last_driver_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('originator_driver_id').unsigned().nullable().references('id').inTable('employees');
               table.integer('total_orders').defaultTo(0);
               table.decimal('total_amount', 10, 2).defaultTo(0);
               table.timestamp('last_order_date');
@@ -624,6 +637,23 @@ const tables = [
               table.integer('receptionist_id').unsigned().nullable().references('id').inTable('employees');
               table.timestamp('settled_at');
               table.text('notes');
+              table.timestamps(true, true);
+            });
+            break;
+          case 'driver_customer_calls':
+            await db.schema.createTable('driver_customer_calls', (table) => {
+              table.increments('id').primary();
+              table.integer('dispatch_order_id').unsigned().notNullable().references('id').inTable('orders');
+              table.integer('customer_id').unsigned().nullable().references('id').inTable('driver_customers');
+              table.string('customer_name').notNullable();
+              table.string('customer_phone').notNullable();
+              table.text('customer_address');
+              table.integer('driver_id').unsigned().notNullable().references('id').inTable('employees');
+              table.integer('originator_driver_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('bags').notNullable();
+              table.boolean('processed').defaultTo(false); // Whether used in settlement
+              table.integer('receptionist_id').unsigned().nullable().references('id').inTable('employees');
+              table.timestamp('called_at').notNullable();
               table.timestamps(true, true);
             });
             break;

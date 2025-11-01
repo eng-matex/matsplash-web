@@ -58,6 +58,7 @@ import OrderManagement from './OrderManagement';
 import SalesManagement from './SalesManagement';
 import InventoryManagement from './InventoryManagement';
 import DriverDispatchManagement from './DriverDispatchManagement';
+import DriverCustomerCallsView from './DriverCustomerCallsView';
 
 interface ReceptionistDashboardProps {
   selectedSection: string;
@@ -1532,10 +1533,12 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         return <OrderManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'driver-dispatches':
         return <DriverDispatchManagement userRole="receptionist" />;
+      case 'customer-calls':
+        return <DriverCustomerCallsView />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'driver-settlement':
-        return renderDriverSettlement();
+        return <DriverDispatchManagement userRole="receptionist" />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
       case 'my-attendance':
