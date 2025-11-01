@@ -3428,6 +3428,10 @@ app.use('/api/packing-logs', packingLogsRoutes(db));
 const ordersRoutes = require('./server/routes/orders.cjs');
 app.use('/api/orders', ordersRoutes(db));
 
+// Import and mount driver dispatch routes
+const driverDispatchRoutes = require('./server/routes/driver-dispatch.cjs');
+app.use('/api/driver-dispatch', driverDispatchRoutes(db));
+
 // Import and mount price models routes
 const priceModelsRoutes = require('./server/routes/price-models.cjs');
 app.use('/api/price-models', priceModelsRoutes(db));

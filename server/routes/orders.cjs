@@ -181,11 +181,13 @@ module.exports = (db) => {
       // Calculate new stock after deduction
       const newStock = currentStock - totalQuantity;
 
-      // Update order status
+      // Update order status (set to out_for_delivery for driver dispatch)
+      const newStatus = order.order_type === 'driver_dispatch' ? 'out_for_delivery' : 'picked_up';
+      
       await db('orders')
         .where('id', id)
         .update({
-          status: 'picked_up',
+          status: newStatus,
           picked_up_at: new Date().toISOString(),
           storekeeper_authorized: true,
           authorization_time: new Date().toISOString(),
