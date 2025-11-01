@@ -165,8 +165,8 @@ module.exports = (db) => {
       // Parse items JSON
       const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
       
-      // Calculate total quantity of Sachet Water
-      const sachetWaterItem = items.find(item => item.product_name === 'Sachet Water');
+      // Calculate total quantity of Sachet Water (support both 'name' and 'product_name' fields)
+      const sachetWaterItem = items.find(item => (item.product_name || item.name) === 'Sachet Water');
       const totalQuantity = sachetWaterItem ? sachetWaterItem.quantity : 0;
 
       if (totalQuantity === 0) {
