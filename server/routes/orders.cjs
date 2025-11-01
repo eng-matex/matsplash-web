@@ -245,9 +245,12 @@ module.exports = (db) => {
 
     } catch (error) {
       console.error('Error confirming pickup:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Error message:', error.message);
       res.status(500).json({
         success: false,
-        message: 'Failed to confirm pickup'
+        message: 'Failed to confirm pickup',
+        error: error.message
       });
     }
   });
