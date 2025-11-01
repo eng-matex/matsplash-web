@@ -280,13 +280,13 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Inventory sx={{ mr: 1, color: '#13bbc6' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Total Items</Typography>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Current Stock</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                {inventory.length}
+                {inventory.length > 0 ? inventory[0].current_stock : 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                In inventory
+                Sachet Water (bags)
               </Typography>
             </CardContent>
           </Card>
@@ -892,7 +892,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                   Current Stock
                 </Typography>
                 <Typography variant="h4" color="primary" sx={{ mb: 2 }}>
-                  {inventoryStats.currentStock || 0} bags
+                  {inventory.length > 0 ? inventory[0].current_stock : 0} bags
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Sachet Water (500ml)

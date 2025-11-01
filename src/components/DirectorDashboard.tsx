@@ -135,7 +135,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       let inventoryGrowth = 0;
       if (inventoryResponse.status === 'fulfilled' && inventoryResponse.value.ok) {
         const inventoryData = await inventoryResponse.value.json();
-        inventoryValue = inventoryData.current_stock * 300; // Assuming ₦300 per bag
+        inventoryValue = inventoryData.data?.totalInventory || 0; // Get total bags count
         inventoryGrowth = 0; // Real growth data from API
       }
 
@@ -492,7 +492,7 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
           {renderMetricCard('Active Employees', dashboardData.activeEmployees, dashboardData.employeeGrowth, People, '#ff9800')}
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          {renderMetricCard('Inventory Value', `₦${dashboardData.inventoryValue.toLocaleString()}`, dashboardData.inventoryGrowth, Inventory, '#9c27b0')}
+          {renderMetricCard('Current Stock', `${dashboardData.inventoryValue} bags`, dashboardData.inventoryGrowth, Inventory, '#9c27b0')}
         </Grid>
       </Grid>
 

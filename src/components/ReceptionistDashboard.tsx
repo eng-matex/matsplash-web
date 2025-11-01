@@ -50,7 +50,8 @@ import {
   ShoppingCart,
   Store,
   DeliveryDining,
-  Payment
+  Payment,
+  Inventory
 } from '@mui/icons-material';
 import axios from 'axios';
 import OrderManagement from './OrderManagement';
@@ -69,6 +70,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
   const [distributorOrders, setDistributorOrders] = useState<any[]>([]);
   const [driverDispatches, setDriverDispatches] = useState<any[]>([]);
   const [attendanceStatus, setAttendanceStatus] = useState<any>(null);
+  const [currentStock, setCurrentStock] = useState<number>(0);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -117,9 +119,12 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           setOrders(ordersResponse.data.data || []);
           try {
             const invStats = await axios.get('http://localhost:3002/api/inventory/stats', { headers });
-            // Optionally expose inventory totals here if needed by the UI
-            (window as any).__INV_STATS__ = invStats.data.data;
-          } catch (e) {}
+            if (invStats.data.success) {
+              setCurrentStock(invStats.data.data?.totalInventory || 0);
+            }
+          } catch (e) {
+            console.error('Error fetching inventory stats:', e);
+          }
           break;
         case 'general-sales':
           // Filter orders for general sales
@@ -508,6 +513,23 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 All types
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Inventory sx={{ mr: 1, color: '#9c27b0' }} />
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Current Stock</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 700 }}>
+                {currentStock}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sachet Water (bags)
               </Typography>
             </CardContent>
           </Card>
