@@ -25,8 +25,7 @@ import {
   Grid,
   IconButton,
   Tooltip,
-  Alert,
-  Autocomplete
+  Alert
 } from '@mui/material';
 import {
   Add,
@@ -37,8 +36,7 @@ import {
   Cancel,
   AttachMoney,
   LocalShipping,
-  PersonAdd,
-  Search
+  PersonAdd
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -66,6 +64,7 @@ interface CustomerOrder {
   customer_address?: string;
   bags: number;
   price: number;
+  is_new_customer?: boolean;
 }
 
 interface DriverDispatch {
@@ -150,7 +149,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   };
 
   const addCustomerOrder = () => {
-    setCustomerOrders([...customerOrders, { customer_name: '', customer_phone: '', bags: 0, price: 0 }]);
+    setCustomerOrders([...customerOrders, { customer_name: '', customer_phone: '', bags: 0, price: 0, is_new_customer: false }]);
   };
 
   const updateCustomerOrder = (index: number, field: string, value: any) => {
@@ -166,7 +165,21 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
         updated[index].customer_name = customer.name;
         updated[index].customer_phone = customer.phone;
         updated[index].customer_address = customer.address;
+        updated[index].is_new_customer = false;
       }
+    } else if (field === 'customer_phone') {
+      // Check if customer exists by phone
+      const customer = customers.find(c => c.phone === value);
+      if (customer) {
+        updated[index].customer_id = customer.id;
+        updated[index].customer_name = customer.name;
+        updated[index].customer_address = customer.address;
+        updated[index].is_new_customer = false;
+      } else {
+        updated[index].is_new_customer = true;
+        updated[index].customer_id = undefined;
+      }
+      (updated[index] as any)[field] = value;
     } else {
       (updated[index] as any)[field] = value;
     }
@@ -208,16 +221,38 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       return;
     }
 
-    // Validate all orders have bags
-    const invalidOrders = customerOrders.filter(co => !co.bags || co.bags <= 0);
-    if (invalidOrders.length > 0) {
-      alert('All customer orders must have bags specified');
-      return;
+    // Validate all orders have complete information
+    for (let i = 0; i < customerOrders.length; i++) {
+      const order = customerOrders[i];
+      if (!order.customer_name || !order.customer_phone || !order.bags || order.bags <= 0) {
+        alert(`Please complete all fields for customer ${i + 1}`);
+        return;
+      }
     }
 
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
+
+      // First, save any new customers
+      for (const order of customerOrders) {
+        if (order.is_new_customer && order.customer_phone) {
+          try {
+            await axios.post('http://localhost:3002/api/driver-dispatch/customers', {
+              name: order.customer_name,
+              phone: order.customer_phone,
+              address: order.customer_address || ''
+            }, { headers });
+          } catch (error) {
+            console.error('Error saving customer:', error);
+            // Continue anyway - backend will handle duplicate phones
+          }
+        }
+      }
+
+      // Wait a moment for customers to be saved, then refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchData();
 
       const response = await axios.post('http://localhost:3002/api/driver-dispatch/create', {
         driver_id: selectedDriver,
@@ -479,15 +514,24 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
               {customerOrders.map((order, index) => (
                 <Card key={index} sx={{ mb: 2, p: 2 }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <Autocomplete
-                        options={customers}
-                        getOptionLabel={(option) => `${option.name} - ${option.phone}`}
-                        onChange={(e, value) => updateCustomerOrder(index, 'customer_id', value?.id)}
-                        renderInput={(params) => <TextField {...params} label="Search Customer" fullWidth />}
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Customer Name"
+                        fullWidth
+                        value={order.customer_name}
+                        onChange={(e) => updateCustomerOrder(index, 'customer_name', e.target.value)}
                       />
                     </Grid>
                     <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Phone Number"
+                        fullWidth
+                        value={order.customer_phone}
+                        onChange={(e) => updateCustomerOrder(index, 'customer_phone', e.target.value)}
+                        helperText={order.is_new_customer ? 'New customer - will be saved' : ''}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
                       <TextField
                         label="Number of Bags"
                         type="number"
@@ -496,7 +540,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                         onChange={(e) => updateCustomerOrder(index, 'bags', e.target.value)}
                       />
                     </Grid>
-                    <Grid item xs={12} md={2}>
+                    <Grid item xs={12} md={1}>
                       <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
                         <Button
                           color="error"
