@@ -60,13 +60,14 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import AttendanceManagement from './AttendanceManagement';
-import PackerWorkSubmission from './PackerWorkSubmission';
+import { useAuth } from '../context/AuthContext';
 
 interface PackerDashboardProps {
   selectedSection: string;
 }
 
 const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [packingTasks, setPackingTasks] = useState<any[]>([]);
   const [myLogs, setMyLogs] = useState<any[]>([]);
@@ -92,33 +93,15 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
 
       switch (selectedSection) {
         case 'overview':
-          // Fetch packing tasks from API
-          try {
-            const tasksResponse = await axios.get('http://localhost:3002/api/packing/tasks', { headers });
-            setPackingTasks(tasksResponse.data.data || []);
-          } catch (error) {
-            console.error('Error fetching packing tasks:', error);
-            setPackingTasks([]);
-          }
-          break;
-        case 'packing-log':
-          // Fetch packing logs from API
-          try {
-            const logsResponse = await axios.get('http://localhost:3002/api/packing/logs', { headers });
-            setPackingTasks(logsResponse.data.data || []);
-          } catch (error) {
-            console.error('Error fetching packing logs:', error);
-            setPackingTasks([]);
-          }
-          break;
-        case 'my-logs':
-          // Fetch personal logs from API
-          try {
-            const myLogsResponse = await axios.get('http://localhost:3002/api/packing/my-logs', { headers });
-            setMyLogs(myLogsResponse.data.data || []);
-          } catch (error) {
-            console.error('Error fetching personal logs:', error);
-            setMyLogs([]);
+          // Fetch packing logs for this packer
+          if (user?.id) {
+            try {
+              const logsResponse = await axios.get(`http://localhost:3002/api/packing-logs?packer_id=${user.id}`, { headers });
+              setMyLogs(logsResponse.data.data || []);
+            } catch (error) {
+              console.error('Error fetching packing logs:', error);
+              setMyLogs([]);
+            }
           }
           break;
       }
@@ -228,27 +211,10 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
                 <Typography variant="h6" sx={{ color: '#2c3e50' }}>Active Tasks</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                {packingTasks.filter(t => t.status === 'in_progress').length}
+                {myLogs.filter(l => l.status === 'pending').length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Currently working
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Schedule sx={{ mr: 1, color: '#FFD700' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Pending Tasks</Typography>
-              </Box>
-              <Typography variant="h4" sx={{ color: '#FFD700', fontWeight: 700 }}>
-                {packingTasks.filter(t => t.status === 'pending').length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Awaiting start
+                Pending approvals
               </Typography>
             </CardContent>
           </Card>
@@ -259,13 +225,13 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Completed Today</Typography>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Approved</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                {myLogs.filter(l => l.status === 'completed' && new Date(l.end_time).toDateString() === new Date().toDateString()).length}
+                {myLogs.filter(l => l.status === 'approved').length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Tasks finished
+                Completed logs
               </Typography>
             </CardContent>
           </Card>
@@ -276,138 +242,66 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <TrendingUp sx={{ mr: 1, color: '#9c27b0' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Total Packed</Typography>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Total Bags</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 700 }}>
-                {myLogs.filter(l => l.status === 'completed' && new Date(l.end_time).toDateString() === new Date().toDateString()).reduce((sum, l) => sum + l.quantity_packed, 0)}
+                {myLogs.filter(l => l.status === 'approved').reduce((sum, l) => sum + (l.bags_packed || 0), 0)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Items today
+                Bags approved
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card className="dashboard-card">
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Warning sx={{ mr: 1, color: '#f44336' }} />
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Rejected</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ color: '#f44336', fontWeight: 700 }}>
+                {myLogs.filter(l => l.status === 'rejected').length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Need correction
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {isWorking && currentTask && (
-        <Card className="dashboard-card" sx={{ mb: 3, bgcolor: '#e3f2fd' }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="h6" sx={{ color: '#1976d2' }}>
-                  Currently Working: {currentTask.task_number}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {currentTask.product_type} - {currentTask.completed_quantity}/{currentTask.target_quantity} completed
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Started: {workStartTime?.toLocaleTimeString()}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Pause />}
-                  sx={{ bgcolor: '#ff9800' }}
-                >
-                  Pause
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<Stop />}
-                  onClick={handleStopTask}
-                  sx={{ bgcolor: '#f44336' }}
-                >
-                  Stop
-                </Button>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
-
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Card className="dashboard-card">
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                Active Tasks
-              </Typography>
-              {packingTasks.filter(t => t.status === 'in_progress' || t.status === 'pending').length > 0 ? (
-                <List>
-                  {packingTasks.filter(t => t.status === 'in_progress' || t.status === 'pending').map((task) => (
-                    <ListItem key={task.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
-                        <ListItemIcon>
-                          <Inventory />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={task.task_number}
-                          secondary={task.product_type}
-                        />
-                        <Chip 
-                          label={task.status.replace('_', ' ').toUpperCase()} 
-                          color={getStatusColor(task.status) as any}
-                          size="small"
-                        />
-                      </Box>
-                      <Box sx={{ ml: 4, width: '100%' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Progress: {task.completed_quantity}/{task.target_quantity} ({calculateProgress(task.completed_quantity, task.target_quantity)}%)
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Priority: <Chip label={task.priority.toUpperCase()} color={getPriorityColor(task.priority) as any} size="small" />
-                        </Typography>
-                        {task.status === 'pending' && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<PlayArrow />}
-                            onClick={() => handleStartTask(task)}
-                            sx={{ mt: 1, bgcolor: '#4caf50' }}
-                          >
-                            Start Task
-                          </Button>
-                        )}
-                      </Box>
-                      <Divider sx={{ width: '100%', mt: 1 }} />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">No active tasks</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                Recent Completions
+                Recent Packing Logs
               </Typography>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Task ID</TableCell>
-                      <TableCell>Product</TableCell>
-                      <TableCell>Quantity</TableCell>
-                      <TableCell>Quality</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Bags</TableCell>
+                      <TableCell>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {myLogs.slice(0, 5).map((log) => (
+                    {myLogs.slice(0, 5).map((log: any) => (
                       <TableRow key={log.id}>
-                        <TableCell>{log.task_number}</TableCell>
-                        <TableCell>{log.product_type}</TableCell>
-                        <TableCell>{log.quantity_packed}</TableCell>
+                        <TableCell>{new Date(log.packing_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{log.bags_packed}</TableCell>
                         <TableCell>
                           <Chip 
-                            label={`${log.quality_score}%`} 
-                            color={log.quality_score >= 95 ? 'success' : log.quality_score >= 90 ? 'warning' : 'error'}
+                            label={log.status}
                             size="small"
+                            color={
+                              log.status === 'approved' ? 'success' :
+                              log.status === 'rejected' ? 'error' :
+                              'warning'
+                            }
                           />
                         </TableCell>
                       </TableRow>
@@ -728,12 +622,6 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     switch (selectedSection) {
       case 'overview':
         return renderOverview();
-      case 'packing-log':
-        return renderPackingLog();
-      case 'my-logs':
-        return renderMyLogs();
-      case 'water-bag-work':
-        return <PackerWorkSubmission />;
       case 'my-attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="packer" />;
       default:
