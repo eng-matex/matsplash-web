@@ -191,34 +191,76 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
         if (statsResponse.data.success && logsResponse.data.success) {
           // Process inventory logs to get current stock
           const logs = logsResponse.data.data;
-          const currentStock = statsResponse.data.data.currentStock;
+          const totalInventory = statsResponse.data.data.totalInventory || 0;
+          const inventoryByType = statsResponse.data.data.inventoryByType || [];
           
-          // Create inventory items from logs (simplified for now)
-          const inventoryItems: InventoryItem[] = [
-            {
-              id: 1,
-              product_name: 'Sachet Water',
-              product_type: 'Sachet Water',
-              current_stock: currentStock,
+          // Create inventory items from stats
+          const inventoryItems: InventoryItem[] = [];
+          
+          // Process each product type
+          inventoryByType.forEach((product: any, index: number) => {
+            inventoryItems.push({
+              id: index + 1,
+              product_name: product.product_name || 'Sachet Water',
+              product_type: product.product_name || 'Sachet Water',
+              current_stock: product.total || 0,
               minimum_stock: 200,
               maximum_stock: 2000,
               unit: 'bags',
               unit_price: 300,
-              total_value: currentStock * 300,
+              total_value: (product.total || 0) * 300,
               last_updated: new Date().toISOString(),
-              supplier: 'AquaPure Ltd',
-              location: 'Warehouse A',
-              status: currentStock > 200 ? 'in_stock' : currentStock > 50 ? 'low_stock' : 'out_of_stock',
-              notes: 'Current stock from inventory logs'
-            }
-          ];
+              supplier: 'MatSplash Production',
+              location: 'Main Warehouse',
+              status: product.total > 200 ? 'in_stock' : product.total > 50 ? 'low_stock' : 'out_of_stock',
+              notes: 'Tracked via packing logs and order pickups'
+            });
+          });
+          
+          // If no products, create a default entry for Sachet Water
+          if (inventoryItems.length === 0) {
+            inventoryItems.push({
+              id: 1,
+              product_name: 'Sachet Water',
+              product_type: 'Sachet Water',
+              current_stock: totalInventory,
+              minimum_stock: 200,
+              maximum_stock: 2000,
+              unit: 'bags',
+              unit_price: 300,
+              total_value: totalInventory * 300,
+              last_updated: new Date().toISOString(),
+              supplier: 'MatSplash Production',
+              location: 'Main Warehouse',
+              status: totalInventory > 200 ? 'in_stock' : totalInventory > 50 ? 'low_stock' : 'out_of_stock',
+              notes: 'Tracked via packing logs and order pickups'
+            });
+          }
+
+          // Map logs to match the expected interface
+          const mappedLogs = logs.map((log: any) => ({
+            id: log.id,
+            product_id: 1, // We only have one product
+            product_name: log.product_name || 'Sachet Water',
+            operation_type: log.operation_type || 'adjustment',
+            quantity: Math.abs(log.quantity_change || 0),
+            unit: 'bags',
+            reason: log.reason || 'No reason provided',
+            reference_number: log.order_number || undefined,
+            performed_by: 'System',
+            timestamp: log.created_at,
+            notes: log.notes,
+            previous_stock: (log.current_stock || 0) - (log.quantity_change || 0),
+            new_stock: log.current_stock || 0
+          }));
 
           setInventory(inventoryItems);
-          setInventoryLogs(logs);
+          setInventoryLogs(mappedLogs);
+          setLoading(false);
           return;
         }
       } catch (error) {
-        console.log('API not available, using mock data');
+        console.log('API not available, using mock data', error);
       }
 
       // Fallback to mock data
@@ -693,11 +735,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
                           <Visibility />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Adjust Stock">
-                        <IconButton size="small" onClick={() => handleOpenDialog('adjust', item)}>
-                          <Edit />
-                        </IconButton>
-                      </Tooltip>
+                      {(userRole === 'storekeeper' || userRole === 'manager' || userRole === 'director' || userRole === 'admin') && (
+                        <Tooltip title="Adjust Stock">
+                          <IconButton size="small" onClick={() => handleOpenDialog('adjust', item)}>
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title="View History">
                         <IconButton size="small" onClick={() => handleOpenDialog('history', item)}>
                           <History />
@@ -903,6 +947,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
     }
 
     switch (selectedSection) {
+      case 'inventory':
       case 'inventory-audit':
         return renderInventoryOverview();
       case 'inventory-logs':
