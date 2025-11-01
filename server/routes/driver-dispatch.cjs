@@ -622,8 +622,8 @@ module.exports = (db) => {
         bagsAt250 = existingSettlement.bags_at_250 || 0;
       }
 
-      const bagsAt270 = bags_sold - bagsAt250;
-      const expectedAmount = (bagsAt250 * 250) + (bagsAt270 * 270);
+      // Calculate expected amount only for first settlement, otherwise use existing
+      const expectedAmount = existingSettlement?.expected_amount || ((bagsAt250 * 250) + ((bags_sold - bagsAt250) * 270));
       
       // For partial payments, add to existing amount_collected
       const totalCollected = existingSettlement 
@@ -637,10 +637,10 @@ module.exports = (db) => {
       await db('driver_settlements')
         .where('order_id', id)
         .update({
-          bags_sold,
-          bags_returned,
-          bags_at_250: bagsAt250,
-          bags_at_270: bagsAt270,
+          bags_sold: existingSettlement ? existingSettlement.bags_sold : bags_sold,
+          bags_returned: existingSettlement ? existingSettlement.bags_returned : bags_returned,
+          bags_at_250: existingSettlement ? existingSettlement.bags_at_250 : bagsAt250,
+          bags_at_270: existingSettlement ? existingSettlement.bags_at_270 : bagsAt270,
           expected_amount: expectedAmount,
           amount_collected: totalCollected,
           balance_due: balanceDue,
