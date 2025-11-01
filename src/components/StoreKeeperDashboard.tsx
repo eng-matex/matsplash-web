@@ -712,7 +712,6 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                   <TableCell>Order ID</TableCell>
                   <TableCell>Type</TableCell>
                   <TableCell>Customer/Distributor</TableCell>
-                  <TableCell>Items</TableCell>
                   <TableCell>Bags</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
@@ -739,7 +738,6 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                           order.customer_name || order.distributor_name || 'Unknown'
                         )}
                       </TableCell>
-                      <TableCell>{order.items?.length || 0} items</TableCell>
                       <TableCell>{getBagsFromOrder(order)} bags</TableCell>
                       <TableCell>
                         <Chip 
@@ -847,7 +845,6 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                       <TableCell>Type</TableCell>
                       <TableCell>Customer</TableCell>
                       <TableCell>Driver</TableCell>
-                      <TableCell>Items</TableCell>
                       <TableCell>Bags</TableCell>
                       <TableCell>Created</TableCell>
                       <TableCell>Actions</TableCell>
@@ -871,7 +868,6 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                             {order.assigned_driver_id ? `Driver #${order.assigned_driver_id}` : 'Not Assigned'}
                           </Box>
                         </TableCell>
-                        <TableCell>{order.items?.length || 0} items</TableCell>
                         <TableCell>{getBagsFromOrder(order)} bags</TableCell>
                         <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
