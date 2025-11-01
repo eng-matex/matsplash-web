@@ -100,7 +100,6 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
         { id: 'packing-workflow', label: 'Packing Workflow', icon: Assignment, color: '#9c27b0' },
-        { id: 'water-bag-management', label: 'Water Bag Management', icon: Inventory, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'pickup-confirmations', label: 'Pickup Confirmations', icon: CheckCircle, color: '#4caf50' },

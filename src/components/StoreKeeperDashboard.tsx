@@ -61,7 +61,6 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import InventoryManagement from './InventoryManagement';
-import WaterBagManagement from './WaterBagManagement';
 import PackerWorkflowManagement from './PackerWorkflowManagement';
 
 interface StoreKeeperDashboardProps {
@@ -988,8 +987,6 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
         return renderInventoryAudit();
       case 'inventory-management':
         return <InventoryManagement selectedSection={selectedSection} userRole="storekeeper" />;
-      case 'water-bag-management':
-        return <WaterBagManagement />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
       case 'my-attendance':

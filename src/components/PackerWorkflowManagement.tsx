@@ -360,11 +360,11 @@ const PackerWorkflowManagement: React.FC = () => {
 
   const canCreate = user?.role === 'StoreKeeper';
   const canEdit = (log: PackingLog) => {
-    return log.status === 'pending' && 
+    return (log.status === 'pending' || log.status === 'rejected') && 
            (user?.role === 'StoreKeeper' || user?.role === 'Admin' || user?.role === 'Director');
   };
   const canDelete = (log: PackingLog) => {
-    return log.status === 'pending' && 
+    return (log.status === 'pending' || log.status === 'rejected') && 
            (log.storekeeper_id === user?.id || user?.role === 'Admin' || user?.role === 'Director');
   };
   const canReview = user?.role === 'Manager' || user?.role === 'Admin' || user?.role === 'Director';
@@ -398,6 +398,7 @@ const PackerWorkflowManagement: React.FC = () => {
               <TableCell>Storekeeper</TableCell>
               <TableCell>Manager</TableCell>
               <TableCell>Notes</TableCell>
+              <TableCell>Rejection Comment</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -441,6 +442,15 @@ const PackerWorkflowManagement: React.FC = () => {
                     <Tooltip title={log.notes}>
                       <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {log.notes}
+                      </Typography>
+                    </Tooltip>
+                  ) : '-'}
+                </TableCell>
+                <TableCell>
+                  {log.modification_comment ? (
+                    <Tooltip title={log.modification_comment}>
+                      <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', color: 'error.main' }}>
+                        {log.modification_comment}
                       </Typography>
                     </Tooltip>
                   ) : '-'}

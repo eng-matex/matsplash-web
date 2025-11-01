@@ -95,7 +95,7 @@ module.exports = (db) => {
     }
   });
 
-  // PUT - Update packing log (Only if status is pending)
+  // PUT - Update packing log (Only if status is pending or rejected)
   router.put('/:logId', async (req, res) => {
     try {
       const { logId } = req.params;
@@ -107,14 +107,14 @@ module.exports = (db) => {
         return res.status(404).json({ success: false, message: 'Packing log not found' });
       }
 
-      if (existingLog.status !== 'pending') {
+      if (existingLog.status === 'approved') {
         return res.status(400).json({
           success: false,
-          message: 'Cannot edit packing log that has been approved or rejected'
+          message: 'Cannot edit packing log that has been approved'
         });
       }
 
-      // Validate storekeeper is the one who created it
+      // Validate storekeeper is the one who created it (or admin/director)
       if (existingLog.storekeeper_id !== req.user?.id && req.user?.role !== 'Admin' && req.user?.role !== 'Director') {
         return res.status(403).json({
           success: false,
@@ -129,6 +129,12 @@ module.exports = (db) => {
       if (bags_packed) updateData.bags_packed = bags_packed;
       if (packing_date) updateData.packing_date = packing_date;
       if (notes !== undefined) updateData.notes = notes;
+
+      // If updating a rejected log, reset status to pending and clear rejection comment
+      if (existingLog.status === 'rejected') {
+        updateData.status = 'pending';
+        updateData.modification_comment = null;
+      }
 
       await db('packer_work_logs')
         .where('id', logId)
