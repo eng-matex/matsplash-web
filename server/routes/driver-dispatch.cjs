@@ -582,8 +582,8 @@ module.exports = (db) => {
       // Check if settlement already exists
       const existingSettlement = await db('driver_settlements').where('order_id', id).first();
 
-      // Determine if this is the first actual settlement (bags_sold is 0 and no amount_collected)
-      const isFirstSettlement = !existingSettlement || (existingSettlement.bags_sold === 0 && existingSettlement.amount_collected === 0);
+      // Determine if this is the first actual settlement (no amount_collected yet)
+      const isFirstSettlement = !existingSettlement || existingSettlement.amount_collected === 0;
 
       let bagsAt250 = 0;
 
@@ -657,8 +657,8 @@ module.exports = (db) => {
         });
       }
 
-      // Calculate bags_at_270 for first settlement
-      const bagsAt270 = bags_sold - bagsAt250;
+      // Calculate bags_at_270 for first settlement only
+      const bagsAt270 = isFirstSettlement ? (bags_sold - bagsAt250) : (existingSettlement?.bags_at_270 || 0);
 
       // Update settlement (already created on dispatch)
       await db('driver_settlements')
@@ -667,7 +667,7 @@ module.exports = (db) => {
           bags_sold: existingSettlement ? existingSettlement.bags_sold : bags_sold,
           bags_returned: existingSettlement ? existingSettlement.bags_returned : bags_returned,
           bags_at_250: existingSettlement ? existingSettlement.bags_at_250 : bagsAt250,
-          bags_at_270: existingSettlement ? existingSettlement.bags_at_270 : bagsAt270,
+          bags_at_270: bagsAt270,
           expected_amount: expectedAmount,
           amount_collected: totalCollected,
           balance_due: balanceDue,
