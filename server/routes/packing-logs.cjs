@@ -117,8 +117,19 @@ module.exports = (db) => {
       // Validate storekeeper is the one who created it (or admin/director)
       // Allow storekeepers to edit rejected logs even if storekeeper_id is null (for backward compatibility)
       const isCreator = existingLog.storekeeper_id === req.user?.id;
-      const isAdminOrDirector = req.user?.role === 'Admin' || req.user?.role === 'Director';
-      const isStorekeeperEditingRejected = req.user?.role === 'StoreKeeper' && existingLog.status === 'rejected';
+      const userRole = req.user?.role?.toLowerCase();
+      const isAdminOrDirector = userRole === 'admin' || userRole === 'director';
+      const isStorekeeperEditingRejected = userRole === 'storekeeper' && existingLog.status === 'rejected';
+      
+      console.log('Edit authorization check:', {
+        userId: req.user?.id,
+        userRole: req.user?.role,
+        logStorekeeperId: existingLog.storekeeper_id,
+        logStatus: existingLog.status,
+        isCreator,
+        isAdminOrDirector,
+        isStorekeeperEditingRejected
+      });
       
       if (!isCreator && !isAdminOrDirector && !isStorekeeperEditingRejected) {
         return res.status(403).json({
@@ -259,8 +270,9 @@ module.exports = (db) => {
       // Only the storekeeper who created it or admin/director can delete
       // Allow storekeepers to delete pending/rejected logs even if storekeeper_id is null
       const isCreator = log.storekeeper_id === req.user?.id;
-      const isAdminOrDirector = req.user?.role === 'Admin' || req.user?.role === 'Director';
-      const isStorekeeperDeleting = req.user?.role === 'StoreKeeper' && log.status !== 'approved';
+      const userRole = req.user?.role?.toLowerCase();
+      const isAdminOrDirector = userRole === 'admin' || userRole === 'director';
+      const isStorekeeperDeleting = userRole === 'storekeeper' && log.status !== 'approved';
       
       if (!isCreator && !isAdminOrDirector && !isStorekeeperDeleting) {
         return res.status(403).json({
