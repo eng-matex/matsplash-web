@@ -85,6 +85,73 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     fetchData();
   }, [selectedSection]);
 
+  // Helper functions for pay period calculations
+  const getCurrentPayPeriod = () => {
+    const today = new Date();
+    const day = today.getDate();
+    
+    if (day >= 1 && day <= 15) {
+      return {
+        label: '1st - 15th',
+        start: new Date(today.getFullYear(), today.getMonth(), 1),
+        end: new Date(today.getFullYear(), today.getMonth(), 15),
+        payDate: new Date(today.getFullYear(), today.getMonth(), 18)
+      };
+    } else {
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return {
+        label: '16th - End',
+        start: new Date(today.getFullYear(), today.getMonth(), 16),
+        end: endOfMonth,
+        payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
+      };
+    }
+  };
+
+  const getCurrentPeriodBags = () => {
+    const period = getCurrentPayPeriod();
+    return myLogs.filter(log => {
+      const logDate = new Date(log.packing_date);
+      return log.status === 'approved' && 
+             logDate >= period.start && 
+             logDate <= period.end;
+    }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
+  };
+
+  const getNextPeriodBags = () => {
+    const today = new Date();
+    const day = today.getDate();
+    
+    if (day >= 1 && day <= 15) {
+      // Currently in first half, so next period is 16th-end
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const period = {
+        start: new Date(today.getFullYear(), today.getMonth(), 16),
+        end: endOfMonth,
+        payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
+      };
+      return myLogs.filter(log => {
+        const logDate = new Date(log.packing_date);
+        return log.status === 'approved' && 
+               logDate >= period.start && 
+               logDate <= period.end;
+      }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
+    } else {
+      // Currently in second half, so next period is 1st-15th of next month
+      const period = {
+        start: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+        end: new Date(today.getFullYear(), today.getMonth() + 1, 15),
+        payDate: new Date(today.getFullYear(), today.getMonth() + 2, 18)
+      };
+      return myLogs.filter(log => {
+        const logDate = new Date(log.packing_date);
+        return log.status === 'approved' && 
+               logDate >= period.start && 
+               logDate <= period.end;
+      }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -208,13 +275,16 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Inventory sx={{ mr: 1, color: '#13bbc6' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Active Tasks</Typography>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Current Period</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                {myLogs.filter(l => l.status === 'pending').length}
+                {getCurrentPeriodBags()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Pending approvals
+                {getCurrentPayPeriod().label}
+              </Typography>
+              <Typography variant="caption" color="primary">
+                Paid: {getCurrentPayPeriod().payDate.toLocaleDateString()}
               </Typography>
             </CardContent>
           </Card>
@@ -225,13 +295,18 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Approved</Typography>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Next Period</Typography>
               </Box>
               <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                {myLogs.filter(l => l.status === 'approved').length}
+                {getNextPeriodBags()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Completed logs
+                {new Date().getDate() >= 1 && new Date().getDate() <= 15 ? '16th - End' : 'Next 1st-15th'}
+              </Typography>
+              <Typography variant="caption" color="primary">
+                {new Date().getDate() >= 1 && new Date().getDate() <= 15 
+                  ? `Paid: ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5).toLocaleDateString()}`
+                  : `Paid: ${new Date(new Date().getFullYear(), new Date().getMonth() + 2, 18).toLocaleDateString()}`}
               </Typography>
             </CardContent>
           </Card>
@@ -248,7 +323,7 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
                 {myLogs.filter(l => l.status === 'approved').reduce((sum, l) => sum + (l.bags_packed || 0), 0)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Bags approved
+                All time approved
               </Typography>
             </CardContent>
           </Card>
