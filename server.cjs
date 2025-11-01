@@ -156,6 +156,35 @@ async function setupDatabase() {
         });
         console.log('Added first_name and last_name columns to employees table');
       }
+
+      // Add missing columns to packer_work_logs for simplified workflow
+      const hasPackerWorkLogsTable = await db.schema.hasTable('packer_work_logs');
+      if (hasPackerWorkLogsTable) {
+        const hasStorekeeperId = await db.schema.hasColumn('packer_work_logs', 'storekeeper_id');
+        if (!hasStorekeeperId) {
+          await db.schema.alterTable('packer_work_logs', (table) => {
+            table.integer('storekeeper_id').unsigned().nullable().references('id').inTable('employees');
+            table.integer('manager_id').unsigned().nullable().references('id').inTable('employees');
+          });
+          console.log('Added storekeeper_id and manager_id columns to packer_work_logs table');
+        }
+        
+        const hasPackingDate = await db.schema.hasColumn('packer_work_logs', 'packing_date');
+        if (!hasPackingDate) {
+          await db.schema.alterTable('packer_work_logs', (table) => {
+            table.timestamp('packing_date').nullable();
+          });
+          console.log('Added packing_date column to packer_work_logs table');
+        }
+        
+        const hasNotes = await db.schema.hasColumn('packer_work_logs', 'notes');
+        if (!hasNotes) {
+          await db.schema.alterTable('packer_work_logs', (table) => {
+            table.text('notes').nullable();
+          });
+          console.log('Added notes column to packer_work_logs table');
+        }
+      }
     } catch (error) {
       console.log('Column already exists or error adding column:', error.message);
     }
@@ -494,11 +523,14 @@ const tables = [
           case 'packer_work_logs':
             await db.schema.createTable('packer_work_logs', (table) => {
               table.increments('id').primary();
-              table.integer('assignment_id').unsigned().references('id').inTable('water_bag_assignments');
-              table.integer('packer_id').unsigned().references('id').inTable('employees');
+              table.integer('packer_id').unsigned().notNullable().references('id').inTable('employees');
+              table.integer('storekeeper_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('manager_id').unsigned().nullable().references('id').inTable('employees');
               table.integer('bags_packed').notNullable();
               table.string('status').defaultTo('pending').notNullable(); // pending, approved, rejected
-              table.text('modification_comment');
+              table.text('notes').nullable(); // Storekeeper notes
+              table.text('modification_comment').nullable(); // Manager rejection comment
+              table.timestamp('packing_date').notNullable(); // Date when bags were packed
               table.timestamps(true, true);
             });
             break;
@@ -3308,6 +3340,10 @@ app.use('/api/inventory', inventoryRoutes(db));
 // Import and mount water bag management routes
 const waterBagRoutes = require('./server/routes/water-bag-management.cjs');
 app.use('/api/water-bags', waterBagRoutes(db));
+
+// Import and mount packing logs routes
+const packingLogsRoutes = require('./server/routes/packing-logs.cjs');
+app.use('/api/packing-logs', packingLogsRoutes(db));
 
 // Import and mount orders routes
 const ordersRoutes = require('./server/routes/orders.cjs');

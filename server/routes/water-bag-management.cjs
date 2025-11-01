@@ -136,7 +136,7 @@ module.exports = (db) => {
     try {
       const packers = await db('employees')
         .where('role', 'Packer')
-        .select('id', 'name', 'email', 'status')
+        .select('id', 'name', 'first_name', 'last_name', 'email', 'status')
         .orderBy('name');
 
       res.json({ success: true, data: packers });
