@@ -550,8 +550,12 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
                   <TableCell>Type</TableCell>
                   <TableCell>Current Stock</TableCell>
                   <TableCell>Stock Level</TableCell>
-                  <TableCell>Unit Price</TableCell>
-                  <TableCell>Total Value</TableCell>
+                  {userRole !== 'storekeeper' && userRole !== 'receptionist' && (
+                    <>
+                      <TableCell>Unit Price</TableCell>
+                      <TableCell>Total Value</TableCell>
+                    </>
+                  )}
                   <TableCell>Status</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
@@ -594,16 +598,20 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
                         Min: {item.minimum_stock} | Max: {item.maximum_stock}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="bold">
-                        ₦{item.unit_price.toLocaleString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="bold">
-                        ₦{item.total_value.toLocaleString()}
-                      </Typography>
-                    </TableCell>
+                    {userRole !== 'storekeeper' && userRole !== 'receptionist' && (
+                      <>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            ₦{item.unit_price.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            ₦{item.total_value.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell>
                       <Chip 
                         label={item.status.replace('_', ' ').toUpperCase()} 
