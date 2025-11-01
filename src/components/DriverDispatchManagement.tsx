@@ -93,11 +93,12 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<number>(0);
   const [selectedAssistant, setSelectedAssistant] = useState<number>(0);
+  const [bagsDispatched, setBagsDispatched] = useState<number>(0);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer' | 'settle' | 'return'>('create');
-  const [settlementData, setSettlementData] = useState({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
+  const [settlementData, setSettlementData] = useState({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] as CustomerOrder[] });
   const [selectedDispatch, setSelectedDispatch] = useState<DriverDispatch | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -133,9 +134,9 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     if (type === 'create') {
       setSelectedDriver(0);
       setSelectedAssistant(0);
-      setCustomerOrders([]);
+      setBagsDispatched(0);
     } else if (type === 'settle' && dispatch) {
-      setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
+      setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
     }
     setDialogOpen(true);
   };
@@ -145,7 +146,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     setDialogType('create');
     setSelectedDispatch(null);
     setNewCustomer({ name: '', phone: '', address: '' });
-    setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
+    setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
   };
 
   const addCustomerOrder = () => {
@@ -216,48 +217,19 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       return;
     }
 
-    if (customerOrders.length === 0) {
-      alert('Please add at least one customer order');
+    if (!bagsDispatched || bagsDispatched <= 0) {
+      alert('Please enter number of bags to dispatch');
       return;
-    }
-
-    // Validate all orders have complete information
-    for (let i = 0; i < customerOrders.length; i++) {
-      const order = customerOrders[i];
-      if (!order.customer_name || !order.customer_phone || !order.bags || order.bags <= 0) {
-        alert(`Please complete all fields for customer ${i + 1}`);
-        return;
-      }
     }
 
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // First, save any new customers
-      for (const order of customerOrders) {
-        if (order.is_new_customer && order.customer_phone) {
-          try {
-            await axios.post('http://localhost:3002/api/driver-dispatch/customers', {
-              name: order.customer_name,
-              phone: order.customer_phone,
-              address: order.customer_address || ''
-            }, { headers });
-          } catch (error) {
-            console.error('Error saving customer:', error);
-            // Continue anyway - backend will handle duplicate phones
-          }
-        }
-      }
-
-      // Wait a moment for customers to be saved, then refresh
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await fetchData();
-
       const response = await axios.post('http://localhost:3002/api/driver-dispatch/create', {
         driver_id: selectedDriver,
         assistant_id: selectedAssistant || null,
-        customer_orders: customerOrders,
+        bags_dispatched: bagsDispatched,
         notes: ''
       }, { headers });
 
@@ -291,16 +263,23 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const handleProcessSettlement = async () => {
     if (!selectedDispatch) return;
 
-    const { bags_sold, bags_at_250, amount_paid } = settlementData;
+    const { bags_sold, amount_paid, customer_orders } = settlementData;
 
     if (!bags_sold || bags_sold <= 0) {
       alert('Please enter number of bags sold');
       return;
     }
 
-    if (bags_at_250 > bags_sold) {
-      alert('Bags at 250 cannot exceed total bags sold');
-      return;
+    // Validate customer orders - all must be 50+ bags
+    for (const order of customer_orders) {
+      if (!order.customer_name || !order.customer_phone || !order.bags) {
+        alert('Please complete all fields for all customer orders');
+        return;
+      }
+      if (order.bags < 50) {
+        alert('Customer orders must be 50 bags or more');
+        return;
+      }
     }
 
     try {
@@ -309,9 +288,9 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
 
       const response = await axios.post(`http://localhost:3002/api/driver-dispatch/${selectedDispatch.id}/settle`, {
         bags_sold,
-        bags_at_250,
         bags_returned: 0,
         amount_paid,
+        customer_orders,
         notes: ''
       }, { headers });
 
@@ -342,13 +321,52 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
 
   const calculateExpectedAmount = () => {
     if (!settlementData.bags_sold) return 0;
-    const bagsAt270 = settlementData.bags_sold - settlementData.bags_at_250;
-    return (settlementData.bags_at_250 * 250) + (bagsAt270 * 270);
+    const bagsAt250 = settlementData.customer_orders.reduce((sum, o) => sum + (o.bags || 0), 0);
+    const bagsAt270 = settlementData.bags_sold - bagsAt250;
+    return (bagsAt250 * 250) + (bagsAt270 * 270);
   };
 
   const calculateBalance = () => {
     const expected = calculateExpectedAmount();
     return expected - settlementData.amount_paid;
+  };
+
+  const addSettlementCustomer = () => {
+    setSettlementData({
+      ...settlementData,
+      customer_orders: [...settlementData.customer_orders, { customer_name: '', customer_phone: '', bags: 0, price: 0, is_new_customer: false }]
+    });
+  };
+
+  const updateSettlementCustomer = (index: number, field: string, value: any) => {
+    const updated = [...settlementData.customer_orders];
+    if (field === 'bags') {
+      const bags = parseInt(value) || 0;
+      updated[index].bags = bags;
+      updated[index].price = bags >= 50 ? 250 : 270;
+    } else if (field === 'customer_phone') {
+      const customer = customers.find(c => c.phone === value);
+      if (customer) {
+        updated[index].customer_id = customer.id;
+        updated[index].customer_name = customer.name;
+        updated[index].customer_address = customer.address;
+        updated[index].is_new_customer = false;
+      } else {
+        updated[index].is_new_customer = true;
+        updated[index].customer_id = undefined;
+      }
+      (updated[index] as any)[field] = value;
+    } else {
+      (updated[index] as any)[field] = value;
+    }
+    setSettlementData({ ...settlementData, customer_orders: updated });
+  };
+
+  const removeSettlementCustomer = (index: number) => {
+    setSettlementData({
+      ...settlementData,
+      customer_orders: settlementData.customer_orders.filter((_, i) => i !== index)
+    });
   };
 
   return (
@@ -471,7 +489,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       </Card>
 
       {/* Create Dispatch Dialog */}
-      <Dialog open={dialogOpen && dialogType === 'create'} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog open={dialogOpen && dialogType === 'create'} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Create Driver Dispatch</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -502,65 +520,15 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Customer Orders</Typography>
-                <Button startIcon={<Add />} onClick={addCustomerOrder} size="small">
-                  Add Customer
-                </Button>
-              </Box>
-
-              {customerOrders.map((order, index) => (
-                <Card key={index} sx={{ mb: 2, p: 2 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Customer Name"
-                        fullWidth
-                        value={order.customer_name}
-                        onChange={(e) => updateCustomerOrder(index, 'customer_name', e.target.value)}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Phone Number"
-                        fullWidth
-                        value={order.customer_phone}
-                        onChange={(e) => updateCustomerOrder(index, 'customer_phone', e.target.value)}
-                        helperText={order.is_new_customer ? 'New customer - will be saved' : ''}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        label="Number of Bags"
-                        type="number"
-                        fullWidth
-                        value={order.bags}
-                        onChange={(e) => updateCustomerOrder(index, 'bags', e.target.value)}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={1}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                        <Button
-                          color="error"
-                          onClick={() => removeCustomerOrder(index)}
-                          size="small"
-                        >
-                          Remove
-                        </Button>
-                      </Box>
-                    </Grid>
-                    {order.bags > 0 && (
-                      <Grid item xs={12}>
-                        <Alert severity="info">
-                          Price: ₦{order.price} per bag (Total: ₦{(order.bags * order.price).toLocaleString()})
-                        </Alert>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Card>
-              ))}
+              <TextField
+                fullWidth
+                label="Number of Bags to Dispatch"
+                type="number"
+                value={bagsDispatched}
+                onChange={(e) => setBagsDispatched(parseInt(e.target.value) || 0)}
+                helperText="Enter total number of bags being dispatched to driver"
+              />
             </Grid>
           </Grid>
         </DialogContent>
@@ -635,7 +603,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       </Dialog>
 
       {/* Settlement Dialog */}
-      <Dialog open={dialogOpen && dialogType === 'settle'} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen && dialogType === 'settle'} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>Process Settlement</DialogTitle>
         <DialogContent>
           {selectedDispatch && (
@@ -655,15 +623,67 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     onChange={(e) => setSettlementData({ ...settlementData, bags_sold: parseInt(e.target.value) || 0 })}
                   />
                 </Grid>
+
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Bags Sold @ ₦250 (50+ bags orders)"
-                    type="number"
-                    value={settlementData.bags_at_250}
-                    onChange={(e) => setSettlementData({ ...settlementData, bags_at_250: parseInt(e.target.value) || 0 })}
-                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">Customers with 50+ Bags</Typography>
+                    <Button startIcon={<Add />} onClick={addSettlementCustomer} size="small">
+                      Add Customer
+                    </Button>
+                  </Box>
+
+                  {settlementData.customer_orders.map((order, index) => (
+                    <Card key={index} sx={{ mb: 2, p: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={4}>
+                          <TextField
+                            label="Customer Name"
+                            fullWidth
+                            value={order.customer_name}
+                            onChange={(e) => updateSettlementCustomer(index, 'customer_name', e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <TextField
+                            label="Phone Number"
+                            fullWidth
+                            value={order.customer_phone}
+                            onChange={(e) => updateSettlementCustomer(index, 'customer_phone', e.target.value)}
+                            helperText={order.is_new_customer ? 'New customer' : ''}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            label="Number of Bags"
+                            type="number"
+                            fullWidth
+                            value={order.bags}
+                            onChange={(e) => updateSettlementCustomer(index, 'bags', e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={1}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                            <Button
+                              color="error"
+                              onClick={() => removeSettlementCustomer(index)}
+                              size="small"
+                            >
+                              Remove
+                            </Button>
+                          </Box>
+                        </Grid>
+                        {order.bags > 0 && (
+                          <Grid item xs={12}>
+                            <Alert severity="info">
+                              Price: ₦250 per bag (Total: ₦{(order.bags * 250).toLocaleString()})
+                            </Alert>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Card>
+                  ))}
                 </Grid>
+
                 <Grid item xs={12}>
                   <TextField
                     fullWidth

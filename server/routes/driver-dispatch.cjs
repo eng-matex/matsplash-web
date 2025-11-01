@@ -101,7 +101,7 @@ module.exports = (db) => {
   // Create driver dispatch order
   router.post('/create', async (req, res) => {
     try {
-      const { driver_id, assistant_id, customer_orders, notes } = req.body;
+      const { driver_id, assistant_id, bags_dispatched, notes } = req.body;
       const receptionist_id = req.user?.id;
 
       if (!driver_id) {
@@ -111,10 +111,10 @@ module.exports = (db) => {
         });
       }
 
-      if (!customer_orders || !Array.isArray(customer_orders) || customer_orders.length === 0) {
+      if (!bags_dispatched || bags_dispatched <= 0) {
         return res.status(400).json({
           success: false,
-          message: 'At least one customer order is required'
+          message: 'Number of bags dispatched is required'
         });
       }
 
@@ -133,16 +133,9 @@ module.exports = (db) => {
         });
       }
 
-      // Calculate total bags
-      let totalBags = 0;
-      let expectedRevenue = 0;
-
-      customer_orders.forEach(order => {
-        const bags = parseInt(order.bags) || 0;
-        const price = bags >= 50 ? 250 : 270;
-        totalBags += bags;
-        expectedRevenue += bags * price;
-      });
+      // Calculate expected revenue (all bags at 270 since no customer info yet)
+      const totalBags = parseInt(bags_dispatched);
+      const expectedRevenue = totalBags * 270;
 
       // Create order
       const orderNumber = `DRV-${Date.now()}`;
@@ -311,7 +304,7 @@ module.exports = (db) => {
   router.post('/:id/settle', async (req, res) => {
     try {
       const { id } = req.params;
-      const { bags_sold, bags_returned, bags_at_250, amount_paid, notes } = req.body;
+      const { bags_sold, bags_returned, amount_paid, customer_orders, notes } = req.body;
       const receptionist_id = req.user?.id;
 
       const dispatch = await db('orders')
@@ -333,8 +326,42 @@ module.exports = (db) => {
         });
       }
 
-      const bagsAt270 = bags_sold - bags_at_250;
-      const expectedAmount = (bags_at_250 * 250) + (bagsAt270 * 270);
+      // Save customer orders (50+ bag customers that driver called about)
+      let bagsAt250 = 0;
+      if (customer_orders && Array.isArray(customer_orders)) {
+        for (const order of customer_orders) {
+          // Save or update customer
+          const existing = await db('driver_customers').where('phone', order.customer_phone).first();
+          if (existing) {
+            await db('driver_customers')
+              .where('id', existing.id)
+              .update({
+                total_orders: existing.total_orders + 1,
+                total_amount: existing.total_amount + (order.bags * 250),
+                last_order_date: new Date().toISOString(),
+                last_driver_id: dispatch.assigned_driver_id,
+                updated_at: new Date().toISOString()
+              });
+          } else {
+            await db('driver_customers').insert({
+              name: order.customer_name,
+              phone: order.customer_phone,
+              address: order.customer_address || null,
+              last_driver_id: dispatch.assigned_driver_id,
+              total_orders: 1,
+              total_amount: order.bags * 250,
+              last_order_date: new Date().toISOString(),
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          }
+          bagsAt250 += order.bags;
+        }
+      }
+
+      const bagsAt270 = bags_sold - bagsAt250;
+      const expectedAmount = (bagsAt250 * 250) + (bagsAt270 * 270);
       const balanceDue = expectedAmount - amount_paid;
       const status = balanceDue <= 0 ? 'completed' : 'partial';
 
@@ -344,7 +371,7 @@ module.exports = (db) => {
         .update({
           bags_sold,
           bags_returned,
-          bags_at_250,
+          bags_at_250: bagsAt250,
           bags_at_270: bagsAt270,
           expected_amount: expectedAmount,
           amount_collected: amount_paid,
