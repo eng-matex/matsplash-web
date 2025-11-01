@@ -126,5 +126,116 @@ module.exports = (db) => {
     }
   });
 
+  // Confirm pickup (Storekeeper confirms order pickup and deducts from inventory)
+  router.put('/:id/confirm-pickup', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { userId, userEmail } = req.body;
+
+      // Get order details
+      const order = await db('orders').where('id', id).first();
+      
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      if (order.status !== 'pending') {
+        return res.status(400).json({
+          success: false,
+          message: 'Order is not pending pickup'
+        });
+      }
+
+      // Parse items JSON
+      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      
+      // Calculate total quantity of Sachet Water
+      const sachetWaterItem = items.find(item => item.product_name === 'Sachet Water');
+      const totalQuantity = sachetWaterItem ? sachetWaterItem.quantity : 0;
+
+      if (totalQuantity === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No Sachet Water items in this order'
+        });
+      }
+
+      // Get current stock
+      const stockAgg = await db('inventory_logs')
+        .where('product_name', 'Sachet Water')
+        .sum('quantity_change as total')
+        .first();
+      const currentStock = stockAgg.total || 0;
+
+      // Check if enough stock is available
+      if (currentStock < totalQuantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock. Current: ${currentStock}, Required: ${totalQuantity}`
+        });
+      }
+
+      // Calculate new stock after deduction
+      const newStock = currentStock - totalQuantity;
+
+      // Update order status
+      await db('orders')
+        .where('id', id)
+        .update({
+          status: 'picked_up',
+          picked_up_at: new Date().toISOString(),
+          storekeeper_authorized: true,
+          authorization_time: new Date().toISOString(),
+          authorization_by: userId || req.user?.id,
+          updated_at: new Date().toISOString()
+        });
+
+      // Deduct from inventory logs
+      await db('inventory_logs').insert({
+        product_name: 'Sachet Water',
+        quantity_change: -totalQuantity, // Negative for deduction
+        current_stock: newStock,
+        operation_type: 'out',
+        reason: `Order pickup: ${totalQuantity} bags for order ${order.order_number} - ${order.customer_name}`,
+        employee_id: userId || req.user?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Log system activity
+      if (userId) {
+        await db('system_activity').insert({
+          user_id: userId,
+          user_email: userEmail || 'unknown',
+          action: 'ORDER_PICKUP_CONFIRMED',
+          details: `Confirmed pickup for order ${order.order_number}: ${totalQuantity} bags`,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent'),
+          created_at: new Date().toISOString()
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Pickup confirmed successfully',
+        data: {
+          order_id: id,
+          quantity_picked: totalQuantity,
+          new_stock: newStock
+        }
+      });
+
+    } catch (error) {
+      console.error('Error confirming pickup:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to confirm pickup'
+      });
+    }
+  });
+
   return router;
 };

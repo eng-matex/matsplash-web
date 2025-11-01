@@ -62,12 +62,14 @@ import {
 import axios from 'axios';
 import InventoryManagement from './InventoryManagement';
 import PackerWorkflowManagement from './PackerWorkflowManagement';
+import { useAuth } from '../context/AuthContext';
 
 interface StoreKeeperDashboardProps {
   selectedSection: string;
 }
 
 const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSection }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<any[]>([]);
   const [inventoryLogs, setInventoryLogs] = useState<any[]>([]);
@@ -173,8 +175,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
 
       // Use the new confirm-pickup endpoint
       const response = await axios.put(`http://localhost:3002/api/orders/${selectedItem.id}/confirm-pickup`, {
-        userId: 1, // This should come from auth context
-        userEmail: 'storekeeper@matsplash.com' // This should come from auth context
+        userId: user?.id,
+        userEmail: user?.email
       }, { headers });
 
       if (response.data.success) {
@@ -185,9 +187,13 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
       } else {
         alert('Error authorizing pickup: ' + response.data.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error confirming pickup:', error);
-      alert('Error confirming pickup. Please try again.');
+      if (error.response?.data?.message) {
+        alert('Error: ' + error.response.data.message);
+      } else {
+        alert('Error confirming pickup. Please try again.');
+      }
     }
   };
 
