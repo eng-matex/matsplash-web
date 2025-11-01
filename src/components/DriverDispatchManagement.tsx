@@ -111,15 +111,17 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [dispatchesRes, customersRes, driversRes] = await Promise.all([
+      const [dispatchesRes, customersRes, employeesRes] = await Promise.all([
         axios.get('http://localhost:3002/api/driver-dispatch', { headers }),
         axios.get('http://localhost:3002/api/driver-dispatch/customers', { headers }),
-        axios.get('http://localhost:3002/api/sales/drivers', { headers })
+        axios.get('http://localhost:3002/api/employees', { headers })
       ]);
 
       setDispatches(dispatchesRes.data.data || []);
       setCustomers(customersRes.data.data || []);
-      setDrivers(driversRes.data.data || []);
+      // Filter for Driver and Driver Assistant roles
+      const driverRoles = ['Driver', 'Driver Assistant'];
+      setDrivers((employeesRes.data.data || []).filter((emp: any) => driverRoles.includes(emp.role)));
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
