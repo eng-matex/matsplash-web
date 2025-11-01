@@ -885,6 +885,13 @@ module.exports = (db) => {
       const { action, commission_amount, comment } = req.body;
       const manager_id = req.user?.id;
 
+      console.log('Commission review:', { 
+        commissionId: id, 
+        action, 
+        manager_id,
+        user: req.user 
+      });
+
       const commission = await db('driver_commissions').where('id', id).first();
 
       if (!commission) {
