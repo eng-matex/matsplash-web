@@ -177,20 +177,25 @@ const PackerWorkflowManagement: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
+      const payload = {
+        packer_id: parseInt(formData.packer_id),
+        bags_packed: parseInt(formData.bags_packed),
+        notes: formData.notes
+      };
+      console.log('Creating packing log with payload:', payload);
+      
       const response = await fetch('/api/packing-logs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          packer_id: parseInt(formData.packer_id),
-          bags_packed: parseInt(formData.bags_packed),
-          notes: formData.notes
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
+      console.log('Response from server:', data);
+      
       if (data.success) {
         alert('Packing log created successfully!');
         handleCloseCreateDialog();
