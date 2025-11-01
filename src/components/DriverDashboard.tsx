@@ -63,17 +63,20 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import AttendanceManagement from './AttendanceManagement';
+import { useAuth } from '../context/AuthContext';
 
 interface DriverDashboardProps {
   selectedSection: string;
 }
 
 const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeDispatches, setActiveDispatches] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [salesLogs, setSalesLogs] = useState<any[]>([]);
   const [commissionData, setCommissionData] = useState<any>({});
+  const [myCommissions, setMyCommissions] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -103,11 +106,19 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'active-dispatches':
           // Fetch driver dispatches from API
           try {
-            const response = await axios.get('http://localhost:3002/api/driver-dispatch?status=out_for_delivery', { headers });
-            if (response.data.success) {
-              setActiveDispatches(response.data.data || []);
+            const [dispatchesRes, commissionsRes] = await Promise.all([
+              axios.get(`http://localhost:3002/api/driver-dispatch?driver_id=${user?.id}&status=out_for_delivery`, { headers }),
+              axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers })
+            ]);
+            if (dispatchesRes.data.success) {
+              setActiveDispatches(dispatchesRes.data.data || []);
             } else {
               setActiveDispatches([]);
+            }
+            if (commissionsRes.data.success) {
+              // Filter commissions for this driver
+              const myComms = (commissionsRes.data.data || []).filter((c: any) => c.driver_id === user?.id);
+              setMyCommissions(myComms);
             }
           } catch (error) {
             console.error('Error fetching active dispatches:', error);
