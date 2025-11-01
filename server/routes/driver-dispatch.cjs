@@ -585,6 +585,14 @@ module.exports = (db) => {
       // Determine if this is the first actual settlement (no amount_collected yet)
       const isFirstSettlement = !existingSettlement || existingSettlement.amount_collected === 0;
 
+      // Validate: bags_sold is required for first settlement
+      if (isFirstSettlement && (!bags_sold || bags_sold <= 0)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Number of bags sold is required for settlement'
+        });
+      }
+
       let bagsAt250 = 0;
 
       // Only process customer calls if this is the first settlement
