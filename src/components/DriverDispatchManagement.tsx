@@ -97,7 +97,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer'>('create');
+  const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer' | 'settle' | 'return'>('create');
+  const [settlementData, setSettlementData] = useState({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
   const [selectedDispatch, setSelectedDispatch] = useState<DriverDispatch | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -127,13 +128,15 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     }
   };
 
-  const handleOpenDialog = (type: 'create' | 'view' | 'customer', dispatch?: DriverDispatch) => {
+  const handleOpenDialog = (type: 'create' | 'view' | 'customer' | 'settle' | 'return', dispatch?: DriverDispatch) => {
     setDialogType(type);
     setSelectedDispatch(dispatch || null);
     if (type === 'create') {
       setSelectedDriver(0);
       setSelectedAssistant(0);
       setCustomerOrders([]);
+    } else if (type === 'settle' && dispatch) {
+      setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
     }
     setDialogOpen(true);
   };
@@ -143,6 +146,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     setDialogType('create');
     setSelectedDispatch(null);
     setNewCustomer({ name: '', phone: '', address: '' });
+    setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0 });
   };
 
   const addCustomerOrder = () => {
@@ -249,12 +253,67 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     }
   };
 
+  const handleProcessSettlement = async () => {
+    if (!selectedDispatch) return;
+
+    const { bags_sold, bags_at_250, amount_paid } = settlementData;
+
+    if (!bags_sold || bags_sold <= 0) {
+      alert('Please enter number of bags sold');
+      return;
+    }
+
+    if (bags_at_250 > bags_sold) {
+      alert('Bags at 250 cannot exceed total bags sold');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.post(`http://localhost:3002/api/driver-dispatch/${selectedDispatch.id}/settle`, {
+        bags_sold,
+        bags_at_250,
+        bags_returned: 0,
+        amount_paid,
+        notes: ''
+      }, { headers });
+
+      if (response.data.success) {
+        alert('Settlement processed successfully!');
+        handleCloseDialog();
+        fetchData();
+      } else {
+        alert(response.data.message || 'Error processing settlement');
+      }
+    } catch (error: any) {
+      console.error('Error processing settlement:', error);
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert('Error processing settlement');
+      }
+    }
+  };
+
   const getFilteredCustomers = () => {
     if (!searchTerm) return customers;
     return customers.filter(c => 
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone.includes(searchTerm)
     );
+  };
+
+  const calculateExpectedAmount = () => {
+    if (!settlementData.bags_sold) return 0;
+    const bagsAt270 = settlementData.bags_sold - settlementData.bags_at_250;
+    return (settlementData.bags_at_250 * 250) + (bagsAt270 * 270);
+  };
+
+  const calculateBalance = () => {
+    const expected = calculateExpectedAmount();
+    return expected - settlementData.amount_paid;
   };
 
   return (
@@ -360,6 +419,13 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                           <Visibility />
                         </IconButton>
                       </Tooltip>
+                      {userRole === 'receptionist' && dispatch.status === 'out_for_delivery' && (
+                        <Tooltip title="Process Settlement">
+                          <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)}>
+                            <AttachMoney />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -521,6 +587,70 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Settlement Dialog */}
+      <Dialog open={dialogOpen && dialogType === 'settle'} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Process Settlement</DialogTitle>
+        <DialogContent>
+          {selectedDispatch && (
+            <Box>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2"><strong>Driver:</strong> {selectedDispatch.driver_name}</Typography>
+                <Typography variant="body2"><strong>Order:</strong> {selectedDispatch.order_number}</Typography>
+              </Alert>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Total Bags Sold"
+                    type="number"
+                    value={settlementData.bags_sold}
+                    onChange={(e) => setSettlementData({ ...settlementData, bags_sold: parseInt(e.target.value) || 0 })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Bags Sold @ ₦250 (50+ bags orders)"
+                    type="number"
+                    value={settlementData.bags_at_250}
+                    onChange={(e) => setSettlementData({ ...settlementData, bags_at_250: parseInt(e.target.value) || 0 })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Amount Paid"
+                    type="number"
+                    value={settlementData.amount_paid}
+                    onChange={(e) => setSettlementData({ ...settlementData, amount_paid: parseFloat(e.target.value) || 0 })}
+                  />
+                </Grid>
+
+                {settlementData.bags_sold > 0 && (
+                  <Grid item xs={12}>
+                    <Alert severity={calculateBalance() === 0 ? 'success' : 'warning'}>
+                      <Typography variant="body2">
+                        <strong>Expected Amount:</strong> ₦{calculateExpectedAmount().toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Balance Due:</strong> ₦{calculateBalance().toLocaleString()}
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleProcessSettlement} variant="contained" sx={{ bgcolor: '#13bbc6' }}>
+            Process Settlement
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
