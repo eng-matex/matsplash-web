@@ -123,6 +123,9 @@ const PackerWorkflowManagement: React.FC = () => {
       const logsRes = await fetch(endpoint, { headers });
       const logsData = await logsRes.json();
 
+      console.log('Fetched logs data:', logsData.data);
+      console.log('First log sample:', logsData.data?.[0]);
+
       if (logsData.success) {
         setLogs(logsData.data);
       }

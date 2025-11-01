@@ -40,6 +40,15 @@ module.exports = (db) => {
 
       const logs = await query;
 
+      console.log('Fetched packing logs:', JSON.stringify(logs.map(l => ({
+        id: l.id,
+        packer_id: l.packer_id,
+        packer_name: l.packer_name,
+        packer_first_name: l.packer_first_name,
+        packer_last_name: l.packer_last_name,
+        status: l.status
+      })), null, 2));
+
       res.json({ success: true, data: logs });
     } catch (error) {
       console.error('Error fetching packing logs:', error);
