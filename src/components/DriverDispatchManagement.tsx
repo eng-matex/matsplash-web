@@ -144,10 +144,12 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       setSelectedAssistant('');
       setBagsDispatched(0);
     } else if (type === 'settle' && dispatch) {
+      // If bags_sold is already set from first settlement, preserve it
+      const bagsSold = dispatch.bags_sold || 0;
       setSettlementData({ 
-        bags_sold: dispatch.bags_sold || 0, 
+        bags_sold: bagsSold, 
         bags_at_250: 0, 
-        amount_paid: 0, 
+        amount_paid: dispatch.balance_due || 0, 
         customer_orders: [] 
       });
       // Fetch stored customer calls for this dispatch
@@ -297,8 +299,17 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
 
     const { bags_sold, amount_paid } = settlementData;
 
-    if (!bags_sold || bags_sold <= 0) {
+    // For first settlement, bags_sold is required
+    // For partial payments, amount_paid is required
+    const isPartialPayment = !!selectedDispatch.amount_collected;
+    
+    if (!isPartialPayment && (!bags_sold || bags_sold <= 0)) {
       alert('Please enter number of bags sold');
+      return;
+    }
+
+    if (!amount_paid || amount_paid <= 0) {
+      alert('Please enter amount paid');
       return;
     }
 
@@ -307,7 +318,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const headers = { Authorization: `Bearer ${token}` };
 
       const response = await axios.post(`/api/driver-dispatch/${selectedDispatch.id}/settle`, {
-        bags_sold,
+        bags_sold: isPartialPayment ? 0 : bags_sold, // Send 0 for partial payments, backend will preserve existing
         bags_returned: 0,
         amount_paid,
         notes: ''

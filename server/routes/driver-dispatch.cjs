@@ -641,6 +641,22 @@ module.exports = (db) => {
       const balanceDue = expectedAmount - totalCollected;
       const status = balanceDue <= 0 ? 'completed' : 'partial';
 
+      // Validate: amount paid should not exceed expected amount
+      if (amount_paid < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Amount paid cannot be negative'
+        });
+      }
+
+      // Validate: total collected should not exceed expected amount (allow for rounding)
+      if (totalCollected > expectedAmount + 1) {
+        return res.status(400).json({
+          success: false,
+          message: `Amount paid exceeds expected amount. Total due: ₦${expectedAmount.toLocaleString()}, attempting to collect: ₦${totalCollected.toLocaleString()}`
+        });
+      }
+
       // Calculate bags_at_270 for first settlement
       const bagsAt270 = bags_sold - bagsAt250;
 
