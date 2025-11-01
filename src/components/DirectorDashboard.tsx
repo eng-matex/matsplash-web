@@ -149,12 +149,6 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         alerts = 0; // Real alerts from API
       }
 
-      // Generate sales chart data
-      const salesChartData = generateSalesChartData();
-      
-      // Generate recent activity from real data
-      const recentActivity = generateRecentActivity();
-
       const dashboardData = {
         totalSales,
         totalOrders,
@@ -164,11 +158,11 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         orderGrowth,
         employeeGrowth,
         inventoryGrowth,
-        recentActivity,
+        recentActivity: [],
         systemStatus,
         pendingTasks,
         alerts,
-        salesChartData
+        salesChartData: []
       };
       
       setDashboardData(dashboardData);
@@ -176,40 +170,25 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
       console.error('Error fetching dashboard data:', error);
       // Fallback to empty data
       setDashboardData({
-        totalSales: 2850000,
-        totalOrders: 1247,
-        activeEmployees: 12,
-        inventoryValue: 1250000,
-        salesGrowth: 15.2,
-        orderGrowth: 8.5,
+        totalSales: 0,
+        totalOrders: 0,
+        activeEmployees: 0,
+        inventoryValue: 0,
+        salesGrowth: 0,
+        orderGrowth: 0,
         employeeGrowth: 0,
-        inventoryGrowth: -2.1,
-        recentActivity: [
-          { id: 1, type: 'order', message: 'New order #ORD-001234 received', time: '2 minutes ago', icon: ShoppingCart, color: '#4caf50' },
-          { id: 2, type: 'employee', message: 'John Doe clocked in', time: '5 minutes ago', icon: People, color: '#2196f3' },
-          { id: 3, type: 'inventory', message: 'Low stock alert: Sachet Water', time: '12 minutes ago', icon: Warning, color: '#ff9800' },
-          { id: 4, type: 'sales', message: 'Daily sales target achieved', time: '1 hour ago', icon: CheckCircle, color: '#4caf50' },
-          { id: 5, type: 'security', message: 'Camera 3 motion detected', time: '2 hours ago', icon: Security, color: '#f44336' }
-        ],
-        systemStatus: 'healthy',
-        pendingTasks: 3,
-        alerts: 2,
-        salesChartData: generateSalesChartData()
+        inventoryGrowth: 0,
+        recentActivity: [],
+        systemStatus: 'unknown',
+        pendingTasks: 0,
+        alerts: 0,
+        salesChartData: []
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const generateSalesChartData = () => {
-    // Fetch real sales data from API
-    return [];
-  };
-
-  const generateRecentActivity = () => {
-    // Fetch real activity data from API
-    return [];
-  };
 
   const handleQuickAction = (action: string) => {
     if (onPageChange) {

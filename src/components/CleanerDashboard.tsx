@@ -96,115 +96,13 @@ const CleanerDashboard: React.FC<CleanerDashboardProps> = ({ selectedSection }) 
 
       switch (selectedSection) {
         case 'overview':
-          // Fetch cleaning tasks from API
-          setCleaningTasks([
-            {
-              id: 1,
-              task_number: 'CLEAN001',
-              area: 'Production Floor',
-              task_type: 'Daily Cleaning',
-              priority: 'high',
-              estimated_duration: '2 hours',
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              required_supplies: ['Floor Cleaner', 'Mop', 'Disinfectant'],
-              completed_items: []
-            },
-            {
-              id: 2,
-              task_number: 'CLEAN002',
-              area: 'Office Area',
-              task_type: 'Weekly Deep Clean',
-              priority: 'medium',
-              estimated_duration: '3 hours',
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              required_supplies: ['Glass Cleaner', 'Vacuum', 'Dusting Cloths'],
-              completed_items: ['Vacuum', 'Dusting Cloths']
-            },
-            {
-              id: 3,
-              task_number: 'CLEAN003',
-              area: 'Restrooms',
-              task_type: 'Sanitization',
-              priority: 'high',
-              estimated_duration: '1 hour',
-              status: 'completed',
-              assigned_at: new Date(Date.now() - 86400000).toISOString(),
-              required_supplies: ['Toilet Cleaner', 'Disinfectant', 'Paper Towels'],
-              completed_items: ['Toilet Cleaner', 'Disinfectant', 'Paper Towels']
-            }
-          ]);
-          break;
         case 'cleaning-tasks':
-          // Same as overview for cleaning tasks
-          setCleaningTasks([
-            {
-              id: 1,
-              task_number: 'CLEAN001',
-              area: 'Production Floor',
-              task_type: 'Daily Cleaning',
-              priority: 'high',
-              estimated_duration: '2 hours',
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              required_supplies: ['Floor Cleaner', 'Mop', 'Disinfectant'],
-              completed_items: []
-            },
-            {
-              id: 2,
-              task_number: 'CLEAN002',
-              area: 'Office Area',
-              task_type: 'Weekly Deep Clean',
-              priority: 'medium',
-              estimated_duration: '3 hours',
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              required_supplies: ['Glass Cleaner', 'Vacuum', 'Dusting Cloths'],
-              completed_items: ['Vacuum', 'Dusting Cloths']
-            }
-          ]);
+          // TODO: Fetch cleaning tasks from API
+          setCleaningTasks([]);
           break;
         case 'supply-inventory':
-          // Fetch supply inventory from API
-          setSupplyInventory([
-            {
-              id: 1,
-              supply_name: 'Floor Cleaner',
-              current_stock: 5,
-              min_stock: 2,
-              unit: 'bottles',
-              status: 'good',
-              last_restocked: new Date(Date.now() - 172800000).toISOString()
-            },
-            {
-              id: 2,
-              supply_name: 'Disinfectant',
-              current_stock: 1,
-              min_stock: 3,
-              unit: 'bottles',
-              status: 'low',
-              last_restocked: new Date(Date.now() - 259200000).toISOString()
-            },
-            {
-              id: 3,
-              supply_name: 'Paper Towels',
-              current_stock: 0,
-              min_stock: 5,
-              unit: 'rolls',
-              status: 'critical',
-              last_restocked: new Date(Date.now() - 345600000).toISOString()
-            },
-            {
-              id: 4,
-              supply_name: 'Glass Cleaner',
-              current_stock: 8,
-              min_stock: 2,
-              unit: 'bottles',
-              status: 'good',
-              last_restocked: new Date(Date.now() - 86400000).toISOString()
-            }
-          ]);
+          // TODO: Fetch supply inventory from API
+          setSupplyInventory([]);
           break;
       }
     } catch (error) {

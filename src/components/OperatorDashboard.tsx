@@ -106,123 +106,13 @@ const OperatorDashboard: React.FC<OperatorDashboardProps> = ({ selectedSection }
 
       switch (selectedSection) {
         case 'overview':
-          // Fetch maintenance tasks from API
-          setMaintenanceTasks([
-            {
-              id: 1,
-              task_number: 'MAINT001',
-              equipment_name: 'Water Filling Machine #1',
-              task_type: 'Routine Maintenance',
-              priority: 'high',
-              estimated_duration: '4 hours',
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              required_tools: ['Wrench Set', 'Lubricant', 'Cleaning Supplies'],
-              completed_items: []
-            },
-            {
-              id: 2,
-              task_number: 'MAINT002',
-              equipment_name: 'Packaging Machine #2',
-              task_type: 'Repair',
-              priority: 'critical',
-              estimated_duration: '6 hours',
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              required_tools: ['Screwdriver Set', 'Replacement Parts', 'Multimeter'],
-              completed_items: ['Screwdriver Set', 'Multimeter']
-            },
-            {
-              id: 3,
-              task_number: 'MAINT003',
-              equipment_name: 'Conveyor Belt System',
-              task_type: 'Inspection',
-              priority: 'medium',
-              estimated_duration: '2 hours',
-              status: 'completed',
-              assigned_at: new Date(Date.now() - 86400000).toISOString(),
-              required_tools: ['Flashlight', 'Measuring Tape', 'Inspection Checklist'],
-              completed_items: ['Flashlight', 'Measuring Tape', 'Inspection Checklist']
-            }
-          ]);
-          break;
         case 'maintenance-tasks':
-          // Same as overview for maintenance tasks
-          setMaintenanceTasks([
-            {
-              id: 1,
-              task_number: 'MAINT001',
-              equipment_name: 'Water Filling Machine #1',
-              task_type: 'Routine Maintenance',
-              priority: 'high',
-              estimated_duration: '4 hours',
-              status: 'pending',
-              assigned_at: new Date().toISOString(),
-              required_tools: ['Wrench Set', 'Lubricant', 'Cleaning Supplies'],
-              completed_items: []
-            },
-            {
-              id: 2,
-              task_number: 'MAINT002',
-              equipment_name: 'Packaging Machine #2',
-              task_type: 'Repair',
-              priority: 'critical',
-              estimated_duration: '6 hours',
-              status: 'in_progress',
-              assigned_at: new Date().toISOString(),
-              required_tools: ['Screwdriver Set', 'Replacement Parts', 'Multimeter'],
-              completed_items: ['Screwdriver Set', 'Multimeter']
-            }
-          ]);
+          // TODO: Fetch maintenance tasks from API
+          setMaintenanceTasks([]);
           break;
         case 'equipment-status':
-          // Fetch equipment status from API
-          setEquipmentStatus([
-            {
-              id: 1,
-              equipment_name: 'Water Filling Machine #1',
-              equipment_type: 'Filling Machine',
-              status: 'operational',
-              last_maintenance: new Date(Date.now() - 172800000).toISOString(),
-              next_maintenance: new Date(Date.now() + 259200000).toISOString(),
-              operating_hours: 1250,
-              efficiency: 95,
-              location: 'Production Line A'
-            },
-            {
-              id: 2,
-              equipment_name: 'Packaging Machine #2',
-              equipment_type: 'Packaging Machine',
-              status: 'maintenance',
-              last_maintenance: new Date(Date.now() - 3600000).toISOString(),
-              next_maintenance: new Date(Date.now() + 7200000).toISOString(),
-              operating_hours: 2100,
-              efficiency: 88,
-              location: 'Production Line B'
-            },
-            {
-              id: 3,
-              equipment_name: 'Conveyor Belt System',
-              equipment_type: 'Conveyor',
-              status: 'operational',
-              last_maintenance: new Date(Date.now() - 86400000).toISOString(),
-              next_maintenance: new Date(Date.now() + 345600000).toISOString(),
-              operating_hours: 3200,
-              efficiency: 92,
-              location: 'Main Production Floor'
-            },
-            {
-              id: 4,
-              equipment_name: 'Water Purification System',
-              equipment_type: 'Purification',
-              status: 'warning',
-              last_maintenance: new Date(Date.now() - 259200000).toISOString(),
-              next_maintenance: new Date(Date.now() + 86400000).toISOString(),
-              operating_hours: 1800,
-              efficiency: 78,
-              location: 'Water Treatment Area'
-            }
-          ]);
+          // TODO: Fetch equipment status from API
+          setEquipmentStatus([]);
           break;
       }
     } catch (error) {
