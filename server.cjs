@@ -185,6 +185,31 @@ async function setupDatabase() {
           console.log('Added notes column to packer_work_logs table');
         }
       }
+
+      // Add missing columns to orders table for driver dispatch
+      const hasOrdersTable = await db.schema.hasTable('orders');
+      if (hasOrdersTable) {
+        const hasAssignedDriverId = await db.schema.hasColumn('orders', 'assigned_driver_id');
+        if (!hasAssignedDriverId) {
+          await db.schema.alterTable('orders', (table) => {
+            table.integer('assigned_driver_id').unsigned().nullable().references('id').inTable('employees');
+            table.integer('assigned_assistant_id').unsigned().nullable().references('id').inTable('employees');
+            table.integer('customer_id').unsigned().nullable().references('id').inTable('driver_customers');
+          });
+          console.log('Added driver dispatch columns to orders table');
+        }
+        
+        const hasPickedUpAt = await db.schema.hasColumn('orders', 'picked_up_at');
+        if (!hasPickedUpAt) {
+          await db.schema.alterTable('orders', (table) => {
+            table.timestamp('picked_up_at');
+            table.boolean('storekeeper_authorized').defaultTo(false);
+            table.timestamp('authorization_time');
+            table.integer('authorization_by').unsigned().nullable().references('id').inTable('employees');
+          });
+          console.log('Added pickup authorization columns to orders table');
+        }
+      }
     } catch (error) {
       console.log('Column already exists or error adding column:', error.message);
     }
@@ -424,7 +449,8 @@ const tables = [
   'orders', 'inventory_logs', 'attendance_logs', 'packing_logs',
   'dispatch_logs', 'driver_sales_logs', 'cameras', 'camera_credentials', 'recording_sessions', 'system_activity', 'ai_detections', 'system_alerts',
   'water_bag_batches', 'water_bag_assignments', 'packer_work_logs',
-  'gate_logs', 'incident_reports', 'products', 'sales_entries', 'sales_history', 'sales_stats'
+  'gate_logs', 'incident_reports', 'products', 'sales_entries', 'sales_history', 'sales_stats',
+  'driver_customers', 'driver_commissions', 'driver_settlements'
 ];
 
     for (const tableName of tables) {
@@ -531,6 +557,59 @@ const tables = [
               table.text('notes').nullable(); // Storekeeper notes
               table.text('modification_comment').nullable(); // Manager rejection comment
               table.timestamp('packing_date').notNullable(); // Date when bags were packed
+              table.timestamps(true, true);
+            });
+            break;
+          case 'driver_customers':
+            await db.schema.createTable('driver_customers', (table) => {
+              table.increments('id').primary();
+              table.string('name').notNullable();
+              table.string('phone').notNullable();
+              table.text('address');
+              table.integer('last_driver_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('total_orders').defaultTo(0);
+              table.decimal('total_amount', 10, 2).defaultTo(0);
+              table.timestamp('last_order_date');
+              table.boolean('is_active').defaultTo(true);
+              table.timestamps(true, true);
+            });
+            break;
+          case 'driver_commissions':
+            await db.schema.createTable('driver_commissions', (table) => {
+              table.increments('id').primary();
+              table.integer('driver_id').unsigned().notNullable().references('id').inTable('employees');
+              table.integer('assistant_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('order_id').unsigned().nullable().references('id').inTable('orders');
+              table.integer('bags_sold').notNullable();
+              table.integer('bags_returned').defaultTo(0);
+              table.decimal('total_revenue', 10, 2).notNullable();
+              table.decimal('commission_amount', 10, 2).defaultTo(0);
+              table.date('delivery_date').notNullable();
+              table.string('status').defaultTo('pending'); // pending, approved, rejected
+              table.integer('approved_by').unsigned().nullable().references('id').inTable('employees');
+              table.timestamp('approved_at');
+              table.text('manager_comment').nullable();
+              table.timestamps(true, true);
+            });
+            break;
+          case 'driver_settlements':
+            await db.schema.createTable('driver_settlements', (table) => {
+              table.increments('id').primary();
+              table.integer('order_id').unsigned().notNullable().references('id').inTable('orders');
+              table.integer('driver_id').unsigned().notNullable().references('id').inTable('employees');
+              table.integer('assistant_id').unsigned().nullable().references('id').inTable('employees');
+              table.integer('bags_dispatched').notNullable();
+              table.integer('bags_sold').notNullable();
+              table.integer('bags_returned').defaultTo(0);
+              table.integer('bags_at_250').defaultTo(0);
+              table.integer('bags_at_270').defaultTo(0);
+              table.decimal('expected_amount', 10, 2).notNullable();
+              table.decimal('amount_collected', 10, 2).defaultTo(0);
+              table.decimal('balance_due', 10, 2).notNullable();
+              table.string('status').defaultTo('pending_settlement'); // pending_settlement, partial, completed, over_limit
+              table.integer('receptionist_id').unsigned().nullable().references('id').inTable('employees');
+              table.timestamp('settled_at');
+              table.text('notes');
               table.timestamps(true, true);
             });
             break;
