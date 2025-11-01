@@ -95,6 +95,82 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     fetchData();
   }, [selectedSection]);
 
+  // Helper functions for pay period calculations
+  const getCurrentPayPeriod = () => {
+    const today = new Date();
+    const day = today.getDate();
+    
+    if (day >= 1 && day <= 15) {
+      return {
+        label: '1st - 15th',
+        start: new Date(today.getFullYear(), today.getMonth(), 1),
+        end: new Date(today.getFullYear(), today.getMonth(), 15),
+        payDate: new Date(today.getFullYear(), today.getMonth(), 18)
+      };
+    } else {
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return {
+        label: '16th - End',
+        start: new Date(today.getFullYear(), today.getMonth(), 16),
+        end: endOfMonth,
+        payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
+      };
+    }
+  };
+
+  const getCurrentPeriodBags = () => {
+    const period = getCurrentPayPeriod();
+    return myCommissions.filter(comm => {
+      const commDate = new Date(comm.delivery_date);
+      const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
+      const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+      const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
+      return comm.status === 'approved' && 
+             commDateOnly >= periodStartOnly && 
+             commDateOnly <= periodEndOnly;
+    }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
+  };
+
+  const getNextPeriodBags = () => {
+    const today = new Date();
+    const day = today.getDate();
+    
+    if (day >= 1 && day <= 15) {
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const period = {
+        start: new Date(today.getFullYear(), today.getMonth(), 16),
+        end: endOfMonth,
+        payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
+      };
+      const bags = myCommissions.filter(comm => {
+        const commDate = new Date(comm.delivery_date);
+        const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
+        const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+        const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
+        return comm.status === 'approved' && 
+               commDateOnly >= periodStartOnly && 
+               commDateOnly <= periodEndOnly;
+      }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
+      return bags;
+    } else {
+      const period = {
+        start: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+        end: new Date(today.getFullYear(), today.getMonth() + 1, 15),
+        payDate: new Date(today.getFullYear(), today.getMonth() + 2, 18)
+      };
+      const bags = myCommissions.filter(comm => {
+        const commDate = new Date(comm.delivery_date);
+        const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
+        const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+        const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
+        return comm.status === 'approved' && 
+               commDateOnly >= periodStartOnly && 
+               commDateOnly <= periodEndOnly;
+      }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
+      return bags;
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
