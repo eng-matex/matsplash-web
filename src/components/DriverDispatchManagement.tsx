@@ -329,6 +329,19 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     });
   };
 
+  // Helper function to get bags count from items JSON
+  const getBagsCount = (dispatch: DriverDispatch): number => {
+    try {
+      if (typeof dispatch.items === 'string') {
+        const items = JSON.parse(dispatch.items);
+        return items[0]?.quantity || 0;
+      }
+      return dispatch.items?.[0]?.quantity || 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -397,6 +410,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                   <TableCell>Order Number</TableCell>
                   <TableCell>Driver</TableCell>
                   <TableCell>Assistant</TableCell>
+                  <TableCell>Bags</TableCell>
+                  <TableCell>Total Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Settlement</TableCell>
                   <TableCell>Created</TableCell>
@@ -409,6 +424,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     <TableCell>{dispatch.order_number}</TableCell>
                     <TableCell>{dispatch.driver_name}</TableCell>
                     <TableCell>{dispatch.assistant_name || '-'}</TableCell>
+                    <TableCell>{getBagsCount(dispatch)}</TableCell>
+                    <TableCell>₦{dispatch.total_amount?.toLocaleString() || 0}</TableCell>
                     <TableCell>
                       <Chip 
                         label={dispatch.status.replace('_', ' ').toUpperCase()} 
