@@ -237,5 +237,82 @@ module.exports = (db) => {
     }
   });
 
+  // Process returns (Storekeeper confirms return and adds back to inventory)
+  router.put('/:id/process-return', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { quantity_returned, notes, userId, userEmail } = req.body;
+
+      if (!quantity_returned || quantity_returned <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Valid quantity returned is required'
+        });
+      }
+
+      // Get order details
+      const order = await db('orders').where('id', id).first();
+      
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      // Get current stock
+      const stockAgg = await db('inventory_logs')
+        .where('product_name', 'Sachet Water')
+        .sum('quantity_change as total')
+        .first();
+      const currentStock = stockAgg.total || 0;
+
+      // Calculate new stock after return
+      const newStock = currentStock + quantity_returned;
+
+      // Add back to inventory logs
+      await db('inventory_logs').insert({
+        product_name: 'Sachet Water',
+        quantity_change: quantity_returned, // Positive for return
+        current_stock: newStock,
+        operation_type: 'in',
+        reason: `Return processed: ${quantity_returned} bags from order ${order.order_number} - ${order.customer_name}${notes ? ` - ${notes}` : ''}`,
+        employee_id: userId || req.user?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Log system activity
+      if (userId) {
+        await db('system_activity').insert({
+          user_id: userId,
+          user_email: userEmail || 'unknown',
+          action: 'ORDER_RETURN_PROCESSED',
+          details: `Processed return for order ${order.order_number}: ${quantity_returned} bags`,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent'),
+          created_at: new Date().toISOString()
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Return processed successfully',
+        data: {
+          order_id: id,
+          quantity_returned: quantity_returned,
+          new_stock: newStock
+        }
+      });
+
+    } catch (error) {
+      console.error('Error processing return:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process return'
+      });
+    }
+  });
+
   return router;
 };
