@@ -47,12 +47,15 @@ import { useAuth } from '../context/AuthContext';
 interface PackingLog {
   id: number;
   packer_id: number;
+  packer_name?: string;
   packer_first_name?: string;
   packer_last_name?: string;
   storekeeper_id?: number;
+  storekeeper_name?: string;
   storekeeper_first_name?: string;
   storekeeper_last_name?: string;
   manager_id?: number;
+  manager_name?: string;
   manager_first_name?: string;
   manager_last_name?: string;
   bags_packed: number;
@@ -411,10 +414,10 @@ const PackerWorkflowManagement: React.FC = () => {
                 <TableCell>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                      {getFullName(log.packer_first_name, log.packer_last_name, 'P').charAt(0).toUpperCase()}
+                      {getFullName(log.packer_first_name, log.packer_last_name, log.packer_name || 'P').charAt(0).toUpperCase()}
                     </Avatar>
                     <Typography variant="body2">
-                      {getFullName(log.packer_first_name, log.packer_last_name)}
+                      {getFullName(log.packer_first_name, log.packer_last_name, log.packer_name)}
                     </Typography>
                   </Stack>
                 </TableCell>
@@ -428,14 +431,10 @@ const PackerWorkflowManagement: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {log.storekeeper_first_name && log.storekeeper_last_name
-                    ? getFullName(log.storekeeper_first_name, log.storekeeper_last_name)
-                    : '-'}
+                  {getFullName(log.storekeeper_first_name, log.storekeeper_last_name, log.storekeeper_name || '-')}
                 </TableCell>
                 <TableCell>
-                  {log.manager_first_name && log.manager_last_name
-                    ? getFullName(log.manager_first_name, log.manager_last_name)
-                    : '-'}
+                  {getFullName(log.manager_first_name, log.manager_last_name, log.manager_name || '-')}
                 </TableCell>
                 <TableCell>
                   {log.notes ? (

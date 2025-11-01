@@ -14,10 +14,13 @@ module.exports = (db) => {
         .leftJoin('employees as manager', 'pwl.manager_id', 'manager.id')
         .select(
           'pwl.*',
+          'packer.name as packer_name',
           'packer.first_name as packer_first_name',
           'packer.last_name as packer_last_name',
+          'storekeeper.name as storekeeper_name',
           'storekeeper.first_name as storekeeper_first_name',
           'storekeeper.last_name as storekeeper_last_name',
+          'manager.name as manager_name',
           'manager.first_name as manager_first_name',
           'manager.last_name as manager_last_name'
         )
