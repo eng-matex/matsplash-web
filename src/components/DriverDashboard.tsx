@@ -180,10 +180,10 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       switch (selectedSection) {
         case 'overview':
         case 'active-dispatches':
-          // Fetch driver dispatches from API
+          // Fetch all driver dispatches (not just out_for_delivery) to show all statuses
           try {
             const [dispatchesRes, commissionsRes] = await Promise.all([
-              axios.get(`http://localhost:3002/api/driver-dispatch?driver_id=${user?.id}&status=out_for_delivery`, { headers }),
+              axios.get(`http://localhost:3002/api/driver-dispatch?driver_id=${user?.id}`, { headers }),
               axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers })
             ]);
             if (dispatchesRes.data.success) {
@@ -197,7 +197,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               setMyCommissions(myComms);
             }
           } catch (error) {
-            console.error('Error fetching active dispatches:', error);
+            console.error('Error fetching dispatches:', error);
             setActiveDispatches([]);
           }
           break;
@@ -308,182 +308,176 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     }
   };
 
-  const renderOverview = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-        Driver Dashboard
-      </Typography>
-      
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <LocalShipping sx={{ mr: 1, color: '#13bbc6' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Active Dispatches</Typography>
-              </Box>
-              <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                {activeDispatches.length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Currently assigned
-              </Typography>
-            </CardContent>
-          </Card>
+  // Helper to get bags from items JSON
+  const getBagsFromItems = (items: any): number => {
+    try {
+      const itemList = typeof items === 'string' ? JSON.parse(items) : items;
+      return itemList[0]?.quantity || 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const renderOverview = () => {
+    const outForDelivery = activeDispatches.filter(d => d.status === 'out_for_delivery');
+    const settlementPending = activeDispatches.filter(d => d.status === 'settlement_pending');
+    const settled = activeDispatches.filter(d => d.status === 'settled');
+    
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Driver Dashboard
+        </Typography>
+        
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <LocalShipping sx={{ mr: 1, color: '#13bbc6' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Out for Delivery</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
+                  {outForDelivery.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Currently on delivery
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Payment sx={{ mr: 1, color: '#ff9800' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Pending Settlement</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700 }}>
+                  {settlementPending.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Awaiting settlement
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Settled</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
+                  {settled.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Fully settled
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Payment sx={{ mr: 1, color: '#FFD700' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Approved Commissions</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#FFD700', fontWeight: 700 }}>
+                  ₦{myCommissions
+                    .filter(c => c.status === 'approved')
+                    .reduce((sum, c) => sum + (c.commission_amount || 0), 0)
+                    .toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total earned
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Delivered Today</Typography>
-              </Box>
-              <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                {dispatchLogs.filter(d => d.status === 'delivered' && new Date(d.delivered_at).toDateString() === new Date().toDateString()).length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Successful deliveries
-              </Typography>
-            </CardContent>
-          </Card>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
+                  My Dispatches
+                </Typography>
+                {activeDispatches.length > 0 ? (
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Order Number</TableCell>
+                          <TableCell>Assistant</TableCell>
+                          <TableCell>Bags</TableCell>
+                          <TableCell>Total Amount</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Settlement Status</TableCell>
+                          <TableCell>Amount Settled</TableCell>
+                          <TableCell>Balance Due</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {activeDispatches.map((dispatch) => (
+                          <TableRow key={dispatch.id}>
+                            <TableCell>{dispatch.order_number}</TableCell>
+                            <TableCell>{dispatch.assistant_name || '-'}</TableCell>
+                            <TableCell>{getBagsFromItems(dispatch.items)}</TableCell>
+                            <TableCell>₦{(dispatch.expected_amount || dispatch.total_amount)?.toLocaleString() || 0}</TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={dispatch.status.replace('_', ' ').toUpperCase()} 
+                                color={getStatusColor(dispatch.status) as any}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {dispatch.settlement_status ? (
+                                <Chip 
+                                  label={dispatch.settlement_status.replace('_', ' ').toUpperCase()} 
+                                  color={dispatch.balance_due === 0 ? 'success' : 'warning'}
+                                  size="small"
+                                />
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {dispatch.amount_collected ? (
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  ₦{dispatch.amount_collected?.toLocaleString() || 0}
+                                </Typography>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {dispatch.balance_due ? (
+                                <Chip 
+                                  label={`₦${dispatch.balance_due?.toLocaleString() || 0}`} 
+                                  color={dispatch.balance_due === 0 ? 'success' : 'error'}
+                                  size="small"
+                                />
+                              ) : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Typography color="text.secondary">No dispatches found</Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Payment sx={{ mr: 1, color: '#FFD700' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Today's Commission</Typography>
-              </Box>
-              <Typography variant="h4" sx={{ color: '#FFD700', fontWeight: 700 }}>
-                ₦{dispatchLogs
-                  .filter(d => d.status === 'delivered' && new Date(d.delivered_at).toDateString() === new Date().toDateString())
-                  .reduce((sum, d) => sum + (d.commission || 0), 0)
-                  .toLocaleString()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total earnings
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Warning sx={{ mr: 1, color: '#ff9800' }} />
-                <Typography variant="h6" sx={{ color: '#2c3e50' }}>Failed Deliveries</Typography>
-              </Box>
-              <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700 }}>
-                {dispatchLogs.filter(d => d.status === 'failed').length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Need attention
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                Active Dispatches
-              </Typography>
-              {activeDispatches.length > 0 ? (
-                <List>
-                  {activeDispatches.map((dispatch) => (
-                    <ListItem key={dispatch.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
-                        <ListItemIcon>
-                          {getStatusIcon(dispatch.status)}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={dispatch.dispatch_number}
-                          secondary={dispatch.customer_name}
-                        />
-                        <Chip 
-                          label={dispatch.status.replace('_', ' ').toUpperCase()} 
-                          color={getStatusColor(dispatch.status) as any}
-                          size="small"
-                        />
-                      </Box>
-                      <Box sx={{ ml: 4, width: '100%' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          <LocationOn sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-                          {dispatch.customer_address}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          <Phone sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-                          {dispatch.customer_phone}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Amount: ₦{dispatch.total_amount.toLocaleString()}
-                        </Typography>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleOpenDialog('update-status', dispatch)}
-                          sx={{ mt: 1 }}
-                        >
-                          Update Status
-                        </Button>
-                      </Box>
-                      <Divider sx={{ width: '100%', mt: 1 }} />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">No active dispatches</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                Recent Deliveries
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Dispatch ID</TableCell>
-                      <TableCell>Customer</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Commission</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {dispatchLogs.slice(0, 5).map((dispatch) => (
-                      <TableRow key={dispatch.id}>
-                        <TableCell>{dispatch.dispatch_number}</TableCell>
-                        <TableCell>{dispatch.customer_name}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={dispatch.status} 
-                            color={getStatusColor(dispatch.status) as any}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>₦{dispatch.commission?.toLocaleString() || '0'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
+      </Box>
+    );
+  };
 
   const renderActiveDispatches = () => (
     <Box>
@@ -807,9 +801,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
 
     switch (selectedSection) {
       case 'overview':
-        return renderOverview();
       case 'active-dispatches':
-        return renderActiveDispatches();
+        return renderOverview();
       case 'dispatch-log':
         return renderDispatchLog();
       case 'sales-accounting':
