@@ -134,9 +134,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
           }
           break;
         case 'commission-approval':
-          // Fetch commission approvals
+          // Fetch driver commissions for approval
           try {
-            const commissionResponse = await axios.get('http://localhost:3002/api/sales/driver-sales', { headers });
+            const commissionResponse = await axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers });
             if (commissionResponse.data.success) {
               setCommissionApprovals(commissionResponse.data.data || []);
             } else {
@@ -187,9 +187,14 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.put(`http://localhost:3002/api/sales/commission/${commissionId}/approve`, {
-        approved_by: 1, // This should come from auth context
-        approval_notes: 'Approved by Manager'
+      // Prompt for commission amount
+      const commissionAmount = prompt('Enter commission amount (₦):');
+      if (commissionAmount === null) return; // User cancelled
+
+      const response = await axios.put(`http://localhost:3002/api/driver-dispatch/commissions/${commissionId}/review`, {
+        action: 'approve',
+        commission_amount: parseFloat(commissionAmount) || 0,
+        comment: 'Approved by Manager'
       }, { headers });
 
       if (response.data.success) {
@@ -198,9 +203,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       } else {
         alert('Error approving commission: ' + response.data.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving commission:', error);
-      alert('Error approving commission. Please try again.');
+      if (error.response?.data?.message) {
+        alert('Error approving commission: ' + error.response.data.message);
+      } else {
+        alert('Error approving commission. Please try again.');
+      }
     }
   };
 
@@ -209,9 +218,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.put(`http://localhost:3002/api/sales/commission/${commissionId}/reject`, {
-        rejected_by: 1, // This should come from auth context
-        rejection_notes: 'Rejected by Manager - requires review'
+      const comment = prompt('Enter rejection reason:');
+      if (comment === null) return; // User cancelled
+
+      const response = await axios.put(`http://localhost:3002/api/driver-dispatch/commissions/${commissionId}/review`, {
+        action: 'reject',
+        commission_amount: 0,
+        comment: comment || 'Rejected by Manager'
       }, { headers });
 
       if (response.data.success) {
@@ -220,9 +233,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       } else {
         alert('Error rejecting commission: ' + response.data.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rejecting commission:', error);
-      alert('Error rejecting commission. Please try again.');
+      if (error.response?.data?.message) {
+        alert('Error rejecting commission: ' + error.response.data.message);
+      } else {
+        alert('Error rejecting commission. Please try again.');
+      }
     }
   };
 
@@ -610,7 +627,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Approval Summary */}
+        {/* Pending Commissions */}
         <Grid item xs={12} md={4}>
           <Card className="dashboard-card">
             <CardContent>
@@ -618,7 +635,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
                 Pending Approvals
               </Typography>
               <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                {commissionApprovals.filter(approval => approval.approval_status === 'Pending Manager Approval').length}
+                {commissionApprovals.filter(approval => approval.status === 'pending').length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Awaiting manager approval
@@ -627,32 +644,32 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
           </Card>
         </Grid>
 
-        {/* Total Commission */}
+        {/* Total Revenue */}
         <Grid item xs={12} md={4}>
           <Card className="dashboard-card">
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
-                Total Commission
+                Total Revenue
               </Typography>
               <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                ₦{commissionApprovals.reduce((sum, approval) => sum + (approval.commission_earned || 0), 0).toLocaleString()}
+                ₦{commissionApprovals.reduce((sum, approval) => sum + (approval.total_revenue || 0), 0).toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total commission to approve
+                Revenue from sales
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Approved Today */}
+        {/* Approved */}
         <Grid item xs={12} md={4}>
           <Card className="dashboard-card">
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
-                Approved Today
+                Approved
               </Typography>
               <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                {commissionApprovals.filter(approval => approval.approval_status === 'Approved').length}
+                {commissionApprovals.filter(approval => approval.status === 'approved').length}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Commissions approved
@@ -673,61 +690,77 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Order ID</TableCell>
+                  <TableCell>Order Number</TableCell>
                   <TableCell>Driver</TableCell>
+                  <TableCell>Assistant</TableCell>
                   <TableCell>Bags Sold</TableCell>
                   <TableCell>Bags Returned</TableCell>
-                  <TableCell>Total Sales</TableCell>
-                  <TableCell>Commission</TableCell>
-                  <TableCell>Money Submitted</TableCell>
+                  <TableCell>Total Revenue</TableCell>
+                  <TableCell>Delivery Date</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {commissionApprovals.map((approval) => (
-                  <TableRow key={approval.id}>
-                    <TableCell>{approval.order_number}</TableCell>
-                    <TableCell>{approval.driver_name}</TableCell>
-                    <TableCell>{approval.bags_sold}</TableCell>
-                    <TableCell>{approval.bags_returned}</TableCell>
-                    <TableCell>₦{approval.total_sales?.toLocaleString()}</TableCell>
-                    <TableCell>₦{approval.commission_earned?.toLocaleString()}</TableCell>
-                    <TableCell>₦{approval.money_submitted?.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={approval.approval_status || 'Pending Manager Approval'} 
-                        color={approval.approval_status === 'Approved' ? 'success' : 
-                               approval.approval_status === 'Rejected' ? 'error' : 'warning'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {approval.approval_status === 'Pending Manager Approval' && (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Approve Commission">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleApproveCommission(approval.id)}
-                              sx={{ color: '#4caf50' }}
-                            >
-                              <CheckCircle />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Reject Commission">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleRejectCommission(approval.id)}
-                              sx={{ color: '#f44336' }}
-                            >
-                              <Cancel />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      )}
+                {commissionApprovals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      <Typography color="text.secondary">No pending commissions</Typography>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  commissionApprovals.map((approval) => (
+                    <TableRow key={approval.id}>
+                      <TableCell>{approval.order_number}</TableCell>
+                      <TableCell>
+                        {approval.driver_first_name && approval.driver_last_name
+                          ? `${approval.driver_first_name} ${approval.driver_last_name}`
+                          : approval.driver_name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {approval.assistant_first_name && approval.assistant_last_name
+                          ? `${approval.assistant_first_name} ${approval.assistant_last_name}`
+                          : approval.assistant_name || '-'}
+                      </TableCell>
+                      <TableCell>{approval.bags_sold || 0}</TableCell>
+                      <TableCell>{approval.bags_returned || 0}</TableCell>
+                      <TableCell>₦{(approval.total_revenue || 0).toLocaleString()}</TableCell>
+                      <TableCell>{new Date(approval.delivery_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={approval.status?.toUpperCase() || 'PENDING'} 
+                          color={approval.status === 'approved' ? 'success' : 
+                                 approval.status === 'rejected' ? 'error' : 'warning'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {approval.status === 'pending' && (
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="Approve Commission">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApproveCommission(approval.id)}
+                                sx={{ color: '#4caf50' }}
+                              >
+                                <CheckCircle />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reject Commission">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleRejectCommission(approval.id)}
+                                sx={{ color: '#f44336' }}
+                              >
+                                <Cancel />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>

@@ -216,13 +216,23 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           }
           break;
         case 'sales-accounting':
-          // Fetch commission data
+          // Fetch commission data for this driver
           try {
             const response = await axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers });
             if (response.data.success) {
-              setSalesLogs(response.data.data || []);
+              // Filter commissions for this driver and all statuses
+              const myCommissions = (response.data.data || []).filter((c: any) => c.driver_id === user?.id);
+              setSalesLogs(myCommissions);
+              // Calculate totals
+              setCommissionData({
+                totalSales: myCommissions.reduce((sum: number, c: any) => sum + (c.total_revenue || 0), 0),
+                totalCommission: myCommissions.reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0),
+                pendingCommission: myCommissions.filter((c: any) => c.status === 'pending').reduce((sum: number, c: any) => sum + (c.commission_amount || 0), 0)
+              });
+            } else {
+              setSalesLogs([]);
+              setCommissionData({ totalSales: 0, totalCommission: 0, pendingCommission: 0 });
             }
-            setCommissionData({ totalSales: 0, totalCommission: 0, pendingCommission: 0 });
           } catch (error) {
             console.error('Error fetching sales data:', error);
             setSalesLogs([]);
@@ -665,130 +675,127 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     </Box>
   );
 
-  const renderSalesAccounting = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-        Sales & Commission History
-      </Typography>
+  const renderSalesAccounting = () => {
+    const pendingCommissions = salesLogs.filter((log: any) => log.status === 'pending');
+    const approvedCommissions = salesLogs.filter((log: any) => log.status === 'approved');
+    
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Sales & Commission History
+        </Typography>
 
-      <Grid container spacing={3}>
-        {/* Commission Summary */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
-                This Month's Commission
-              </Typography>
-              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                ₦{commissionData.total_commission?.toLocaleString() || '0'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {commissionData.bags_sold_today || 0} bags sold this month
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Rate: ₦{commissionData.commission_rate || 30} per bag
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Expected Salary */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
-                Expected Next Salary
-              </Typography>
-              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                ₦{commissionData.expected_salary?.toLocaleString() || '0'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Payment Date: {commissionData.next_payment_date || 'TBD'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Status: {commissionData.payment_status || 'Pending Approval'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Payment Status */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
-                Payment Status
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Chip 
-                  label={commissionData.payment_status || 'Pending Manager Approval'} 
-                  color={commissionData.payment_status === 'Approved' ? 'success' : 
-                         commissionData.payment_status === 'Pending' ? 'warning' : 'default'}
-                  size="medium"
-                />
-                <Typography variant="body2" color="text.secondary">
-                  Last Payment: {commissionData.last_payment_date || 'N/A'}
+        <Grid container spacing={3}>
+          {/* Total Revenue */}
+          <Grid item xs={12} md={4}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                  Total Revenue
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.totalSales || 0).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Next Payment: {commissionData.next_payment_date || 'TBD'}
+                  From all completed deliveries
                 </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
 
-      {/* Sales Logs - Read Only */}
-      <Card className="dashboard-card" sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-            Sales History (Read Only)
-          </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Settlement is handled by Receptionist. Manager reviews and approves commissions for payment.
-          </Alert>
-          
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Order ID</TableCell>
-                  <TableCell>Bags Sold</TableCell>
-                  <TableCell>Bags Returned</TableCell>
-                  <TableCell>Total Sales</TableCell>
-                  <TableCell>Commission Earned</TableCell>
-                  <TableCell>Money Submitted</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {salesLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.order_number}</TableCell>
-                    <TableCell>{log.bags_sold}</TableCell>
-                    <TableCell>{log.bags_returned}</TableCell>
-                    <TableCell>₦{log.total_sales?.toLocaleString()}</TableCell>
-                    <TableCell>₦{log.commission_earned?.toLocaleString()}</TableCell>
-                    <TableCell>₦{log.money_submitted?.toLocaleString()}</TableCell>
-                    <TableCell>{new Date(log.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={log.approval_status || 'Pending Approval'} 
-                        color={log.approval_status === 'Approved' ? 'success' : 
-                               log.approval_status === 'Rejected' ? 'error' : 'warning'}
-                        size="small"
-                      />
-                    </TableCell>
+          {/* Pending Commission */}
+          <Grid item xs={12} md={4}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                  Pending Commission
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.pendingCommission || 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Awaiting manager approval
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Approved Commission */}
+          <Grid item xs={12} md={4}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                  Approved Commission
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.totalCommission || 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {approvedCommissions.length} commissions approved
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Commission History Table */}
+        <Card className="dashboard-card" sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+              Commission History
+            </Typography>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Settlement is handled by Receptionist. Manager reviews and approves commissions for payment.
+            </Alert>
+            
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Order Number</TableCell>
+                    <TableCell>Bags Sold</TableCell>
+                    <TableCell>Bags Returned</TableCell>
+                    <TableCell>Total Revenue</TableCell>
+                    <TableCell>Commission Amount</TableCell>
+                    <TableCell>Delivery Date</TableCell>
+                    <TableCell>Status</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
-  );
+                </TableHead>
+                <TableBody>
+                  {salesLogs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography color="text.secondary">No commission records found</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    salesLogs.map((log: any) => (
+                      <TableRow key={log.id}>
+                        <TableCell>{log.order_number}</TableCell>
+                        <TableCell>{log.bags_sold || 0}</TableCell>
+                        <TableCell>{log.bags_returned || 0}</TableCell>
+                        <TableCell>₦{(log.total_revenue || 0).toLocaleString()}</TableCell>
+                        <TableCell>₦{(log.commission_amount || 0).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(log.delivery_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={log.status?.toUpperCase() || 'PENDING'} 
+                            color={log.status === 'approved' ? 'success' : 
+                                   log.status === 'rejected' ? 'error' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
 
   const renderContent = () => {
     if (loading) {
