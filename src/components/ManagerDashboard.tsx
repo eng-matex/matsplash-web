@@ -60,6 +60,7 @@ import DistributorManagement from './DistributorManagement';
 import PricingManagement from './PricingManagement';
 import SalaryManagement from './SalaryManagement';
 import SalesManagement from './SalesManagement';
+import PackerWorkflowManagement from './PackerWorkflowManagement';
 
 interface ManagerDashboardProps {
   selectedSection: string;
@@ -878,6 +879,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         return <EmployeeManagement selectedSection="employee-mgmt" userRole="Manager" />;
       case 'new-employee':
         return <EmployeeManagement selectedSection="new-employee" userRole="Manager" />;
+      case 'packing-workflow':
+        return <PackerWorkflowManagement />;
       case 'attendance':
         return <AttendanceManagement selectedSection={selectedSection} userRole="manager" />;
       case 'distributor-mgmt':

@@ -33,6 +33,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
+        { id: 'packing-workflow', label: 'Packing Workflow', icon: Assignment, color: '#9c27b0' },
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
@@ -50,6 +51,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'attendance-enhanced', label: 'All Employee Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
         { id: 'new-employee', label: 'Add Employee', icon: SupervisorAccount, color: '#13bbc6' },
+        { id: 'packing-workflow', label: 'Packing Workflow', icon: Assignment, color: '#9c27b0' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
         { id: 'admin-clock', label: 'Admin Clock-In/Out', icon: SupervisorAccount, color: '#e91e63' },
         { id: 'comprehensive-log', label: '🔒 Comprehensive Log', icon: Lock, color: '#ff5722' },
@@ -69,6 +71,7 @@ export const getRoleNavigation = (role: string) => {
         { id: 'device-management', label: 'Device Management', icon: Devices, color: '#13bbc6' },
         { id: 'factory-mgmt', label: 'Factory Management', icon: LocationOn, color: '#00bcd4' },
         { id: 'employee-mgmt', label: 'Employee Management', icon: People, color: '#4caf50' },
+        { id: 'packing-workflow', label: 'Packing Workflow', icon: Assignment, color: '#9c27b0' },
         { id: 'distributor-mgmt', label: 'Distributor Management', icon: Business, color: '#9c27b0' },
         { id: 'pricing', label: 'Pricing Management', icon: PointOfSale, color: '#ff9800' },
         { id: 'salary', label: '💲 Salary Management', icon: Payment, color: '#4caf50' },
@@ -96,6 +99,7 @@ export const getRoleNavigation = (role: string) => {
     case 'storekeeper':
       return [
         { id: 'overview', label: 'Order Management', icon: DashboardIcon, color: '#2196f3' },
+        { id: 'packing-workflow', label: 'Packing Workflow', icon: Assignment, color: '#9c27b0' },
         { id: 'water-bag-management', label: 'Water Bag Management', icon: Inventory, color: '#ff9800' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },

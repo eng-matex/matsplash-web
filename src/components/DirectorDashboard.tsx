@@ -43,6 +43,7 @@ import SalaryManagement from './SalaryManagement';
 import SalesManagement from './SalesManagement';
 import ReportingAnalytics from './ReportingAnalytics';
 import SurveillanceManagement from './SurveillanceManagement';
+import PackerWorkflowManagement from './PackerWorkflowManagement';
 
 interface DirectorDashboardProps {
   currentPage: string;
@@ -628,6 +629,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         return <EmployeeManagement />;
       case 'factory-mgmt':
         return <FactoryManagement selectedSection={currentPage} />;
+      case 'packing-workflow':
+        return <PackerWorkflowManagement />;
       case 'distributor-mgmt':
         return <DistributorManagement />;
       case 'pricing':

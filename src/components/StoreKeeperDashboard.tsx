@@ -62,6 +62,7 @@ import {
 import axios from 'axios';
 import InventoryManagement from './InventoryManagement';
 import WaterBagManagement from './WaterBagManagement';
+import PackerWorkflowManagement from './PackerWorkflowManagement';
 
 interface StoreKeeperDashboardProps {
   selectedSection: string;
@@ -979,6 +980,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
     switch (selectedSection) {
       case 'overview':
         return renderOverview();
+      case 'packing-workflow':
+        return <PackerWorkflowManagement />;
       case 'pickup-confirmations':
         return renderPickupConfirmations();
       case 'inventory-audit':
