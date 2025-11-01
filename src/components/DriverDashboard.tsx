@@ -83,6 +83,12 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [dispatchFilter, setDispatchFilter] = useState({
+    status: 'all',
+    dateRange: 'all',
+    startDate: '',
+    endDate: ''
+  });
   const [settlementData, setSettlementData] = useState({
     bags_sold: 0,
     bags_returned: 0,
@@ -329,6 +335,47 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   };
 
   const renderOverview = () => {
+    // Filter dispatches based on selected filters
+    const filteredDispatches = activeDispatches.filter(d => {
+      // Status filter
+      if (dispatchFilter.status !== 'all' && d.status !== dispatchFilter.status) {
+        return false;
+      }
+
+      // Date range filter
+      if (dispatchFilter.dateRange === 'custom') {
+        const dispatchDate = new Date(d.created_at);
+        const start = new Date(dispatchFilter.startDate);
+        const end = new Date(dispatchFilter.endDate);
+        end.setHours(23, 59, 59, 999); // Include the entire end date
+        if (dispatchDate < start || dispatchDate > end) {
+          return false;
+        }
+      } else if (dispatchFilter.dateRange === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dispatchDate = new Date(d.created_at);
+        dispatchDate.setHours(0, 0, 0, 0);
+        if (dispatchDate.getTime() !== today.getTime()) {
+          return false;
+        }
+      } else if (dispatchFilter.dateRange === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        if (new Date(d.created_at) < weekAgo) {
+          return false;
+        }
+      } else if (dispatchFilter.dateRange === 'month') {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        if (new Date(d.created_at) < monthAgo) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     const outForDelivery = activeDispatches.filter(d => d.status === 'out_for_delivery');
     const settlementPending = activeDispatches.filter(d => d.status === 'settlement_pending');
     const settled = activeDispatches.filter(d => d.status === 'settled');
@@ -417,9 +464,73 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             <Card className="dashboard-card">
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                  My Dispatches
+                  My Dispatches ({filteredDispatches.length})
                 </Typography>
-                {activeDispatches.length > 0 ? (
+                
+                {/* Filter Controls */}
+                <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      value={dispatchFilter.status}
+                      label="Status"
+                      onChange={(e) => setDispatchFilter({ ...dispatchFilter, status: e.target.value })}
+                    >
+                      <MenuItem value="all">All</MenuItem>
+                      <MenuItem value="pending_pickup">Pending Pickup</MenuItem>
+                      <MenuItem value="out_for_delivery">Out for Delivery</MenuItem>
+                      <MenuItem value="settlement_pending">Settlement Pending</MenuItem>
+                      <MenuItem value="settled">Settled</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Date Range</InputLabel>
+                    <Select
+                      value={dispatchFilter.dateRange}
+                      label="Date Range"
+                      onChange={(e) => setDispatchFilter({ ...dispatchFilter, dateRange: e.target.value })}
+                    >
+                      <MenuItem value="all">All Time</MenuItem>
+                      <MenuItem value="today">Today</MenuItem>
+                      <MenuItem value="week">Last 7 Days</MenuItem>
+                      <MenuItem value="month">Last 30 Days</MenuItem>
+                      <MenuItem value="custom">Custom</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {dispatchFilter.dateRange === 'custom' && (
+                    <>
+                      <TextField
+                        size="small"
+                        type="date"
+                        label="Start Date"
+                        InputLabelProps={{ shrink: true }}
+                        value={dispatchFilter.startDate}
+                        onChange={(e) => setDispatchFilter({ ...dispatchFilter, startDate: e.target.value })}
+                      />
+                      <TextField
+                        size="small"
+                        type="date"
+                        label="End Date"
+                        InputLabelProps={{ shrink: true }}
+                        value={dispatchFilter.endDate}
+                        onChange={(e) => setDispatchFilter({ ...dispatchFilter, endDate: e.target.value })}
+                      />
+                    </>
+                  )}
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setDispatchFilter({ status: 'all', dateRange: 'all', startDate: '', endDate: '' })}
+                  >
+                    Reset
+                  </Button>
+                </Box>
+
+                {filteredDispatches.length > 0 ? (
                   <TableContainer>
                     <Table>
                       <TableHead>
@@ -427,16 +538,23 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                           <TableCell>Order Number</TableCell>
                           <TableCell>Assistant</TableCell>
                           <TableCell>Bags</TableCell>
+                          <TableCell>Date Assigned</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell>Settlement Status</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {activeDispatches.map((dispatch) => (
-                          <TableRow key={dispatch.id}>
-                            <TableCell>{dispatch.order_number}</TableCell>
+                        {filteredDispatches.map((dispatch) => (
+                          <TableRow key={dispatch.id} hover>
+                            <TableCell><strong>{dispatch.order_number}</strong></TableCell>
                             <TableCell>{dispatch.assistant_name || '-'}</TableCell>
                             <TableCell>{getBagsFromItems(dispatch.items)}</TableCell>
+                            <TableCell>
+                              {new Date(dispatch.created_at).toLocaleDateString()}
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {new Date(dispatch.created_at).toLocaleTimeString()}
+                              </Typography>
+                            </TableCell>
                             <TableCell>
                               <Chip 
                                 label={dispatch.status.replace('_', ' ').toUpperCase()} 
@@ -453,7 +571,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                                 />
                               ) : '-'}
                             </TableCell>
-                            {/* Removed: Total Amount, Amount Settled, Balance Due */}
                           </TableRow>
                         ))}
                       </TableBody>
