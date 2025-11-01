@@ -82,6 +82,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [activeStep, setActiveStep] = useState(0);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [settlementData, setSettlementData] = useState({
     bags_sold: 0,
     bags_returned: 0,
@@ -675,7 +676,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   );
 
   const renderSalesAccounting = () => {
-    const [filterStatus, setFilterStatus] = useState<string>('all');
     const filteredCommissions = filterStatus === 'all' 
       ? salesLogs 
       : salesLogs.filter((log: any) => log.status === filterStatus);

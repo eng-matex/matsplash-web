@@ -84,6 +84,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   useEffect(() => {
     fetchData();
@@ -621,7 +622,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   );
 
   const renderCommissionApproval = () => {
-    const [filterStatus, setFilterStatus] = useState<string>('all');
     const filteredCommissions = filterStatus === 'all' 
       ? commissionApprovals 
       : commissionApprovals.filter((c: any) => c.status === filterStatus);
