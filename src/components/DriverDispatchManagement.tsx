@@ -94,7 +94,6 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [selectedDriver, setSelectedDriver] = useState<number>(0);
   const [selectedAssistant, setSelectedAssistant] = useState<number>(0);
   const [bagsDispatched, setBagsDispatched] = useState<number>(0);
-  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'create' | 'view' | 'customer' | 'settle' | 'return'>('create');
@@ -149,47 +148,6 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
   };
 
-  const addCustomerOrder = () => {
-    setCustomerOrders([...customerOrders, { customer_name: '', customer_phone: '', bags: 0, price: 0, is_new_customer: false }]);
-  };
-
-  const updateCustomerOrder = (index: number, field: string, value: any) => {
-    const updated = [...customerOrders];
-    if (field === 'bags') {
-      const bags = parseInt(value) || 0;
-      updated[index].bags = bags;
-      updated[index].price = bags >= 50 ? 250 : 270;
-    } else if (field === 'customer_id') {
-      const customer = customers.find(c => c.id === value);
-      if (customer) {
-        updated[index].customer_id = customer.id;
-        updated[index].customer_name = customer.name;
-        updated[index].customer_phone = customer.phone;
-        updated[index].customer_address = customer.address;
-        updated[index].is_new_customer = false;
-      }
-    } else if (field === 'customer_phone') {
-      // Check if customer exists by phone
-      const customer = customers.find(c => c.phone === value);
-      if (customer) {
-        updated[index].customer_id = customer.id;
-        updated[index].customer_name = customer.name;
-        updated[index].customer_address = customer.address;
-        updated[index].is_new_customer = false;
-      } else {
-        updated[index].is_new_customer = true;
-        updated[index].customer_id = undefined;
-      }
-      (updated[index] as any)[field] = value;
-    } else {
-      (updated[index] as any)[field] = value;
-    }
-    setCustomerOrders(updated);
-  };
-
-  const removeCustomerOrder = (index: number) => {
-    setCustomerOrders(customerOrders.filter((_, i) => i !== index));
-  };
 
   const handleSaveCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
