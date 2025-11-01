@@ -576,47 +576,62 @@ module.exports = (db) => {
         });
       }
 
-      // Get stored customer calls (50+ bag customers that driver called about)
-      const customerCalls = await db('driver_customer_calls')
-        .where('dispatch_order_id', id)
-        .where('processed', false);
+      // Check if settlement already exists
+      const existingSettlement = await db('driver_settlements').where('order_id', id).first();
 
       let bagsAt250 = 0;
-      
-      // Process stored customer calls and update customer stats
-      for (const call of customerCalls) {
-        // Update customer stats
-        if (call.customer_id) {
-          const customer = await db('driver_customers').where('id', call.customer_id).first();
-          if (customer) {
-            await db('driver_customers')
-              .where('id', call.customer_id)
-              .update({
-                total_orders: customer.total_orders + 1,
-                total_amount: customer.total_amount + (call.bags * 250),
-                last_order_date: new Date().toISOString(),
-                last_driver_id: dispatch.assigned_driver_id,
-                updated_at: new Date().toISOString()
-              });
+
+      // Only process customer calls if this is the first settlement
+      if (!existingSettlement) {
+        // Get stored customer calls (50+ bag customers that driver called about)
+        const customerCalls = await db('driver_customer_calls')
+          .where('dispatch_order_id', id)
+          .where('processed', false);
+
+        // Process stored customer calls and update customer stats
+        for (const call of customerCalls) {
+          // Update customer stats
+          if (call.customer_id) {
+            const customer = await db('driver_customers').where('id', call.customer_id).first();
+            if (customer) {
+              await db('driver_customers')
+                .where('id', call.customer_id)
+                .update({
+                  total_orders: customer.total_orders + 1,
+                  total_amount: customer.total_amount + (call.bags * 250),
+                  last_order_date: new Date().toISOString(),
+                  last_driver_id: dispatch.assigned_driver_id,
+                  updated_at: new Date().toISOString()
+                });
+            }
           }
+          bagsAt250 += call.bags;
+          
+          // Mark call as processed
+          await db('driver_customer_calls')
+            .where('id', call.id)
+            .update({
+              processed: true,
+              updated_at: new Date().toISOString()
+            });
         }
-        bagsAt250 += call.bags;
-        
-        // Mark call as processed
-        await db('driver_customer_calls')
-          .where('id', call.id)
-          .update({
-            processed: true,
-            updated_at: new Date().toISOString()
-          });
+      } else {
+        // For partial payments, use existing values
+        bagsAt250 = existingSettlement.bags_at_250 || 0;
       }
 
       const bagsAt270 = bags_sold - bagsAt250;
       const expectedAmount = (bagsAt250 * 250) + (bagsAt270 * 270);
-      const balanceDue = expectedAmount - amount_paid;
+      
+      // For partial payments, add to existing amount_collected
+      const totalCollected = existingSettlement 
+        ? existingSettlement.amount_collected + amount_paid 
+        : amount_paid;
+      
+      const balanceDue = expectedAmount - totalCollected;
       const status = balanceDue <= 0 ? 'completed' : 'partial';
 
-      // Update settlement
+      // Update settlement (already created on dispatch)
       await db('driver_settlements')
         .where('order_id', id)
         .update({
@@ -625,11 +640,11 @@ module.exports = (db) => {
           bags_at_250: bagsAt250,
           bags_at_270: bagsAt270,
           expected_amount: expectedAmount,
-          amount_collected: amount_paid,
+          amount_collected: totalCollected,
           balance_due: balanceDue,
           status,
           settled_at: new Date().toISOString(),
-          notes: notes || null,
+          notes: notes || existingSettlement?.notes,
           updated_at: new Date().toISOString()
         });
 

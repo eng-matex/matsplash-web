@@ -147,29 +147,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
           const allOrdersResponse = await axios.get('http://localhost:3002/api/orders', { headers });
           setOrders(allOrdersResponse.data.data || []);
           break;
-        case 'driver-settlement':
-          // Fetch driver sales data
-          try {
-            const driverSalesResponse = await axios.get('http://localhost:3002/api/sales/driver-sales', { headers });
-            if (driverSalesResponse.data.success) {
-              setDriverSales(driverSalesResponse.data.data || []);
-            } else {
-              setDriverSales([]);
-            }
-          } catch (error) {
-            console.error('Error fetching driver sales:', error);
-            setDriverSales([]);
-          }
-          
-          // Also fetch driver dispatches for the order dropdown
-          try {
-            const dispatchResponse = await axios.get('http://localhost:3002/api/orders?type=driver_dispatch', { headers });
-            setDriverDispatches(dispatchResponse.data.data || []);
-          } catch (error) {
-            console.log('Driver dispatches API not available, using empty array');
-            setDriverDispatches([]);
-          }
-          break;
         case 'my-attendance':
           // Fetch attendance data for the current user
           try {
@@ -1537,8 +1514,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         return <DriverCustomerCallsView />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
-      case 'driver-settlement':
-        return <DriverDispatchManagement userRole="receptionist" />;
       case 'order-status-logs':
         return renderOrderStatusLogs();
       case 'my-attendance':

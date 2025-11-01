@@ -103,7 +103,6 @@ export const getRoleNavigation = (role: string) => {
         { id: 'driver-dispatches', label: 'Driver Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'customer-calls', label: 'Customer Calls (50+)', icon: Phone, color: '#4caf50' },
         { id: 'store-dispatch', label: 'Store Dispatch', icon: LocalShipping, color: '#9c27b0' },
-        { id: 'driver-settlement', label: 'Driver Settlement', icon: Payment, color: '#ff5722' },
         { id: 'order-status-logs', label: 'Order Status Logs', icon: Assessment, color: '#2196f3' }
       ];
 

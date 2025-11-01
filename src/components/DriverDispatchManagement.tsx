@@ -490,17 +490,19 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                               <PersonAdd />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={dispatch.settlement_status ? 'Complete Settlement' : 'Process Settlement'}>
+                          <Tooltip title="Process Settlement">
                             <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)}>
                               <AttachMoney />
                             </IconButton>
                           </Tooltip>
                         </>
                       )}
-                      {userRole === 'receptionist' && dispatch.status === 'settled' && dispatch.balance_due > 0 && (
+                      {userRole === 'receptionist' && 
+                       (dispatch.status === 'settlement_pending' || dispatch.status === 'settled') && 
+                       dispatch.balance_due > 0 && (
                         <Tooltip title="Complete Payment">
                           <IconButton size="small" onClick={() => handleOpenDialog('settle', dispatch)} color="success">
-                            <CheckCircle />
+                            <AttachMoney />
                           </IconButton>
                         </Tooltip>
                       )}
