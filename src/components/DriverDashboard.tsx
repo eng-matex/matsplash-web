@@ -691,7 +691,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
 
         <Grid container spacing={3}>
           {/* Total Commission Earned */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('approved')}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
@@ -708,7 +708,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           </Grid>
 
           {/* Pending Commission */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('pending')}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
@@ -725,7 +725,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           </Grid>
 
           {/* Total Bags Sold */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={4}>
             <Card className="dashboard-card">
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
@@ -736,23 +736,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Across all orders
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Total Revenue */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Card className="dashboard-card">
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: '#9c27b0', fontWeight: 600 }}>
-                  Total Revenue
-                </Typography>
-                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                  ₦{(commissionData.totalSales || 0).toLocaleString()}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  From all deliveries
                 </Typography>
               </CardContent>
             </Card>
