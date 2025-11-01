@@ -81,6 +81,12 @@ const PackerWorkflowManagement: React.FC = () => {
   const [logs, setLogs] = useState<PackingLog[]>([]);
   const [packers, setPackers] = useState<Packer[]>([]);
   const [tabValue, setTabValue] = useState(0);
+  
+  // Additional filters (independent of tabs)
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [filterPacker, setFilterPacker] = useState<string>('all');
 
   // Dialog states
   const [createDialog, setCreateDialog] = useState(false);
@@ -366,6 +372,35 @@ const PackerWorkflowManagement: React.FC = () => {
   };
   const canReview = user?.role === 'Manager' || user?.role === 'Admin' || user?.role === 'Director';
 
+  const getFilteredLogs = () => {
+    return logs.filter(log => {
+      // Filter by status (if additional filter is set, use it; otherwise use tab filter)
+      const statusFilter = filterStatus !== 'all' ? filterStatus : 
+                          tabValue === 1 ? 'pending' :
+                          tabValue === 2 ? 'approved' :
+                          tabValue === 3 ? 'rejected' : 'all';
+      
+      if (statusFilter !== 'all' && log.status !== statusFilter) {
+        return false;
+      }
+      
+      // Filter by date range
+      if (filterStartDate && new Date(log.packing_date) < new Date(filterStartDate)) {
+        return false;
+      }
+      if (filterEndDate && new Date(log.packing_date) > new Date(filterEndDate)) {
+        return false;
+      }
+      
+      // Filter by packer
+      if (filterPacker !== 'all' && log.packer_id.toString() !== filterPacker) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
   const renderTable = () => {
     if (loading) {
       return (
@@ -375,7 +410,9 @@ const PackerWorkflowManagement: React.FC = () => {
       );
     }
 
-    if (logs.length === 0) {
+    const filteredLogs = getFilteredLogs();
+    
+    if (filteredLogs.length === 0) {
       return (
         <Alert severity="info">
           No packing logs found
@@ -400,7 +437,7 @@ const PackerWorkflowManagement: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {logs.map((log) => (
+            {filteredLogs.map((log) => (
               <TableRow key={log.id}>
                 <TableCell>
                   {new Date(log.packing_date).toLocaleDateString()}
@@ -527,6 +564,70 @@ const PackerWorkflowManagement: React.FC = () => {
         <Tab label="Approved" />
         <Tab label="Rejected" />
       </Tabs>
+
+      {/* Filter Controls */}
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={filterStatus}
+            label="Status"
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="approved">Approved</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel>Packer</InputLabel>
+          <Select
+            value={filterPacker}
+            label="Packer"
+            onChange={(e) => setFilterPacker(e.target.value)}
+          >
+            <MenuItem value="all">All Packers</MenuItem>
+            {packers.map((packer) => (
+              <MenuItem key={packer.id} value={packer.id.toString()}>
+                {getFullName(packer.first_name, packer.last_name, packer.name)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        <TextField
+          size="small"
+          label="Start Date"
+          type="date"
+          value={filterStartDate}
+          onChange={(e) => setFilterStartDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        
+        <TextField
+          size="small"
+          label="End Date"
+          type="date"
+          value={filterEndDate}
+          onChange={(e) => setFilterEndDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            setFilterStatus('all');
+            setFilterPacker('all');
+            setFilterStartDate('');
+            setFilterEndDate('');
+          }}
+        >
+          Clear Filters
+        </Button>
+      </Box>
 
       {renderTable()}
 
