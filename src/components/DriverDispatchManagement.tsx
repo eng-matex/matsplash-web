@@ -91,8 +91,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [dispatches, setDispatches] = useState<DriverDispatch[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<number>(0);
-  const [selectedAssistant, setSelectedAssistant] = useState<number>(0);
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [selectedAssistant, setSelectedAssistant] = useState<string>('');
   const [bagsDispatched, setBagsDispatched] = useState<number>(0);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -133,8 +133,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
     setDialogType(type);
     setSelectedDispatch(dispatch || null);
     if (type === 'create') {
-      setSelectedDriver(0);
-      setSelectedAssistant(0);
+      setSelectedDriver('');
+      setSelectedAssistant('');
       setBagsDispatched(0);
     } else if (type === 'settle' && dispatch) {
       setSettlementData({ bags_sold: 0, bags_at_250: 0, amount_paid: 0, customer_orders: [] });
@@ -187,8 +187,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const headers = { Authorization: `Bearer ${token}` };
 
       const response = await axios.post('http://localhost:3002/api/driver-dispatch/create', {
-        driver_id: selectedDriver,
-        assistant_id: selectedAssistant || null,
+        driver_id: parseInt(selectedDriver),
+        assistant_id: selectedAssistant ? parseInt(selectedAssistant) : null,
         bags_dispatched: bagsDispatched,
         notes: ''
       }, { headers });
@@ -458,10 +458,10 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 <InputLabel>Select Driver</InputLabel>
                 <Select
                   value={selectedDriver}
-                  onChange={(e) => setSelectedDriver(Number(e.target.value))}
+                  onChange={(e) => setSelectedDriver(e.target.value)}
                 >
                   {drivers.filter(d => d.role === 'Driver').map((driver) => (
-                    <MenuItem key={driver.id} value={driver.id}>{driver.name}</MenuItem>
+                    <MenuItem key={driver.id} value={String(driver.id)}>{driver.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -471,11 +471,11 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 <InputLabel>Select Driver Assistant (Optional)</InputLabel>
                 <Select
                   value={selectedAssistant}
-                  onChange={(e) => setSelectedAssistant(Number(e.target.value))}
+                  onChange={(e) => setSelectedAssistant(e.target.value)}
                 >
-                  <MenuItem value={0}>None</MenuItem>
+                  <MenuItem value="">None</MenuItem>
                   {drivers.filter(d => d.role === 'Driver Assistant').map((assistant) => (
-                    <MenuItem key={assistant.id} value={assistant.id}>{assistant.name}</MenuItem>
+                    <MenuItem key={assistant.id} value={String(assistant.id)}>{assistant.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
