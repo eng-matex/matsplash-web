@@ -193,10 +193,24 @@ async function setupDatabase() {
         if (!hasAssignedDriverId) {
           await db.schema.alterTable('orders', (table) => {
             table.integer('assigned_driver_id').unsigned().nullable().references('id').inTable('employees');
+          });
+          console.log('Added assigned_driver_id column to orders table');
+        }
+        
+        const hasAssignedAssistantId = await db.schema.hasColumn('orders', 'assigned_assistant_id');
+        if (!hasAssignedAssistantId) {
+          await db.schema.alterTable('orders', (table) => {
             table.integer('assigned_assistant_id').unsigned().nullable().references('id').inTable('employees');
+          });
+          console.log('Added assigned_assistant_id column to orders table');
+        }
+        
+        const hasCustomerId = await db.schema.hasColumn('orders', 'customer_id');
+        if (!hasCustomerId) {
+          await db.schema.alterTable('orders', (table) => {
             table.integer('customer_id').unsigned().nullable().references('id').inTable('driver_customers');
           });
-          console.log('Added driver dispatch columns to orders table');
+          console.log('Added customer_id column to orders table');
         }
         
         const hasPickedUpAt = await db.schema.hasColumn('orders', 'picked_up_at');

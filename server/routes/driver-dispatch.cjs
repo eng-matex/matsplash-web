@@ -250,9 +250,12 @@ module.exports = (db) => {
       });
     } catch (error) {
       console.error('Error fetching driver dispatches:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch driver dispatches'
+        message: 'Failed to fetch driver dispatches',
+        error: error.message
       });
     }
   });

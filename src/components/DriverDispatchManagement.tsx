@@ -112,9 +112,9 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const headers = { Authorization: `Bearer ${token}` };
 
       const [dispatchesRes, customersRes, employeesRes] = await Promise.all([
-        axios.get('http://localhost:3002/api/driver-dispatch', { headers }),
-        axios.get('http://localhost:3002/api/driver-dispatch/customers', { headers }),
-        axios.get('http://localhost:3002/api/employees', { headers })
+        axios.get('/api/driver-dispatch', { headers }),
+        axios.get('/api/driver-dispatch/customers', { headers }),
+        axios.get('/api/employees', { headers })
       ]);
 
       setDispatches(dispatchesRes.data.data || []);
@@ -161,7 +161,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      await axios.post('http://localhost:3002/api/driver-dispatch/customers', newCustomer, { headers });
+      await axios.post('/api/driver-dispatch/customers', newCustomer, { headers });
       await fetchData();
       handleCloseDialog();
       alert('Customer saved successfully');
@@ -186,7 +186,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.post('http://localhost:3002/api/driver-dispatch/create', {
+      const response = await axios.post('/api/driver-dispatch/create', {
         driver_id: parseInt(selectedDriver),
         assistant_id: selectedAssistant ? parseInt(selectedAssistant) : null,
         bags_dispatched: bagsDispatched,
@@ -246,7 +246,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const response = await axios.post(`http://localhost:3002/api/driver-dispatch/${selectedDispatch.id}/settle`, {
+      const response = await axios.post(`/api/driver-dispatch/${selectedDispatch.id}/settle`, {
         bags_sold,
         bags_returned: 0,
         amount_paid,
