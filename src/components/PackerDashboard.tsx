@@ -112,9 +112,13 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     const period = getCurrentPayPeriod();
     return myLogs.filter(log => {
       const logDate = new Date(log.packing_date);
+      // Compare only the date part (ignore time)
+      const logDateOnly = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+      const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+      const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
       return log.status === 'approved' && 
-             logDate >= period.start && 
-             logDate <= period.end;
+             logDateOnly >= periodStartOnly && 
+             logDateOnly <= periodEndOnly;
     }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
   };
 
@@ -130,12 +134,17 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
         end: endOfMonth,
         payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
       };
-      return myLogs.filter(log => {
+      const bags = myLogs.filter(log => {
         const logDate = new Date(log.packing_date);
+        // Compare only the date part (ignore time)
+        const logDateOnly = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+        const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+        const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
         return log.status === 'approved' && 
-               logDate >= period.start && 
-               logDate <= period.end;
+               logDateOnly >= periodStartOnly && 
+               logDateOnly <= periodEndOnly;
       }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
+      return bags;
     } else {
       // Currently in second half, so next period is 1st-15th of next month
       const period = {
@@ -143,12 +152,17 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
         end: new Date(today.getFullYear(), today.getMonth() + 1, 15),
         payDate: new Date(today.getFullYear(), today.getMonth() + 2, 18)
       };
-      return myLogs.filter(log => {
+      const bags = myLogs.filter(log => {
         const logDate = new Date(log.packing_date);
+        // Compare only the date part (ignore time)
+        const logDateOnly = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+        const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
+        const periodEndOnly = new Date(period.end.getFullYear(), period.end.getMonth(), period.end.getDate());
         return log.status === 'approved' && 
-               logDate >= period.start && 
-               logDate <= period.end;
+               logDateOnly >= periodStartOnly && 
+               logDateOnly <= periodEndOnly;
       }).reduce((sum, log) => sum + (log.bags_packed || 0), 0);
+      return bags;
     }
   };
 
