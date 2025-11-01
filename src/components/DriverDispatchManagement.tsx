@@ -680,8 +680,8 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     type="number"
                     value={settlementData.bags_sold}
                     onChange={(e) => setSettlementData({ ...settlementData, bags_sold: parseInt(e.target.value) || 0 })}
-                    disabled={!!selectedDispatch?.settlement_status}
-                    helperText={selectedDispatch?.settlement_status ? 'Bags sold cannot be changed for existing settlements' : ''}
+                    disabled={!!selectedDispatch?.amount_collected}
+                    helperText={selectedDispatch?.amount_collected ? 'Bags sold cannot be changed once payment is recorded' : ''}
                   />
                 </Grid>
 
