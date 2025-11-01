@@ -185,6 +185,14 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
   const handleConfirmPickup = async () => {
     if (!selectedItem) return;
 
+    // Check if order is in valid status
+    if (selectedItem.status !== 'pending' && selectedItem.status !== 'pending_pickup') {
+      alert(`This order cannot be confirmed. Current status: ${selectedItem.status}`);
+      handleCloseDialog();
+      fetchData(); // Refresh to get latest status
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
