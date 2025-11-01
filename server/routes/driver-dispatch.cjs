@@ -664,9 +664,9 @@ module.exports = (db) => {
       await db('driver_settlements')
         .where('order_id', id)
         .update({
-          bags_sold: existingSettlement ? existingSettlement.bags_sold : bags_sold,
-          bags_returned: existingSettlement ? existingSettlement.bags_returned : bags_returned,
-          bags_at_250: existingSettlement ? existingSettlement.bags_at_250 : bagsAt250,
+          bags_sold: isFirstSettlement ? bags_sold : existingSettlement.bags_sold,
+          bags_returned: isFirstSettlement ? bags_returned : existingSettlement.bags_returned,
+          bags_at_250: isFirstSettlement ? bagsAt250 : existingSettlement.bags_at_250,
           bags_at_270: bagsAt270,
           expected_amount: expectedAmount,
           amount_collected: totalCollected,
