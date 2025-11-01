@@ -115,7 +115,12 @@ module.exports = (db) => {
       }
 
       // Validate storekeeper is the one who created it (or admin/director)
-      if (existingLog.storekeeper_id !== req.user?.id && req.user?.role !== 'Admin' && req.user?.role !== 'Director') {
+      // Allow storekeepers to edit rejected logs even if storekeeper_id is null (for backward compatibility)
+      const isCreator = existingLog.storekeeper_id === req.user?.id;
+      const isAdminOrDirector = req.user?.role === 'Admin' || req.user?.role === 'Director';
+      const isStorekeeperEditingRejected = req.user?.role === 'StoreKeeper' && existingLog.status === 'rejected';
+      
+      if (!isCreator && !isAdminOrDirector && !isStorekeeperEditingRejected) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to edit this packing log'
@@ -244,15 +249,20 @@ module.exports = (db) => {
         return res.status(404).json({ success: false, message: 'Packing log not found' });
       }
 
-      if (log.status !== 'pending') {
+      if (log.status === 'approved') {
         return res.status(400).json({
           success: false,
-          message: 'Cannot delete packing log that has been reviewed'
+          message: 'Cannot delete packing log that has been approved'
         });
       }
 
       // Only the storekeeper who created it or admin/director can delete
-      if (log.storekeeper_id !== req.user?.id && req.user?.role !== 'Admin' && req.user?.role !== 'Director') {
+      // Allow storekeepers to delete pending/rejected logs even if storekeeper_id is null
+      const isCreator = log.storekeeper_id === req.user?.id;
+      const isAdminOrDirector = req.user?.role === 'Admin' || req.user?.role === 'Director';
+      const isStorekeeperDeleting = req.user?.role === 'StoreKeeper' && log.status !== 'approved';
+      
+      if (!isCreator && !isAdminOrDirector && !isStorekeeperDeleting) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to delete this packing log'
