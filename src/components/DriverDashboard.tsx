@@ -23,8 +23,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tabs,
-  Tab,
   Alert,
   CircularProgress,
   IconButton,
@@ -59,7 +57,8 @@ import {
   Warning,
   Done,
   Schedule,
-  DirectionsCar
+  DirectionsCar,
+  TrendingUp
 } from '@mui/icons-material';
 import axios from 'axios';
 import AttendanceManagement from './AttendanceManagement';
@@ -73,11 +72,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeDispatches, setActiveDispatches] = useState<any[]>([]);
-  const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [salesLogs, setSalesLogs] = useState<any[]>([]);
   const [commissionData, setCommissionData] = useState<any>({});
   const [myCommissions, setMyCommissions] = useState<any[]>([]);
-  const [selectedTab, setSelectedTab] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -207,20 +204,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             setActiveDispatches([]);
           }
           break;
-        case 'dispatch-log':
-          // Fetch completed dispatches
-          try {
-            const response = await axios.get('http://localhost:3002/api/driver-dispatch?status=settled', { headers });
-            if (response.data.success) {
-              setDispatchLogs(response.data.data || []);
-            } else {
-              setDispatchLogs([]);
-            }
-          } catch (error) {
-            console.error('Error fetching dispatch logs:', error);
-            setDispatchLogs([]);
-          }
-          break;
         case 'sales-accounting':
           // Fetch commission data for this driver
           try {
@@ -253,10 +236,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     }
   };
 
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setSelectedTab(newValue);
-  };
 
   const handleOpenDialog = (type: string, item?: any) => {
     setDialogType(type);
@@ -386,36 +365,23 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           Driver Dashboard
         </Typography>
         
+        {/* Pay Period Summary Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card className="dashboard-card">
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <LocalShipping sx={{ mr: 1, color: '#13bbc6' }} />
-                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Out for Delivery</Typography>
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Current Period</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                  {outForDelivery.length}
+                  {getCurrentPeriodBags()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Currently on delivery
+                  {getCurrentPayPeriod().label}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card className="dashboard-card">
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Payment sx={{ mr: 1, color: '#ff9800' }} />
-                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Pending Settlement</Typography>
-                </Box>
-                <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700 }}>
-                  {settlementPending.length}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Awaiting settlement
+                <Typography variant="caption" color="primary">
+                  Paid: {getCurrentPayPeriod().payDate.toLocaleDateString()}
                 </Typography>
               </CardContent>
             </Card>
@@ -426,13 +392,18 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <CheckCircle sx={{ mr: 1, color: '#4caf50' }} />
-                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Settled</Typography>
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Next Period</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                  {settled.length}
+                  {getNextPeriodBags()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Fully settled
+                  {new Date().getDate() >= 1 && new Date().getDate() <= 15 ? '16th - End' : 'Next 1st-15th'}
+                </Typography>
+                <Typography variant="caption" color="primary">
+                  {new Date().getDate() >= 1 && new Date().getDate() <= 15 
+                    ? `Paid: ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5).toLocaleDateString()}`
+                    : `Paid: ${new Date(new Date().getFullYear(), new Date().getMonth() + 2, 18).toLocaleDateString()}`}
                 </Typography>
               </CardContent>
             </Card>
@@ -443,7 +414,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Payment sx={{ mr: 1, color: '#FFD700' }} />
-                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Approved Commissions</Typography>
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Total Commission</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#FFD700', fontWeight: 700 }}>
                   ₦{myCommissions
@@ -457,6 +428,23 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               </CardContent>
             </Card>
           </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <TrendingUp sx={{ mr: 1, color: '#9c27b0' }} />
+                  <Typography variant="h6" sx={{ color: '#2c3e50' }}>Total Bags Sold</Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 700 }}>
+                  {myCommissions.reduce((sum, c) => sum + (c.bags_sold || 0), 0)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  All time
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         <Grid container spacing={3}>
@@ -464,7 +452,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             <Card className="dashboard-card">
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                  My Dispatches ({filteredDispatches.length})
+                  Dispatches ({filteredDispatches.length})
                 </Typography>
                 
                 {/* Filter Controls */}
@@ -589,60 +577,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     );
   };
 
-  const renderDispatchLog = () => {
-    return (
-      <Box>
-        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-          Dispatch History
-        </Typography>
-        {dispatchLogs.length > 0 ? (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Order Number</TableCell>
-                  <TableCell>Assistant</TableCell>
-                  <TableCell>Bags</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Settlement Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {dispatchLogs.map((dispatch) => (
-                  <TableRow key={dispatch.id}>
-                    <TableCell>{dispatch.order_number}</TableCell>
-                    <TableCell>{dispatch.assistant_name || '-'}</TableCell>
-                    <TableCell>{getBagsFromItems(dispatch.items)}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={dispatch.status.replace('_', ' ').toUpperCase()} 
-                        color={getStatusColor(dispatch.status) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {dispatch.settlement_status ? (
-                        <Chip 
-                          label={dispatch.settlement_status.replace('_', ' ').toUpperCase()} 
-                          color={dispatch.balance_due === 0 ? 'success' : 'warning'}
-                          size="small"
-                        />
-                      ) : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
-            No dispatch history found
-          </Typography>
-        )}
-      </Box>
-    );
-  };
-
   const renderContent = () => {
     if (loading) {
       return (
@@ -656,10 +590,10 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       case 'overview':
       case 'active-dispatches':
         return renderOverview();
-      case 'dispatch-log':
-        return renderDispatchLog();
       case 'sales-accounting':
         return renderSalesAccounting();
+      case 'my-attendance':
+        return <AttendanceManagement selectedSection={selectedSection} userRole="driver" />;
       default:
         return renderOverview();
     }

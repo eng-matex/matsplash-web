@@ -122,8 +122,7 @@ export const getRoleNavigation = (role: string) => {
       return [
         { id: 'overview', label: 'Dashboard', icon: DashboardIcon, color: '#2196f3' },
         { id: 'clock-in-out', label: 'Clock In/Out', icon: AccessTime, color: '#13bbc6' },
-        { id: 'active-dispatches', label: 'Active Dispatches', icon: LocalShipping, color: '#ff9800' },
-        { id: 'dispatch-log', label: 'Dispatch Log', icon: Assessment, color: '#ff5722' },
+        { id: 'active-dispatches', label: 'Dispatches', icon: LocalShipping, color: '#ff9800' },
         { id: 'sales-accounting', label: 'Sales & Commission', icon: Payment, color: '#4caf50' },
         { id: 'my-attendance', label: 'My Attendance', icon: AccessTime, color: '#607d8b' }
       ];
