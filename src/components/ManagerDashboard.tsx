@@ -62,6 +62,7 @@ import SalaryManagement from './SalaryManagement';
 import SalesManagement from './SalesManagement';
 import PackerWorkflowManagement from './PackerWorkflowManagement';
 import DriverDispatchManagement from './DriverDispatchManagement';
+import InventoryManagement from './InventoryManagement';
 
 interface ManagerDashboardProps {
   selectedSection: string;
@@ -896,6 +897,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         return <SalaryManagement selectedSection={selectedSection} userRole="manager" />;
       case 'commission-approval':
         return renderCommissionApproval();
+      case 'inventory-management':
+        return <InventoryManagement selectedSection={selectedSection} userRole="manager" />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="manager" />;
       case 'general-sales':
