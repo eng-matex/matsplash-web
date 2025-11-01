@@ -228,7 +228,13 @@ module.exports = (db) => {
         .orderBy('orders.created_at', 'desc');
 
       if (status) {
-        query = query.where('orders.status', status);
+        // Support multiple statuses separated by comma
+        const statuses = status.split(',');
+        if (statuses.length > 1) {
+          query = query.whereIn('orders.status', statuses);
+        } else {
+          query = query.where('orders.status', status);
+        }
       }
 
       if (driver_id) {

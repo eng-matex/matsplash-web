@@ -103,7 +103,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'active-dispatches':
           // Fetch driver dispatches from API
           try {
-            const response = await axios.get('http://localhost:3002/api/orders?order_type=driver_dispatch&status=picked_up,in_transit', { headers });
+            const response = await axios.get('http://localhost:3002/api/driver-dispatch?status=out_for_delivery', { headers });
             if (response.data.success) {
               setActiveDispatches(response.data.data || []);
             } else {
@@ -117,7 +117,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'dispatch-log':
           // Fetch completed dispatches
           try {
-            const response = await axios.get('http://localhost:3002/api/orders?order_type=driver_dispatch&status=delivered,returned', { headers });
+            const response = await axios.get('http://localhost:3002/api/driver-dispatch?status=settled', { headers });
             if (response.data.success) {
               setDispatchLogs(response.data.data || []);
             } else {
@@ -129,18 +129,13 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           }
           break;
         case 'sales-accounting':
-          // Fetch sales logs and commission data
+          // Fetch commission data
           try {
-            const [salesResponse, commissionResponse] = await Promise.all([
-              axios.get('http://localhost:3002/api/sales/driver-sales', { headers }),
-              axios.get('http://localhost:3002/api/salary/commission', { headers })
-            ]);
-            if (salesResponse.data.success) {
-              setSalesLogs(salesResponse.data.data || []);
+            const response = await axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers });
+            if (response.data.success) {
+              setSalesLogs(response.data.data || []);
             }
-            if (commissionResponse.data.success) {
-              setCommissionData(commissionResponse.data.data || {});
-            }
+            setCommissionData({ totalSales: 0, totalCommission: 0, pendingCommission: 0 });
           } catch (error) {
             console.error('Error fetching sales data:', error);
             setSalesLogs([]);

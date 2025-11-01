@@ -255,9 +255,12 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
       case 'low': return 'warning';
       case 'critical': return 'error';
       case 'pending': return 'warning';
+      case 'pending_pickup': return 'warning';
       case 'processing': return 'info';
       case 'completed': return 'success';
+      case 'settled': return 'success';
       case 'picked_up': return 'success';
+      case 'out_for_delivery': return 'info';
       default: return 'default';
     }
   };
@@ -704,16 +707,22 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                 {orders
                   .filter(order => {
                     if (selectedTab === 0) return true;
-                    if (selectedTab === 1) return order.status === 'pending';
-                    if (selectedTab === 2) return order.status === 'picked_up';
-                    if (selectedTab === 3) return order.status === 'completed';
+                    if (selectedTab === 1) return order.status === 'pending' || order.status === 'pending_pickup';
+                    if (selectedTab === 2) return order.status === 'picked_up' || order.status === 'out_for_delivery';
+                    if (selectedTab === 3) return order.status === 'completed' || order.status === 'settled';
                     return true;
                   })
                   .map((order) => (
                     <TableRow key={order.id}>
                       <TableCell>{order.order_number}</TableCell>
-                      <TableCell>{order.type?.replace('_', ' ').toUpperCase()}</TableCell>
-                      <TableCell>{order.customer_name || order.distributor_name || 'Unknown'}</TableCell>
+                      <TableCell>{order.order_type?.replace('_', ' ').toUpperCase() || order.type?.replace('_', ' ').toUpperCase()}</TableCell>
+                      <TableCell>
+                        {order.order_type === 'driver_dispatch' && order.assigned_driver_id ? (
+                          <>Driver: {order.assigned_driver_name || 'Unknown'}</>
+                        ) : (
+                          order.customer_name || order.distributor_name || 'Unknown'
+                        )}
+                      </TableCell>
                       <TableCell>{order.items?.length || 0} items</TableCell>
                       <TableCell>₦{order.total_amount?.toLocaleString()}</TableCell>
                       <TableCell>
@@ -730,7 +739,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                             <Visibility />
                           </IconButton>
                         </Tooltip>
-                        {order.status === 'pending' && (
+                        {(order.status === 'pending' || order.status === 'pending_pickup') && (
                           <Tooltip title="Confirm Pickup">
                             <IconButton size="small" onClick={() => handleOpenDialog('confirm-pickup', order)}>
                               <CheckCircle />
@@ -749,8 +758,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
   );
 
   const renderPickupConfirmations = () => {
-    const pendingOrders = orders.filter(order => order.status === 'pending');
-    const pickedUpOrders = orders.filter(order => order.status === 'picked_up');
+    const pendingOrders = orders.filter(order => order.status === 'pending' || order.status === 'pending_pickup');
+    const pickedUpOrders = orders.filter(order => order.status === 'picked_up' || order.status === 'out_for_delivery');
 
     return (
       <Box>
