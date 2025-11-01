@@ -93,7 +93,6 @@ const PackerWorkflowManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     packer_id: '',
     bags_packed: '',
-    packing_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
@@ -150,7 +149,6 @@ const PackerWorkflowManagement: React.FC = () => {
     setFormData({
       packer_id: '',
       bags_packed: '',
-      packing_date: new Date().toISOString().split('T')[0],
       notes: ''
     });
     setCreateDialog(true);
@@ -161,13 +159,12 @@ const PackerWorkflowManagement: React.FC = () => {
     setFormData({
       packer_id: '',
       bags_packed: '',
-      packing_date: new Date().toISOString().split('T')[0],
       notes: ''
     });
   };
 
   const handleCreateLog = async () => {
-    if (!formData.packer_id || !formData.bags_packed || !formData.packing_date) {
+    if (!formData.packer_id || !formData.bags_packed) {
       alert('Please fill in all required fields');
       return;
     }
@@ -183,7 +180,6 @@ const PackerWorkflowManagement: React.FC = () => {
         body: JSON.stringify({
           packer_id: parseInt(formData.packer_id),
           bags_packed: parseInt(formData.bags_packed),
-          packing_date: formData.packing_date,
           notes: formData.notes
         })
       });
@@ -207,7 +203,6 @@ const PackerWorkflowManagement: React.FC = () => {
     setFormData({
       packer_id: log.packer_id.toString(),
       bags_packed: log.bags_packed.toString(),
-      packing_date: log.packing_date.split('T')[0],
       notes: log.notes || ''
     });
     setEditDialog(true);
@@ -221,7 +216,7 @@ const PackerWorkflowManagement: React.FC = () => {
   const handleUpdateLog = async () => {
     if (!selectedLog) return;
 
-    if (!formData.bags_packed || !formData.packing_date) {
+    if (!formData.bags_packed) {
       alert('Please fill in all required fields');
       return;
     }
@@ -236,7 +231,6 @@ const PackerWorkflowManagement: React.FC = () => {
         },
         body: JSON.stringify({
           bags_packed: parseInt(formData.bags_packed),
-          packing_date: formData.packing_date,
           notes: formData.notes
         })
       });
@@ -368,7 +362,7 @@ const PackerWorkflowManagement: React.FC = () => {
   };
   const canDelete = (log: PackingLog) => {
     return (log.status === 'pending' || log.status === 'rejected') && 
-           (log.storekeeper_id === user?.id || user?.role === 'Admin' || user?.role === 'Director');
+           (log.storekeeper_id === user?.id || user?.role === 'Admin' || user?.role === 'Director' || user?.role === 'Manager');
   };
   const canReview = user?.role === 'Manager' || user?.role === 'Admin' || user?.role === 'Director';
 
@@ -570,18 +564,6 @@ const PackerWorkflowManagement: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Packing Date"
-                type="date"
-                value={formData.packing_date}
-                onChange={(e) => setFormData({ ...formData, packing_date: e.target.value })}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ max: new Date().toISOString().split('T')[0] }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
                 label="Notes"
                 multiline
                 rows={3}
@@ -614,18 +596,6 @@ const PackerWorkflowManagement: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, bags_packed: e.target.value })}
                 required
                 inputProps={{ min: 1 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Packing Date"
-                type="date"
-                value={formData.packing_date}
-                onChange={(e) => setFormData({ ...formData, packing_date: e.target.value })}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ max: new Date().toISOString().split('T')[0] }}
               />
             </Grid>
             <Grid item xs={12}>

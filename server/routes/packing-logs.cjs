@@ -53,15 +53,18 @@ module.exports = (db) => {
       const { packer_id, bags_packed, packing_date, notes } = req.body;
       const storekeeper_id = req.user?.id;
 
-      if (!packer_id || !bags_packed || !packing_date) {
+      if (!packer_id || !bags_packed) {
         return res.status(400).json({
           success: false,
-          message: 'Packer ID, bags packed, and packing date are required'
+          message: 'Packer ID and bags packed are required'
         });
       }
 
+      // Auto-set packing_date to current date if not provided
+      const final_packing_date = packing_date || new Date().toISOString().split('T')[0];
+
       // Validate packing date
-      if (new Date(packing_date) > new Date()) {
+      if (new Date(final_packing_date) > new Date()) {
         return res.status(400).json({
           success: false,
           message: 'Packing date cannot be in the future'
@@ -72,7 +75,7 @@ module.exports = (db) => {
         packer_id,
         storekeeper_id,
         bags_packed,
-        packing_date,
+        packing_date: final_packing_date,
         notes: notes || null,
         status: 'pending',
         created_at: new Date().toISOString(),
@@ -270,14 +273,15 @@ module.exports = (db) => {
         });
       }
 
-      // Only the storekeeper who created it or admin/director can delete
+      // Only the storekeeper who created it or admin/director/manager can delete
       // Allow storekeepers to delete pending/rejected logs even if storekeeper_id is null
       const isCreator = log.storekeeper_id === req.user?.id;
       const userRole = req.user?.role?.toLowerCase();
       const isAdminOrDirector = userRole === 'admin' || userRole === 'director';
+      const isManager = userRole === 'manager';
       const isStorekeeperDeleting = userRole === 'storekeeper' && log.status !== 'approved';
       
-      if (!isCreator && !isAdminOrDirector && !isStorekeeperDeleting) {
+      if (!isCreator && !isAdminOrDirector && !isManager && !isStorekeeperDeleting) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to delete this packing log'

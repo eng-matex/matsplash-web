@@ -80,6 +80,9 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskProgress, setTaskProgress] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
 
   useEffect(() => {
     fetchData();
@@ -277,6 +280,25 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
     return Math.round((completed / target) * 100);
   };
 
+  const getFilteredLogs = () => {
+    return myLogs.filter(log => {
+      // Filter by status
+      if (filterStatus !== 'all' && log.status !== filterStatus) {
+        return false;
+      }
+      
+      // Filter by date range
+      if (filterStartDate && new Date(log.packing_date) < new Date(filterStartDate)) {
+        return false;
+      }
+      if (filterEndDate && new Date(log.packing_date) > new Date(filterEndDate)) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
   const renderOverview = () => (
     <Box>
       <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
@@ -365,9 +387,59 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
         <Grid item xs={12}>
           <Card className="dashboard-card">
             <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50' }}>
-                Recent Packing Logs
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: '#2c3e50' }}>
+                  My Packing Logs
+                </Typography>
+              </Box>
+              
+              {/* Filter Controls */}
+              <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={filterStatus}
+                    label="Status"
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="approved">Approved</MenuItem>
+                    <MenuItem value="rejected">Rejected</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <TextField
+                  size="small"
+                  label="Start Date"
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                
+                <TextField
+                  size="small"
+                  label="End Date"
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    setFilterStatus('all');
+                    setFilterStartDate('');
+                    setFilterEndDate('');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </Box>
+              
               <TableContainer>
                 <Table size="small">
                   <TableHead>
@@ -378,23 +450,31 @@ const PackerDashboard: React.FC<PackerDashboardProps> = ({ selectedSection }) =>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {myLogs.slice(0, 5).map((log: any) => (
-                      <TableRow key={log.id}>
-                        <TableCell>{new Date(log.packing_date).toLocaleDateString()}</TableCell>
-                        <TableCell>{log.bags_packed}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={log.status}
-                            size="small"
-                            color={
-                              log.status === 'approved' ? 'success' :
-                              log.status === 'rejected' ? 'error' :
-                              'warning'
-                            }
-                          />
+                    {getFilteredLogs().length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
+                          No logs found
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      getFilteredLogs().map((log: any) => (
+                        <TableRow key={log.id}>
+                          <TableCell>{new Date(log.packing_date).toLocaleDateString()}</TableCell>
+                          <TableCell>{log.bags_packed}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={log.status}
+                              size="small"
+                              color={
+                                log.status === 'approved' ? 'success' :
+                                log.status === 'rejected' ? 'error' :
+                                'warning'
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
