@@ -436,6 +436,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     <TableCell>Total Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Settlement</TableCell>
+                  <TableCell>Amount Settled</TableCell>
                   <TableCell>Balance Due</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Actions</TableCell>
@@ -466,7 +467,16 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                       )}
                     </TableCell>
                     <TableCell>
-                      {dispatch.settlement_status ? (
+                      {dispatch.amount_collected ? (
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          ₦{dispatch.amount_collected?.toLocaleString() || 0}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">-</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {dispatch.balance_due ? (
                         <Chip 
                           label={`₦${dispatch.balance_due?.toLocaleString() || 0}`} 
                           color={dispatch.balance_due === 0 ? 'success' : 'error'}
