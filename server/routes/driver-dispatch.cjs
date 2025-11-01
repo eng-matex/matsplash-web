@@ -685,14 +685,19 @@ module.exports = (db) => {
           updated_at: new Date().toISOString()
         });
 
+      // Get the updated settlement to ensure we have correct bags_sold for commission
+      const updatedSettlement = await db('driver_settlements')
+        .where('order_id', id)
+        .first();
+
       // Create commission record if fully settled
-      if (status === 'completed') {
+      if (status === 'completed' && updatedSettlement) {
         await db('driver_commissions').insert({
           driver_id: dispatch.assigned_driver_id,
           assistant_id: dispatch.assigned_assistant_id,
           order_id: id,
-          bags_sold,
-          bags_returned,
+          bags_sold: updatedSettlement.bags_sold, // Use from updated settlement, not request
+          bags_returned: updatedSettlement.bags_returned, // Use from updated settlement, not request
           total_revenue: expectedAmount,
           commission_amount: 0, // Will be calculated by manager
           delivery_date: new Date().toISOString().split('T')[0],
@@ -701,10 +706,6 @@ module.exports = (db) => {
           updated_at: new Date().toISOString()
         });
       }
-
-      const updatedSettlement = await db('driver_settlements')
-        .where('order_id', id)
-        .first();
 
       res.json({
         success: true,
@@ -836,11 +837,54 @@ module.exports = (db) => {
         });
       }
 
+      let calculatedCommissionAmount = 0;
+
+      // Calculate commission based on salary rates if commission_amount not provided or is 0
+      if (action === 'approve' && (!commission_amount || commission_amount === 0)) {
+        // Get driver's commission rate from salary_rates table
+        const driverRate = await db('salary_rates')
+          .where('employee_id', commission.driver_id)
+          .where('is_active', true)
+          .first();
+
+        // If no rate found in salary_rates, try to get from employees table
+        let commissionRate = driverRate?.rate_amount || 0;
+        
+        if (!commissionRate) {
+          const employee = await db('employees').where('id', commission.driver_id).first();
+          commissionRate = employee?.commission_rate || 0;
+        }
+
+        // Calculate commission: bags_sold * rate
+        calculatedCommissionAmount = commission.bags_sold * commissionRate;
+
+        // Also calculate for assistant if exists
+        if (commission.assistant_id) {
+          const assistantRate = await db('salary_rates')
+            .where('employee_id', commission.assistant_id)
+            .where('is_active', true)
+            .first();
+          
+          let assistantCommissionRate = assistantRate?.rate_amount || 0;
+          
+          if (!assistantCommissionRate) {
+            const assistant = await db('employees').where('id', commission.assistant_id).first();
+            assistantCommissionRate = assistant?.commission_rate || 0;
+          }
+
+          calculatedCommissionAmount += commission.bags_sold * assistantCommissionRate;
+        }
+      }
+
+      const finalCommissionAmount = action === 'approve' 
+        ? (commission_amount || calculatedCommissionAmount) 
+        : 0;
+
       await db('driver_commissions')
         .where('id', id)
         .update({
           status: action === 'approve' ? 'approved' : 'rejected',
-          commission_amount: action === 'approve' ? (commission_amount || 0) : 0,
+          commission_amount: finalCommissionAmount,
           approved_by: manager_id,
           approved_at: new Date().toISOString(),
           manager_comment: comment || null,
@@ -849,6 +893,10 @@ module.exports = (db) => {
 
       res.json({
         success: true,
+        data: {
+          commission_amount: finalCommissionAmount,
+          calculated: !commission_amount || commission_amount === 0
+        },
         message: `Commission ${action === 'approve' ? 'approved' : 'rejected'} successfully`
       });
     } catch (error) {

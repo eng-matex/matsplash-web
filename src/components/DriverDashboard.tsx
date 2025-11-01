@@ -755,7 +755,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                     <TableCell>Order Number</TableCell>
                     <TableCell>Bags Sold</TableCell>
                     <TableCell>Bags Returned</TableCell>
-                    <TableCell>Total Revenue</TableCell>
                     <TableCell>Commission Amount</TableCell>
                     <TableCell>Delivery Date</TableCell>
                     <TableCell>Status</TableCell>
@@ -764,7 +763,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                 <TableBody>
                   {salesLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography color="text.secondary">No commission records found</Typography>
                       </TableCell>
                     </TableRow>
@@ -774,7 +773,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                         <TableCell>{log.order_number}</TableCell>
                         <TableCell>{log.bags_sold || 0}</TableCell>
                         <TableCell>{log.bags_returned || 0}</TableCell>
-                        <TableCell>₦{(log.total_revenue || 0).toLocaleString()}</TableCell>
                         <TableCell>₦{(log.commission_amount || 0).toLocaleString()}</TableCell>
                         <TableCell>{new Date(log.delivery_date).toLocaleDateString()}</TableCell>
                         <TableCell>

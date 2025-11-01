@@ -187,19 +187,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Prompt for commission amount
-      const commissionAmount = prompt('Enter commission amount (₦):');
-      if (commissionAmount === null) return; // User cancelled
-
+      // Send commission_amount as 0 to trigger auto-calculation from salary rates
       const response = await axios.put(`http://localhost:3002/api/driver-dispatch/commissions/${commissionId}/review`, {
         action: 'approve',
-        commission_amount: parseFloat(commissionAmount) || 0,
+        commission_amount: 0, // Will be auto-calculated from salary rates
         comment: 'Approved by Manager'
       }, { headers });
 
       if (response.data.success) {
         fetchData(); // Refresh data
-        alert('Commission approved successfully!');
+        const message = response.data.data?.calculated 
+          ? `Commission approved successfully! Amount calculated: ₦${response.data.data.commission_amount.toLocaleString()}`
+          : 'Commission approved successfully!';
+        alert(message);
       } else {
         alert('Error approving commission: ' + response.data.message);
       }
