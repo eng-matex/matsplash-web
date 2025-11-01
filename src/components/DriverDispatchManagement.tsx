@@ -411,6 +411,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                   <TableCell>Driver</TableCell>
                   <TableCell>Assistant</TableCell>
                   <TableCell>Bags</TableCell>
+                  <TableCell>Total Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Settlement</TableCell>
                   <TableCell>Created</TableCell>
@@ -424,6 +425,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     <TableCell>{dispatch.driver_name}</TableCell>
                     <TableCell>{dispatch.assistant_name || '-'}</TableCell>
                     <TableCell>{getBagsCount(dispatch)}</TableCell>
+                    <TableCell>₦{dispatch.total_amount?.toLocaleString() || 0}</TableCell>
                     <TableCell>
                       <Chip 
                         label={dispatch.status.replace('_', ' ').toUpperCase()} 
@@ -568,7 +570,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 <Typography variant="body1"><strong>Assistant:</strong> {selectedDispatch.assistant_name}</Typography>
               )}
               <Typography variant="body1"><strong>Status:</strong> {selectedDispatch.status}</Typography>
-              <Typography variant="body1"><strong>Total Amount:</strong> ₦{selectedDispatch.total_amount.toLocaleString()}</Typography>
+              <Typography variant="body1"><strong>Bags:</strong> {getBagsCount(selectedDispatch)}</Typography>
             </Box>
           )}
         </DialogContent>
