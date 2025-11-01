@@ -82,6 +82,22 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [attendanceStatus, setAttendanceStatus] = useState<any>(null);
 
+  // Helper function to get bags from order items
+  const getBagsFromOrder = (order: any): number => {
+    try {
+      if (typeof order.items === 'string') {
+        const items = JSON.parse(order.items);
+        return items[0]?.quantity || 0;
+      }
+      if (Array.isArray(order.items)) {
+        return order.items[0]?.quantity || 0;
+      }
+      return 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [selectedSection]);
@@ -697,7 +713,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                   <TableCell>Type</TableCell>
                   <TableCell>Customer/Distributor</TableCell>
                   <TableCell>Items</TableCell>
-                  <TableCell>Amount</TableCell>
+                  <TableCell>Bags</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Actions</TableCell>
@@ -724,7 +740,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                         )}
                       </TableCell>
                       <TableCell>{order.items?.length || 0} items</TableCell>
-                      <TableCell>₦{order.total_amount?.toLocaleString()}</TableCell>
+                      <TableCell>{getBagsFromOrder(order)} bags</TableCell>
                       <TableCell>
                         <Chip 
                           label={order.status} 
@@ -832,7 +848,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                       <TableCell>Customer</TableCell>
                       <TableCell>Driver</TableCell>
                       <TableCell>Items</TableCell>
-                      <TableCell>Amount</TableCell>
+                      <TableCell>Bags</TableCell>
                       <TableCell>Created</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
@@ -856,7 +872,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                           </Box>
                         </TableCell>
                         <TableCell>{order.items?.length || 0} items</TableCell>
-                        <TableCell>₦{order.total_amount?.toLocaleString() || '0'}</TableCell>
+                        <TableCell>{getBagsFromOrder(order)} bags</TableCell>
                         <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Tooltip title="View Details">
@@ -1056,8 +1072,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                   <Typography variant="body1">{selectedItem.items?.length || 0} items</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
-                  <Typography variant="body1">₦{selectedItem.total_amount?.toLocaleString() || '0'}</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">Bags</Typography>
+                  <Typography variant="body1">{getBagsFromOrder(selectedItem)} bags</Typography>
                 </Grid>
               </Grid>
 
@@ -1101,8 +1117,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ selectedSec
                   <Typography variant="body1">{selectedItem.customer_name || 'Unknown'}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
-                  <Typography variant="body1">₦{selectedItem.total_amount?.toLocaleString() || '0'}</Typography>
+                  <Typography variant="subtitle2" color="text.secondary">Bags</Typography>
+                  <Typography variant="body1">{getBagsFromOrder(selectedItem)} bags</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">Created</Typography>
