@@ -57,6 +57,7 @@ import axios from 'axios';
 import OrderManagement from './OrderManagement';
 import SalesManagement from './SalesManagement';
 import InventoryManagement from './InventoryManagement';
+import DriverDispatchManagement from './DriverDispatchManagement';
 
 interface ReceptionistDashboardProps {
   selectedSection: string;
@@ -1527,9 +1528,10 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ selectedS
         return <InventoryManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'general-sales':
       case 'distributor-orders':
-      case 'driver-dispatches':
       case 'store-dispatch':
         return <OrderManagement selectedSection={selectedSection} userRole="receptionist" />;
+      case 'driver-dispatches':
+        return <DriverDispatchManagement userRole="receptionist" />;
       case 'sales-management':
         return <SalesManagement selectedSection={selectedSection} userRole="receptionist" />;
       case 'driver-settlement':

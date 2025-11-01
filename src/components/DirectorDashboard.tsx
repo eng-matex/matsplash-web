@@ -44,6 +44,7 @@ import SalesManagement from './SalesManagement';
 import ReportingAnalytics from './ReportingAnalytics';
 import SurveillanceManagement from './SurveillanceManagement';
 import PackerWorkflowManagement from './PackerWorkflowManagement';
+import DriverDispatchManagement from './DriverDispatchManagement';
 
 interface DirectorDashboardProps {
   currentPage: string;
@@ -610,6 +611,8 @@ const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ currentPage, onPa
         return <FactoryManagement selectedSection={currentPage} />;
       case 'packing-workflow':
         return <PackerWorkflowManagement />;
+      case 'driver-dispatches':
+        return <DriverDispatchManagement userRole="director" />;
       case 'distributor-mgmt':
         return <DistributorManagement />;
       case 'pricing':
