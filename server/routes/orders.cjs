@@ -163,7 +163,25 @@ module.exports = (db) => {
       }
 
       // Parse items JSON
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      let items;
+      try {
+        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      } catch (parseError) {
+        console.error('Error parsing items JSON:', parseError);
+        console.error('Items value:', order.items);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid items format in order'
+        });
+      }
+      
+      if (!items || !Array.isArray(items)) {
+        console.error('Items is not an array:', items);
+        return res.status(400).json({
+          success: false,
+          message: 'Items is not a valid array'
+        });
+      }
       
       // Calculate total quantity of Sachet Water (support both 'name' and 'product_name' fields)
       const sachetWaterItem = items.find(item => (item.product_name || item.name) === 'Sachet Water');
