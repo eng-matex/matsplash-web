@@ -155,7 +155,7 @@ module.exports = (db) => {
         });
       }
 
-      if (order.status !== 'pending') {
+      if (order.status !== 'pending' && order.status !== 'pending_pickup') {
         return res.status(400).json({
           success: false,
           message: 'Order is not pending pickup'
