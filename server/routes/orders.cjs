@@ -9,16 +9,22 @@ module.exports = (db) => {
       const { status, order_type, limit = 100 } = req.query;
       
       let query = db('orders')
-        .select('*')
-        .orderBy('created_at', 'desc')
+        .select(
+          'orders.*',
+          'driver.name as assigned_driver_name',
+          'assistant.name as assigned_assistant_name'
+        )
+        .leftJoin('employees as driver', 'orders.assigned_driver_id', 'driver.id')
+        .leftJoin('employees as assistant', 'orders.assigned_assistant_id', 'assistant.id')
+        .orderBy('orders.created_at', 'desc')
         .limit(parseInt(limit));
 
       if (status) {
-        query = query.where('status', status);
+        query = query.where('orders.status', status);
       }
 
       if (order_type) {
-        query = query.where('order_type', order_type);
+        query = query.where('orders.order_type', order_type);
       }
 
       const orders = await query;
@@ -43,7 +49,14 @@ module.exports = (db) => {
       const { id } = req.params;
       
       const order = await db('orders')
-        .where('id', id)
+        .select(
+          'orders.*',
+          'driver.name as assigned_driver_name',
+          'assistant.name as assigned_assistant_name'
+        )
+        .leftJoin('employees as driver', 'orders.assigned_driver_id', 'driver.id')
+        .leftJoin('employees as assistant', 'orders.assigned_assistant_id', 'assistant.id')
+        .where('orders.id', id)
         .first();
 
       if (!order) {
