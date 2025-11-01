@@ -80,6 +80,7 @@ interface DriverDispatch {
   balance_due?: number;
   assigned_driver_id?: number;
   amount_collected?: number;
+  expected_amount?: number;
   settled_at?: string;
   bags_sold?: number;
 }
@@ -449,7 +450,7 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                     <TableCell>{dispatch.driver_name}</TableCell>
                     <TableCell>{dispatch.assistant_name || '-'}</TableCell>
                     <TableCell>{getBagsCount(dispatch)}</TableCell>
-                    <TableCell>₦{dispatch.total_amount?.toLocaleString() || 0}</TableCell>
+                    <TableCell>₦{(dispatch.expected_amount || dispatch.total_amount)?.toLocaleString() || 0}</TableCell>
                     <TableCell>
                       <Chip 
                         label={dispatch.status.replace('_', ' ').toUpperCase()} 

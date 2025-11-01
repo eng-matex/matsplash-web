@@ -461,6 +461,7 @@ module.exports = (db) => {
           'settlement.status as settlement_status',
           'settlement.balance_due',
           'settlement.amount_collected',
+          'settlement.expected_amount',
           'settlement.settled_at'
         )
         .leftJoin('employees as driver', 'orders.assigned_driver_id', 'driver.id')
