@@ -918,13 +918,22 @@ module.exports = (db) => {
           .where('is_active', true)
           .first();
 
+        console.log('Driver rate from salary_rates:', driverRate);
+
         // If no rate found in salary_rates, try to get from employees table
         let commissionRate = driverRate?.rate_amount || 0;
         
         if (!commissionRate) {
           const employee = await db('employees').where('id', commission.driver_id).first();
           commissionRate = employee?.commission_rate || 0;
+          console.log('Driver rate from employees:', { commissionRate, employee });
         }
+
+        console.log('Commission calculation:', { 
+          bags_sold: commission.bags_sold, 
+          commissionRate, 
+          calculated: commission.bags_sold * commissionRate 
+        });
 
         // Calculate commission: bags_sold * rate
         calculatedCommissionAmount = commission.bags_sold * commissionRate;
