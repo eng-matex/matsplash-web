@@ -134,9 +134,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
           }
           break;
         case 'commission-approval':
-          // Fetch driver commissions for approval
+          // Fetch all driver commissions with filtering
           try {
-            const commissionResponse = await axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers });
+            const commissionResponse = await axios.get('http://localhost:3002/api/driver-dispatch/commissions', { headers });
             if (commissionResponse.data.success) {
               setCommissionApprovals(commissionResponse.data.data || []);
             } else {
@@ -620,154 +620,228 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
     </Box>
   );
 
-  const renderCommissionApproval = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-        Commission Approval Management
-      </Typography>
+  const renderCommissionApproval = () => {
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+    const filteredCommissions = filterStatus === 'all' 
+      ? commissionApprovals 
+      : commissionApprovals.filter((c: any) => c.status === filterStatus);
+    
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Commission Management
+        </Typography>
 
-      <Grid container spacing={3}>
-        {/* Pending Commissions */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
-                Pending Approvals
-              </Typography>
-              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                {commissionApprovals.filter(approval => approval.status === 'pending').length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Awaiting manager approval
-              </Typography>
-            </CardContent>
-          </Card>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {/* Pending Commissions */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('pending')}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                  Pending
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  {commissionApprovals.filter((a: any) => a.status === 'pending').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Awaiting approval
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Approved */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('approved')}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                  Approved
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  {commissionApprovals.filter((a: any) => a.status === 'approved').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Commissions approved
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Total Commission */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#FFD700', fontWeight: 600 }}>
+                  Total Commission
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{commissionApprovals
+                    .filter((a: any) => a.status === 'approved')
+                    .reduce((sum, a) => sum + (a.commission_amount || 0), 0)
+                    .toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total paid out
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Total Revenue */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#9c27b0', fontWeight: 600 }}>
+                  Total Revenue
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{commissionApprovals.reduce((sum, a: any) => sum + (a.total_revenue || 0), 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Revenue from sales
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
-        {/* Total Revenue */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
-                Total Revenue
-              </Typography>
-              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                ₦{commissionApprovals.reduce((sum, approval) => sum + (approval.total_revenue || 0), 0).toLocaleString()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Revenue from sales
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        {/* Filters */}
+        <Card className="dashboard-card" sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>Filter:</Typography>
+              <Chip 
+                label="All" 
+                onClick={() => setFilterStatus('all')} 
+                color={filterStatus === 'all' ? 'primary' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Pending" 
+                onClick={() => setFilterStatus('pending')} 
+                color={filterStatus === 'pending' ? 'warning' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Approved" 
+                onClick={() => setFilterStatus('approved')} 
+                color={filterStatus === 'approved' ? 'success' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Rejected" 
+                onClick={() => setFilterStatus('rejected')} 
+                color={filterStatus === 'rejected' ? 'error' : 'default'}
+                clickable
+              />
+            </Box>
+          </CardContent>
+        </Card>
 
-        {/* Approved */}
-        <Grid item xs={12} md={4}>
-          <Card className="dashboard-card">
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
-                Approved
-              </Typography>
-              <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                {commissionApprovals.filter(approval => approval.status === 'approved').length}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Commissions approved
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Commission Approvals Table */}
-      <Card className="dashboard-card" sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-            Commission Approvals
-          </Typography>
-          
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Order Number</TableCell>
-                  <TableCell>Driver</TableCell>
-                  <TableCell>Assistant</TableCell>
-                  <TableCell>Bags Sold</TableCell>
-                  <TableCell>Bags Returned</TableCell>
-                  <TableCell>Total Revenue</TableCell>
-                  <TableCell>Delivery Date</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {commissionApprovals.length === 0 ? (
+        {/* Commission Approvals Table */}
+        <Card className="dashboard-card">
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+              Commission Records ({filteredCommissions.length})
+            </Typography>
+            
+            <TableContainer>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
-                      <Typography color="text.secondary">No pending commissions</Typography>
-                    </TableCell>
+                    <TableCell><strong>Order Number</strong></TableCell>
+                    <TableCell><strong>Driver</strong></TableCell>
+                    <TableCell><strong>Assistant</strong></TableCell>
+                    <TableCell><strong>Bags Sold</strong></TableCell>
+                    <TableCell><strong>Bags Returned</strong></TableCell>
+                    <TableCell><strong>Commission Amount</strong></TableCell>
+                    <TableCell><strong>Delivery Date</strong></TableCell>
+                    <TableCell><strong>Status</strong></TableCell>
+                    <TableCell><strong>Actions</strong></TableCell>
                   </TableRow>
-                ) : (
-                  commissionApprovals.map((approval) => (
-                    <TableRow key={approval.id}>
-                      <TableCell>{approval.order_number}</TableCell>
-                      <TableCell>
-                        {approval.driver_first_name && approval.driver_last_name
-                          ? `${approval.driver_first_name} ${approval.driver_last_name}`
-                          : approval.driver_name || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {approval.assistant_first_name && approval.assistant_last_name
-                          ? `${approval.assistant_first_name} ${approval.assistant_last_name}`
-                          : approval.assistant_name || '-'}
-                      </TableCell>
-                      <TableCell>{approval.bags_sold || 0}</TableCell>
-                      <TableCell>{approval.bags_returned || 0}</TableCell>
-                      <TableCell>₦{(approval.total_revenue || 0).toLocaleString()}</TableCell>
-                      <TableCell>{new Date(approval.delivery_date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={approval.status?.toUpperCase() || 'PENDING'} 
-                          color={approval.status === 'approved' ? 'success' : 
-                                 approval.status === 'rejected' ? 'error' : 'warning'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {approval.status === 'pending' && (
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Approve Commission">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApproveCommission(approval.id)}
-                                sx={{ color: '#4caf50' }}
-                              >
-                                <CheckCircle />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Reject Commission">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleRejectCommission(approval.id)}
-                                sx={{ color: '#f44336' }}
-                              >
-                                <Cancel />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        )}
+                </TableHead>
+                <TableBody>
+                  {filteredCommissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">No commission records found</Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
-  );
+                  ) : (
+                    filteredCommissions.map((approval: any) => (
+                      <TableRow key={approval.id} hover>
+                        <TableCell><strong>{approval.order_number}</strong></TableCell>
+                        <TableCell>
+                          {approval.driver_first_name && approval.driver_last_name
+                            ? `${approval.driver_first_name} ${approval.driver_last_name}`
+                            : approval.driver_name || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          {approval.assistant_first_name && approval.assistant_last_name
+                            ? `${approval.assistant_first_name} ${approval.assistant_last_name}`
+                            : approval.assistant_name || '-'}
+                        </TableCell>
+                        <TableCell>{approval.bags_sold || 0}</TableCell>
+                        <TableCell>{approval.bags_returned || 0}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: approval.status === 'approved' ? '#4caf50' : 'inherit' }}>
+                            ₦{(approval.commission_amount || 0).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{new Date(approval.delivery_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={approval.status?.toUpperCase() || 'PENDING'} 
+                            color={approval.status === 'approved' ? 'success' : 
+                                   approval.status === 'rejected' ? 'error' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {approval.status === 'pending' && (
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Tooltip title="Approve Commission">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleApproveCommission(approval.id)}
+                                  sx={{ color: '#4caf50', '&:hover': { bgcolor: '#4caf5020' } }}
+                                >
+                                  <CheckCircle />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Reject Commission">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleRejectCommission(approval.id)}
+                                  sx={{ color: '#f44336', '&:hover': { bgcolor: '#f4433620' } }}
+                                >
+                                  <Cancel />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          )}
+                          {approval.status === 'approved' && approval.approved_by_name && (
+                            <Tooltip title={`Approved by ${approval.manager_first_name && approval.manager_last_name ? `${approval.manager_first_name} ${approval.manager_last_name}` : approval.approved_by_name}`}>
+                              <CheckCircle sx={{ color: '#4caf50', fontSize: 20 }} />
+                            </Tooltip>
+                          )}
+                          {approval.status === 'rejected' && (
+                            <Tooltip title="Rejected">
+                              <Cancel sx={{ color: '#f44336', fontSize: 20 }} />
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
 
   const renderEmployeeManagementDialog = () => {
     return (

@@ -789,7 +789,63 @@ module.exports = (db) => {
 
   // ====== COMMISSION MANAGEMENT ======
   
-  // Get commission records
+  // Get commission records with filtering
+  router.get('/commissions', async (req, res) => {
+    try {
+      const { driver_id, status, start_date, end_date } = req.query;
+      
+      let query = db('driver_commissions')
+        .select(
+          'driver_commissions.*',
+          'driver.name as driver_name',
+          'driver.first_name as driver_first_name',
+          'driver.last_name as driver_last_name',
+          'assistant.name as assistant_name',
+          'assistant.first_name as assistant_first_name',
+          'assistant.last_name as assistant_last_name',
+          'order.order_number',
+          'manager.name as approved_by_name',
+          'manager.first_name as manager_first_name',
+          'manager.last_name as manager_last_name'
+        )
+        .leftJoin('employees as driver', 'driver_commissions.driver_id', 'driver.id')
+        .leftJoin('employees as assistant', 'driver_commissions.assistant_id', 'assistant.id')
+        .leftJoin('orders as order', 'driver_commissions.order_id', 'order.id')
+        .leftJoin('employees as manager', 'driver_commissions.approved_by', 'manager.id');
+
+      // Apply filters
+      if (driver_id) {
+        query = query.where('driver_commissions.driver_id', driver_id);
+      }
+
+      if (status) {
+        query = query.where('driver_commissions.status', status);
+      }
+
+      if (start_date) {
+        query = query.where('driver_commissions.delivery_date', '>=', start_date);
+      }
+
+      if (end_date) {
+        query = query.where('driver_commissions.delivery_date', '<=', end_date);
+      }
+
+      const commissions = await query.orderBy('driver_commissions.created_at', 'desc');
+
+      res.json({
+        success: true,
+        data: commissions
+      });
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch commissions'
+      });
+    }
+  });
+
+  // Get pending commission records (for backward compatibility)
   router.get('/commissions/pending', async (req, res) => {
     try {
       const commissions = await db('driver_commissions')
@@ -814,10 +870,10 @@ module.exports = (db) => {
         data: commissions
       });
     } catch (error) {
-      console.error('Error fetching commissions:', error);
+      console.error('Error fetching pending commissions:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch commissions'
+        message: 'Failed to fetch pending commissions'
       });
     }
   });

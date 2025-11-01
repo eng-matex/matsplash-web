@@ -184,7 +184,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
           try {
             const [dispatchesRes, commissionsRes] = await Promise.all([
               axios.get(`http://localhost:3002/api/driver-dispatch?driver_id=${user?.id}`, { headers }),
-              axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers })
+              axios.get(`http://localhost:3002/api/driver-dispatch/commissions?driver_id=${user?.id}`, { headers })
             ]);
             if (dispatchesRes.data.success) {
               setActiveDispatches(dispatchesRes.data.data || []);
@@ -192,9 +192,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
               setActiveDispatches([]);
             }
             if (commissionsRes.data.success) {
-              // Filter commissions for this driver
-              const myComms = (commissionsRes.data.data || []).filter((c: any) => c.driver_id === user?.id);
-              setMyCommissions(myComms);
+              // Commissions already filtered by driver_id in API
+              setMyCommissions(commissionsRes.data.data || []);
             }
           } catch (error) {
             console.error('Error fetching dispatches:', error);
@@ -218,10 +217,10 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         case 'sales-accounting':
           // Fetch commission data for this driver
           try {
-            const response = await axios.get('http://localhost:3002/api/driver-dispatch/commissions/pending', { headers });
+            const response = await axios.get(`http://localhost:3002/api/driver-dispatch/commissions?driver_id=${user?.id}`, { headers });
             if (response.data.success) {
-              // Filter commissions for this driver and all statuses
-              const myCommissions = (response.data.data || []).filter((c: any) => c.driver_id === user?.id);
+              // Commissions already filtered by driver_id in API
+              const myCommissions = response.data.data || [];
               setSalesLogs(myCommissions);
               // Calculate totals
               setCommissionData({
@@ -676,6 +675,11 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
   );
 
   const renderSalesAccounting = () => {
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+    const filteredCommissions = filterStatus === 'all' 
+      ? salesLogs 
+      : salesLogs.filter((log: any) => log.status === filterStatus);
+    
     const pendingCommissions = salesLogs.filter((log: any) => log.status === 'pending');
     const approvedCommissions = salesLogs.filter((log: any) => log.status === 'approved');
     
@@ -686,94 +690,148 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         </Typography>
 
         <Grid container spacing={3}>
-          {/* Total Revenue */}
-          <Grid item xs={12} md={4}>
-            <Card className="dashboard-card">
+          {/* Total Commission Earned */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('approved')}>
               <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
-                  Total Revenue
+                <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                  Approved
                 </Typography>
                 <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                  ₦{(commissionData.totalSales || 0).toLocaleString()}
+                  ₦{(commissionData.totalCommission || 0).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  From all completed deliveries
+                  {approvedCommissions.length} commissions
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
           {/* Pending Commission */}
-          <Grid item xs={12} md={4}>
-            <Card className="dashboard-card">
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('pending')}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
-                  Pending Commission
+                  Pending
                 </Typography>
                 <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
                   ₦{(commissionData.pendingCommission || 0).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Awaiting manager approval
+                  Awaiting approval
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Approved Commission */}
-          <Grid item xs={12} md={4}>
+          {/* Total Bags Sold */}
+          <Grid item xs={12} sm={6} md={3}>
             <Card className="dashboard-card">
               <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
-                  Approved Commission
+                <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                  Total Bags Sold
                 </Typography>
                 <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
-                  ₦{(commissionData.totalCommission || 0).toLocaleString()}
+                  {salesLogs.reduce((sum, log: any) => sum + (log.bags_sold || 0), 0).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {approvedCommissions.length} commissions approved
+                  Across all orders
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Total Revenue */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#9c27b0', fontWeight: 600 }}>
+                  Total Revenue
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.totalSales || 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  From all deliveries
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
 
+        {/* Filters */}
+        <Card className="dashboard-card" sx={{ mt: 3, mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>Filter:</Typography>
+              <Chip 
+                label="All" 
+                onClick={() => setFilterStatus('all')} 
+                color={filterStatus === 'all' ? 'primary' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Pending" 
+                onClick={() => setFilterStatus('pending')} 
+                color={filterStatus === 'pending' ? 'warning' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Approved" 
+                onClick={() => setFilterStatus('approved')} 
+                color={filterStatus === 'approved' ? 'success' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Rejected" 
+                onClick={() => setFilterStatus('rejected')} 
+                color={filterStatus === 'rejected' ? 'error' : 'default'}
+                clickable
+              />
+            </Box>
+          </CardContent>
+        </Card>
+
         {/* Commission History Table */}
-        <Card className="dashboard-card" sx={{ mt: 3 }}>
+        <Card className="dashboard-card">
           <CardContent>
             <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-              Commission History
+              Commission Records ({filteredCommissions.length})
             </Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
-              Settlement is handled by Receptionist. Manager reviews and approves commissions for payment.
+              Settlement handled by Receptionist. Manager reviews and approves commissions for payment.
             </Alert>
             
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Order Number</TableCell>
-                    <TableCell>Bags Sold</TableCell>
-                    <TableCell>Bags Returned</TableCell>
-                    <TableCell>Commission Amount</TableCell>
-                    <TableCell>Delivery Date</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell><strong>Order Number</strong></TableCell>
+                    <TableCell><strong>Bags Sold</strong></TableCell>
+                    <TableCell><strong>Bags Returned</strong></TableCell>
+                    <TableCell><strong>Commission Amount</strong></TableCell>
+                    <TableCell><strong>Delivery Date</strong></TableCell>
+                    <TableCell><strong>Status</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {salesLogs.length === 0 ? (
+                  {filteredCommissions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">No commission records found</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    salesLogs.map((log: any) => (
-                      <TableRow key={log.id}>
-                        <TableCell>{log.order_number}</TableCell>
+                    filteredCommissions.map((log: any) => (
+                      <TableRow key={log.id} hover>
+                        <TableCell><strong>{log.order_number}</strong></TableCell>
                         <TableCell>{log.bags_sold || 0}</TableCell>
                         <TableCell>{log.bags_returned || 0}</TableCell>
-                        <TableCell>₦{(log.commission_amount || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: log.status === 'approved' ? '#4caf50' : 'inherit' }}>
+                            ₦{(log.commission_amount || 0).toLocaleString()}
+                          </Typography>
+                        </TableCell>
                         <TableCell>{new Date(log.delivery_date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Chip 
