@@ -144,6 +144,9 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [logProductFilter, setLogProductFilter] = useState('all');
+  const [logOperationFilter, setLogOperationFilter] = useState('all');
+  const [logDateFilter, setLogDateFilter] = useState('all');
   const [newAdjustment, setNewAdjustment] = useState<StockAdjustment>({
     product_id: 0,
     product_name: '',
@@ -649,30 +652,121 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
     </Box>
   );
 
-  const renderInventoryLogs = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
-        Inventory Movement Logs
-      </Typography>
+  const renderInventoryLogs = () => {
+    // Filter logs based on selected filters
+    const filteredLogs = inventoryLogs.filter((log) => {
+      if (logProductFilter !== 'all' && log.product_name !== logProductFilter) return false;
+      if (logOperationFilter !== 'all' && log.operation_type !== logOperationFilter) return false;
+      if (logDateFilter !== 'all') {
+        const logDate = new Date(log.timestamp);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+        const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thisMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        if (logDateFilter === 'today' && logDate < today) return false;
+        if (logDateFilter === 'yesterday' && (logDate < yesterday || logDate >= today)) return false;
+        if (logDateFilter === 'this_week' && logDate < thisWeek) return false;
+        if (logDateFilter === 'this_month' && logDate < thisMonth) return false;
+      }
+      return true;
+    });
+    
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Inventory Movement Logs
+        </Typography>
 
-      <Card>
-        <CardContent>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Product</TableCell>
-                  <TableCell>Operation</TableCell>
-                  <TableCell>Quantity</TableCell>
-                  <TableCell>Reason</TableCell>
-                  <TableCell>Reference</TableCell>
-                  <TableCell>Performed By</TableCell>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>Stock Change</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {inventoryLogs.map((log) => (
+        {/* Filters */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Product</InputLabel>
+                  <Select
+                    value={logProductFilter}
+                    onChange={(e) => setLogProductFilter(e.target.value)}
+                    label="Product"
+                  >
+                    <MenuItem value="all">All Products</MenuItem>
+                    {Array.from(new Set(inventoryLogs.map(log => log.product_name))).map((product) => (
+                      <MenuItem key={product} value={product}>
+                        {product}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Operation</InputLabel>
+                  <Select
+                    value={logOperationFilter}
+                    onChange={(e) => setLogOperationFilter(e.target.value)}
+                    label="Operation"
+                  >
+                    <MenuItem value="all">All Operations</MenuItem>
+                    <MenuItem value="add">Add</MenuItem>
+                    <MenuItem value="remove">Remove</MenuItem>
+                    <MenuItem value="adjust">Adjust</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Date Range</InputLabel>
+                  <Select
+                    value={logDateFilter}
+                    onChange={(e) => setLogDateFilter(e.target.value)}
+                    label="Date Range"
+                  >
+                    <MenuItem value="all">All Time</MenuItem>
+                    <MenuItem value="today">Today</MenuItem>
+                    <MenuItem value="yesterday">Yesterday</MenuItem>
+                    <MenuItem value="this_week">This Week</MenuItem>
+                    <MenuItem value="this_month">This Month</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<FilterList />}
+                  onClick={() => {
+                    setLogProductFilter('all');
+                    setLogOperationFilter('all');
+                    setLogDateFilter('all');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Product</TableCell>
+                    <TableCell>Operation</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Reason</TableCell>
+                    <TableCell>Reference</TableCell>
+                    <TableCell>Performed By</TableCell>
+                    <TableCell>Timestamp</TableCell>
+                    <TableCell>Stock Change</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">

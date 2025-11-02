@@ -96,6 +96,14 @@ module.exports = (db) => {
           'fixed_salary',
           db.raw('COALESCE(fixed_salary, 0) as salary'),
           'commission_rate',
+          'has_commission',
+          'commission_type',
+          'department',
+          'position',
+          'address',
+          'emergency_contact',
+          'emergency_phone',
+          'notes',
           'can_access_remotely'
         )
         .orderBy('name')
@@ -196,11 +204,17 @@ module.exports = (db) => {
         delete filteredData.salary;
       }
       
+      // Ensure boolean fields are properly converted
+      if (filteredData.has_commission !== undefined) {
+        filteredData.has_commission = filteredData.has_commission ? 1 : 0;
+      }
+      
       filteredData.updated_at = new Date().toISOString();
       
       console.log('Filtered update data:', filteredData);
       
-      await db('employees').where('id', id).update(filteredData);
+      const updateResult = await db('employees').where('id', id).update(filteredData);
+      console.log('Update result:', updateResult);
 
       res.json({
         success: true,

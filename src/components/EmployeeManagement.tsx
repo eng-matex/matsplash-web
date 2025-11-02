@@ -95,6 +95,11 @@ interface Employee {
   status: 'active' | 'inactive' | 'suspended';
   hire_date: string;
   salary: number;
+  fixed_salary?: number;
+  commission_rate?: number;
+  has_commission?: boolean;
+  commission_type?: string;
+  position?: string;
   address: string;
   emergency_contact: string;
   emergency_phone: string;
@@ -135,6 +140,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     phone: '',
     role: '',
     department: '',
+    position: '',
     status: 'active',
     salary: 0,
     commission_rate: 0,
@@ -322,6 +328,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         phone: '',
         role: '',
         department: '',
+        position: '',
         status: 'active',
         salary: 0,
         commission_rate: 0,
@@ -342,10 +349,11 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
         role: employee.role || '',
         department: employee.department || '',
         status: employee.status || 'active',
-        salary: employee.salary || 0,
+        salary: employee.salary || employee.fixed_salary || 0,
         commission_rate: employee.commission_rate || 0,
         has_commission: employee.has_commission || false,
         commission_type: employee.commission_type || 'none',
+        position: employee.position || '',
         address: employee.address || '',
         emergency_contact: employee.emergency_contact || '',
         emergency_phone: employee.emergency_phone || '',
