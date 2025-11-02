@@ -819,7 +819,8 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ selectedSecti
         </CardContent>
       </Card>
     </Box>
-  );
+    );
+  };
 
   const renderStockAdjustment = () => (
     <Box>
