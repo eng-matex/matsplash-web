@@ -166,14 +166,41 @@ module.exports = (db) => {
       const { id } = req.params;
       const updateData = req.body;
 
+      console.log('Update employee request:', { id, body: req.body });
+
       // Remove fields that shouldn't be updated directly
       delete updateData.id;
       delete updateData.pin_hash;
       delete updateData.created_at;
+      delete updateData.userId;
+      delete updateData.userEmail;
 
-      updateData.updated_at = new Date().toISOString();
-
-      await db('employees').where('id', id).update(updateData);
+      // Only allow updating specific fields
+      const allowedFields = [
+        'phone', 'role', 'status', 'department', 'salary', 'commission_rate',
+        'has_commission', 'commission_type', 'address', 'emergency_contact',
+        'emergency_phone', 'notes', 'salary_type', 'fixed_salary', 'can_access_remotely',
+        'position'
+      ];
+      
+      const filteredData = {};
+      allowedFields.forEach(field => {
+        if (updateData.hasOwnProperty(field)) {
+          filteredData[field] = updateData[field];
+        }
+      });
+      
+      // Map salary to fixed_salary if provided
+      if (filteredData.salary !== undefined && filteredData.salary !== null) {
+        filteredData.fixed_salary = filteredData.salary;
+        delete filteredData.salary;
+      }
+      
+      filteredData.updated_at = new Date().toISOString();
+      
+      console.log('Filtered update data:', filteredData);
+      
+      await db('employees').where('id', id).update(filteredData);
 
       res.json({
         success: true,
@@ -182,9 +209,11 @@ module.exports = (db) => {
 
     } catch (error) {
       console.error('Error updating employee:', error);
+      console.error('Stack:', error.stack);
       res.status(500).json({
         success: false,
-        message: 'Failed to update employee'
+        message: 'Failed to update employee',
+        error: error.message
       });
     }
   });

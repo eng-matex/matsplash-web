@@ -127,6 +127,8 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tempPin, setTempPin] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
     name: '',
     email: '',
@@ -191,6 +193,14 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
       name: 'Driver',
       description: 'Delivery and transportation services',
       permissions: ['view_dispatches', 'update_delivery_status', 'view_route'],
+      color: '#607d8b',
+      icon: LocalShipping
+    },
+    {
+      id: 'driver assistant',
+      name: 'Driver Assistant',
+      description: 'Driver support and assistance',
+      permissions: ['view_dispatches', 'assist_delivery'],
       color: '#607d8b',
       icon: LocalShipping
     },
@@ -304,6 +314,8 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
     }
     
     if (type === 'new') {
+      setFirstName('');
+      setLastName('');
       setNewEmployee({
         name: '',
         email: '',
@@ -1113,22 +1125,68 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
             Personal Information
           </Typography>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Full Name"
-                value={newEmployee.name}
-                onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                label="First Name"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  // Auto-generate email: lastname + first initial @matsplash.com
+                  const newLastName = lastName.trim();
+                  const newFirstName = e.target.value.trim();
+                  if (newLastName && newFirstName) {
+                    const email = `${newLastName.toLowerCase()}${newFirstName.charAt(0).toLowerCase()}@matsplash.com`;
+                    setNewEmployee(prev => ({ 
+                      ...prev, 
+                      name: `${newFirstName} ${newLastName}`,
+                      email: email
+                    }));
+                  } else if (newFirstName) {
+                    setNewEmployee(prev => ({ 
+                      ...prev, 
+                      name: `${newFirstName} ${lastName}`.trim()
+                    }));
+                  }
+                }}
                 required
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  // Auto-generate email: lastname + first initial @matsplash.com
+                  const newLastName = e.target.value.trim();
+                  const newFirstName = firstName.trim();
+                  if (newLastName && newFirstName) {
+                    const email = `${newLastName.toLowerCase()}${newFirstName.charAt(0).toLowerCase()}@matsplash.com`;
+                    setNewEmployee(prev => ({ 
+                      ...prev, 
+                      name: `${newFirstName} ${newLastName}`,
+                      email: email
+                    }));
+                  } else if (newLastName) {
+                    setNewEmployee(prev => ({ 
+                      ...prev, 
+                      name: `${firstName} ${newLastName}`.trim()
+                    }));
+                  }
+                }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="Email Address"
                 type="email"
                 value={newEmployee.email}
-                onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
+                disabled
+                helperText="Auto-generated from name"
                 required
               />
             </Grid>
@@ -1482,7 +1540,8 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
               fullWidth
               label="Full Name"
               value={newEmployee.name}
-              onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+              disabled
+              helperText="Name cannot be changed after creation"
               required
             />
           </Grid>
@@ -1492,7 +1551,8 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ selectedSection
               label="Email"
               type="email"
               value={newEmployee.email}
-              onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+              disabled
+              helperText="Email cannot be changed after creation"
               required
             />
           </Grid>

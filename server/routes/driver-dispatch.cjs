@@ -3,6 +3,31 @@ const router = express.Router();
 
 module.exports = (db) => {
   
+  // Fix existing commission records that have delivery_date set to settlement date instead of dispatch date
+  (async () => {
+    try {
+      const commissions = await db('driver_commissions')
+        .select('driver_commissions.*', 'orders.created_at as dispatch_date')
+        .leftJoin('orders', 'driver_commissions.order_id', 'orders.id')
+        .whereNotNull('orders.created_at');
+      
+      for (const commission of commissions) {
+        const dispatchDate = new Date(commission.dispatch_date).toISOString().split('T')[0];
+        const commissionDate = commission.delivery_date;
+        
+        // Only update if dates differ
+        if (dispatchDate !== commissionDate) {
+          await db('driver_commissions')
+            .where('id', commission.id)
+            .update({ delivery_date: dispatchDate });
+          console.log(`Updated commission ${commission.id}: ${commissionDate} -> ${dispatchDate}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error fixing commission delivery dates:', error);
+    }
+  })();
+  
   // ====== CUSTOMER MANAGEMENT ======
   
   // Get all customers
@@ -791,6 +816,11 @@ module.exports = (db) => {
 
       // Create commission record if fully settled
       if (status === 'completed' && updatedSettlement) {
+        // Use dispatch created_at date for delivery_date to determine correct pay period
+        const dispatchDate = dispatch.created_at 
+          ? new Date(dispatch.created_at).toISOString().split('T')[0] 
+          : new Date().toISOString().split('T')[0];
+        
         await db('driver_commissions').insert({
           driver_id: dispatch.assigned_driver_id,
           assistant_id: dispatch.assigned_assistant_id,
@@ -799,7 +829,7 @@ module.exports = (db) => {
           bags_returned: updatedSettlement.bags_returned, // Use from updated settlement, not request
           total_revenue: expectedAmount,
           commission_amount: 0, // Will be calculated by manager
-          delivery_date: new Date().toISOString().split('T')[0],
+          delivery_date: dispatchDate,
           status: 'pending',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

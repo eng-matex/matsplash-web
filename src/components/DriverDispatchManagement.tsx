@@ -107,6 +107,11 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
   const [searchTerm, setSearchTerm] = useState('');
   const [customerCalls, setCustomerCalls] = useState<any[]>([]);
   const [newCall, setNewCall] = useState({ customer_name: '', customer_phone: '', customer_address: '', bags: 0 });
+  const [dispatchFilter, setDispatchFilter] = useState({
+    status: 'all',
+    startDate: '',
+    endDate: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -434,6 +439,55 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
         </Grid>
       </Grid>
 
+      {/* Filters */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={dispatchFilter.status}
+                label="Status"
+                onChange={(e) => setDispatchFilter({ ...dispatchFilter, status: e.target.value })}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="pending_pickup">Pending Pickup</MenuItem>
+                <MenuItem value="out_for_delivery">Out for Delivery</MenuItem>
+                <MenuItem value="settlement_pending">Settlement Pending</MenuItem>
+                <MenuItem value="settled">Settled</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              size="small"
+              type="date"
+              label="Start Date"
+              InputLabelProps={{ shrink: true }}
+              value={dispatchFilter.startDate}
+              onChange={(e) => setDispatchFilter({ ...dispatchFilter, startDate: e.target.value })}
+            />
+            
+            <TextField
+              size="small"
+              type="date"
+              label="End Date"
+              InputLabelProps={{ shrink: true }}
+              value={dispatchFilter.endDate}
+              onChange={(e) => setDispatchFilter({ ...dispatchFilter, endDate: e.target.value })}
+            />
+            
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setDispatchFilter({ status: 'all', startDate: '', endDate: '' })}
+            >
+              Reset
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
       {/* Dispatches Table */}
       <Card>
         <CardContent>
@@ -455,7 +509,30 @@ const DriverDispatchManagement: React.FC<DriverDispatchManagementProps> = ({ use
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dispatches.map((dispatch) => (
+                {dispatches.filter(dispatch => {
+                  // Status filter
+                  if (dispatchFilter.status !== 'all' && dispatch.status !== dispatchFilter.status) {
+                    return false;
+                  }
+                  
+                  // Date filter
+                  if (dispatchFilter.startDate) {
+                    const dispatchDate = new Date(dispatch.created_at);
+                    if (dispatchDate < new Date(dispatchFilter.startDate)) {
+                      return false;
+                    }
+                  }
+                  if (dispatchFilter.endDate) {
+                    const dispatchDate = new Date(dispatch.created_at);
+                    const endDate = new Date(dispatchFilter.endDate);
+                    endDate.setHours(23, 59, 59, 999);
+                    if (dispatchDate > endDate) {
+                      return false;
+                    }
+                  }
+                  
+                  return true;
+                }).map((dispatch) => (
                   <TableRow key={dispatch.id}>
                     <TableCell>{dispatch.order_number}</TableCell>
                     <TableCell>{dispatch.driver_name}</TableCell>

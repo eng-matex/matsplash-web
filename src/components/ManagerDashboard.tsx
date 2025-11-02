@@ -85,6 +85,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   const [dialogType, setDialogType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [commissionFilter, setCommissionFilter] = useState({
+    status: 'all',
+    role: 'all',
+    name: '',
+    startDate: '',
+    endDate: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -622,9 +629,41 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
   );
 
   const renderCommissionApproval = () => {
-    const filteredCommissions = filterStatus === 'all' 
-      ? commissionApprovals 
-      : commissionApprovals.filter((c: any) => c.status === filterStatus);
+    // Apply comprehensive filtering
+    const filteredCommissions = commissionApprovals.filter((c: any) => {
+      // Status filter
+      if (commissionFilter.status !== 'all' && c.status !== commissionFilter.status) {
+        return false;
+      }
+      
+      // Date range filter
+      if (commissionFilter.startDate) {
+        const commDate = new Date(c.delivery_date);
+        if (commDate < new Date(commissionFilter.startDate)) {
+          return false;
+        }
+      }
+      if (commissionFilter.endDate) {
+        const commDate = new Date(c.delivery_date);
+        const endDate = new Date(commissionFilter.endDate);
+        endDate.setHours(23, 59, 59, 999); // Include entire end date
+        if (commDate > endDate) {
+          return false;
+        }
+      }
+      
+      // Name search filter
+      if (commissionFilter.name) {
+        const searchTerm = commissionFilter.name.toLowerCase();
+        const driverName = `${c.driver_first_name || ''} ${c.driver_last_name || ''}`.toLowerCase();
+        const assistantName = `${c.assistant_first_name || ''} ${c.assistant_last_name || ''}`.toLowerCase();
+        if (!driverName.includes(searchTerm) && !assistantName.includes(searchTerm)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
     
     return (
       <Box>
@@ -635,7 +674,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {/* Pending Commissions */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('pending')}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setCommissionFilter({ ...commissionFilter, status: 'pending' })}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
                   Pending
@@ -652,7 +691,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
 
           {/* Approved */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('approved')}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setCommissionFilter({ ...commissionFilter, status: 'approved' })}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
                   Approved
@@ -705,35 +744,73 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ selectedSection }) 
           </Grid>
         </Grid>
 
-        {/* Filters */}
+        {/* Comprehensive Filters */}
         <Card className="dashboard-card" sx={{ mb: 3 }}>
           <CardContent>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>Filter:</Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>Status Filter:</Typography>
               <Chip 
                 label="All" 
-                onClick={() => setFilterStatus('all')} 
-                color={filterStatus === 'all' ? 'primary' : 'default'}
+                onClick={() => setCommissionFilter({ ...commissionFilter, status: 'all' })} 
+                color={commissionFilter.status === 'all' ? 'primary' : 'default'}
                 clickable
               />
               <Chip 
                 label="Pending" 
-                onClick={() => setFilterStatus('pending')} 
-                color={filterStatus === 'pending' ? 'warning' : 'default'}
+                onClick={() => setCommissionFilter({ ...commissionFilter, status: 'pending' })} 
+                color={commissionFilter.status === 'pending' ? 'warning' : 'default'}
                 clickable
               />
               <Chip 
                 label="Approved" 
-                onClick={() => setFilterStatus('approved')} 
-                color={filterStatus === 'approved' ? 'success' : 'default'}
+                onClick={() => setCommissionFilter({ ...commissionFilter, status: 'approved' })} 
+                color={commissionFilter.status === 'approved' ? 'success' : 'default'}
                 clickable
               />
               <Chip 
                 label="Rejected" 
-                onClick={() => setFilterStatus('rejected')} 
-                color={filterStatus === 'rejected' ? 'error' : 'default'}
+                onClick={() => setCommissionFilter({ ...commissionFilter, status: 'rejected' })} 
+                color={commissionFilter.status === 'rejected' ? 'error' : 'default'}
                 clickable
               />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <TextField
+                size="small"
+                placeholder="Search by name..."
+                value={commissionFilter.name}
+                onChange={(e) => setCommissionFilter({ ...commissionFilter, name: e.target.value })}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+              />
+              
+              <TextField
+                size="small"
+                type="date"
+                label="Start Date"
+                InputLabelProps={{ shrink: true }}
+                value={commissionFilter.startDate}
+                onChange={(e) => setCommissionFilter({ ...commissionFilter, startDate: e.target.value })}
+              />
+              
+              <TextField
+                size="small"
+                type="date"
+                label="End Date"
+                InputLabelProps={{ shrink: true }}
+                value={commissionFilter.endDate}
+                onChange={(e) => setCommissionFilter({ ...commissionFilter, endDate: e.target.value })}
+              />
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCommissionFilter({ status: 'all', role: 'all', name: '', startDate: '', endDate: '' })}
+              >
+                Reset
+              </Button>
             </Box>
           </CardContent>
         </Card>

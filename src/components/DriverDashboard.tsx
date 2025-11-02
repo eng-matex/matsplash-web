@@ -122,9 +122,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
     }
   };
 
-  const getCurrentPeriodBags = () => {
+  const getCurrentPeriodCommission = () => {
     const period = getCurrentPayPeriod();
-    return myCommissions.filter(comm => {
+    const result = myCommissions.filter(comm => {
       const commDate = new Date(comm.delivery_date);
       const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
       const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
@@ -132,10 +132,12 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
       return comm.status === 'approved' && 
              commDateOnly >= periodStartOnly && 
              commDateOnly <= periodEndOnly;
-    }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
+    }).reduce((sum, comm) => sum + (comm.commission_amount || 0), 0);
+    console.log('Current period commission:', result, 'from', myCommissions.length, 'commissions');
+    return result;
   };
 
-  const getNextPeriodBags = () => {
+  const getNextPeriodCommission = () => {
     const today = new Date();
     const day = today.getDate();
     
@@ -146,7 +148,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         end: endOfMonth,
         payDate: new Date(today.getFullYear(), today.getMonth() + 1, 5)
       };
-      const bags = myCommissions.filter(comm => {
+      const commission = myCommissions.filter(comm => {
         const commDate = new Date(comm.delivery_date);
         const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
         const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
@@ -154,15 +156,15 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         return comm.status === 'approved' && 
                commDateOnly >= periodStartOnly && 
                commDateOnly <= periodEndOnly;
-      }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
-      return bags;
+      }).reduce((sum, comm) => sum + (comm.commission_amount || 0), 0);
+      return commission;
     } else {
       const period = {
         start: new Date(today.getFullYear(), today.getMonth() + 1, 1),
         end: new Date(today.getFullYear(), today.getMonth() + 1, 15),
         payDate: new Date(today.getFullYear(), today.getMonth() + 2, 18)
       };
-      const bags = myCommissions.filter(comm => {
+      const commission = myCommissions.filter(comm => {
         const commDate = new Date(comm.delivery_date);
         const commDateOnly = new Date(commDate.getFullYear(), commDate.getMonth(), commDate.getDate());
         const periodStartOnly = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate());
@@ -170,8 +172,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
         return comm.status === 'approved' && 
                commDateOnly >= periodStartOnly && 
                commDateOnly <= periodEndOnly;
-      }).reduce((sum, comm) => sum + (comm.bags_sold || 0), 0);
-      return bags;
+      }).reduce((sum, comm) => sum + (comm.commission_amount || 0), 0);
+      return commission;
     }
   };
 
@@ -198,10 +200,15 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             if (commissionsRes.data.success) {
               // Commissions already filtered by driver_id in API
               setMyCommissions(commissionsRes.data.data || []);
+              console.log('Commissions fetched:', commissionsRes.data.data.length, 'records');
+            } else {
+              console.log('No commissions data:', commissionsRes.data);
+              setMyCommissions([]);
             }
           } catch (error) {
             console.error('Error fetching dispatches:', error);
             setActiveDispatches([]);
+            setMyCommissions([]);
           }
           break;
         case 'sales-accounting':
@@ -375,7 +382,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                   <Typography variant="h6" sx={{ color: '#2c3e50' }}>Current Period</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#13bbc6', fontWeight: 700 }}>
-                  {getCurrentPeriodBags()}
+                  ₦{getCurrentPeriodCommission().toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {getCurrentPayPeriod().label}
@@ -395,7 +402,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
                   <Typography variant="h6" sx={{ color: '#2c3e50' }}>Next Period</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
-                  {getNextPeriodBags()}
+                  ₦{getNextPeriodCommission().toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {new Date().getDate() >= 1 && new Date().getDate() <= 15 ? '16th - End' : 'Next 1st-15th'}
@@ -573,6 +580,220 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ selectedSection }) =>
             </Card>
           </Grid>
         </Grid>
+      </Box>
+    );
+  };
+
+  const renderSalesAccounting = () => {
+    // Apply comprehensive filtering
+    let filteredCommissions = salesLogs.filter((log: any) => {
+      // Status filter
+      if (filterStatus !== 'all' && log.status !== filterStatus) {
+        return false;
+      }
+      
+      // Date range filter
+      if (dispatchFilter.startDate) {
+        const logDate = new Date(log.delivery_date);
+        if (logDate < new Date(dispatchFilter.startDate)) {
+          return false;
+        }
+      }
+      if (dispatchFilter.endDate) {
+        const logDate = new Date(log.delivery_date);
+        const endDate = new Date(dispatchFilter.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        if (logDate > endDate) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    const pendingCommissions = salesLogs.filter((log: any) => log.status === 'pending');
+    const approvedCommissions = salesLogs.filter((log: any) => log.status === 'approved');
+    
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          Sales & Commission History
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Total Commission Earned */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('approved')}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#4caf50', fontWeight: 600 }}>
+                  Approved
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.totalCommission || 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {approvedCommissions.length} commissions
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Pending Commission */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Card className="dashboard-card" sx={{ cursor: 'pointer', '&:hover': { boxShadow: 4 } }} onClick={() => setFilterStatus('pending')}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                  Pending
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  ₦{(commissionData.pendingCommission || 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Awaiting approval
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Total Bags Sold */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Card className="dashboard-card">
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ color: '#13bbc6', fontWeight: 600 }}>
+                  Total Bags Sold
+                </Typography>
+                <Typography variant="h3" sx={{ color: '#2c3e50', fontWeight: 700 }}>
+                  {salesLogs.reduce((sum, log: any) => sum + (log.bags_sold || 0), 0).toLocaleString()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Across all orders
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Comprehensive Filters */}
+        <Card className="dashboard-card" sx={{ mt: 3, mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>Status Filter:</Typography>
+              <Chip 
+                label="All" 
+                onClick={() => setFilterStatus('all')} 
+                color={filterStatus === 'all' ? 'primary' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Pending" 
+                onClick={() => setFilterStatus('pending')} 
+                color={filterStatus === 'pending' ? 'warning' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Approved" 
+                onClick={() => setFilterStatus('approved')} 
+                color={filterStatus === 'approved' ? 'success' : 'default'}
+                clickable
+              />
+              <Chip 
+                label="Rejected" 
+                onClick={() => setFilterStatus('rejected')} 
+                color={filterStatus === 'rejected' ? 'error' : 'default'}
+                clickable
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <TextField
+                size="small"
+                type="date"
+                label="Start Date"
+                InputLabelProps={{ shrink: true }}
+                value={dispatchFilter.startDate}
+                onChange={(e) => setDispatchFilter({ ...dispatchFilter, startDate: e.target.value })}
+              />
+              
+              <TextField
+                size="small"
+                type="date"
+                label="End Date"
+                InputLabelProps={{ shrink: true }}
+                value={dispatchFilter.endDate}
+                onChange={(e) => setDispatchFilter({ ...dispatchFilter, endDate: e.target.value })}
+              />
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  setFilterStatus('all');
+                  setDispatchFilter({ ...dispatchFilter, startDate: '', endDate: '' });
+                }}
+              >
+                Reset
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Commission History Table */}
+        <Card className="dashboard-card">
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ color: '#2c3e50', fontWeight: 600 }}>
+              Commission Records ({filteredCommissions.length})
+            </Typography>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Settlement handled by Receptionist. Manager reviews and approves commissions for payment.
+            </Alert>
+            
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Order Number</strong></TableCell>
+                    <TableCell><strong>Bags Sold</strong></TableCell>
+                    <TableCell><strong>Bags Returned</strong></TableCell>
+                    <TableCell><strong>Commission Amount</strong></TableCell>
+                    <TableCell><strong>Delivery Date</strong></TableCell>
+                    <TableCell><strong>Status</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredCommissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">No commission records found</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCommissions.map((log: any) => (
+                      <TableRow key={log.id} hover>
+                        <TableCell><strong>{log.order_number}</strong></TableCell>
+                        <TableCell>{log.bags_sold || 0}</TableCell>
+                        <TableCell>{log.bags_returned || 0}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: log.status === 'approved' ? '#4caf50' : 'inherit' }}>
+                            ₦{(log.commission_amount || 0).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{new Date(log.delivery_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={log.status?.toUpperCase() || 'PENDING'} 
+                            color={log.status === 'approved' ? 'success' : 
+                                   log.status === 'rejected' ? 'error' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
       </Box>
     );
   };
